@@ -47,6 +47,7 @@ export default function Navbar() {
   }, []);
 
   return (
+    <>
     <nav
       className={cn(
         'fixed top-0 left-0 right-0 z-50 transition-all duration-500',
@@ -141,6 +142,52 @@ export default function Navbar() {
         </div>
       </div>
 
+      {isMobileMenuOpen && (
+        <div className="lg:hidden absolute top-full left-0 right-0 bg-ivory/98 backdrop-blur-md border-t border-beige shadow-lg">
+          <div className="px-4 py-6 space-y-4">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                to={link.href}
+                className={cn(
+                  'block text-base font-medium py-2',
+                  location.pathname === link.href
+                    ? 'text-sage-dark'
+                    : 'text-warm-gray'
+                )}
+              >
+                {link.label}
+              </Link>
+            ))}
+            {!user ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLoginOpen(true);
+                  setIsMobileMenuOpen(false);
+                }}
+                className="mt-4 flex items-center justify-center gap-2 rounded-full border border-beige bg-ivory px-5 py-3 text-sm font-medium text-charcoal"
+              >
+                <LogIn className="h-4 w-4" />
+                Sign In
+              </button>
+            ) : (
+              <>
+                <Link to="/dashboard" className="mt-4 block rounded-full bg-cream px-5 py-3 text-sm font-medium text-charcoal">My Dashboard</Link>
+                <button type="button" onClick={() => void signOut()} className="block w-full rounded-full border border-beige px-5 py-3 text-sm font-medium text-charcoal">Sign Out</button>
+              </>
+            )}
+            <Link
+              to="/booking"
+              className="block bg-sage text-white px-5 py-3 rounded-full text-center text-sm font-medium mt-4"
+            >
+              Book a Session
+            </Link>
+          </div>
+        </div>
+      )}
+    </nav>
+
       {isLoginOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-charcoal/60 px-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-[24px] border border-beige bg-ivory p-6 shadow-2xl sm:p-8">
@@ -200,51 +247,6 @@ export default function Navbar() {
           </div>
         </div>
       )}
-
-      {isMobileMenuOpen && (
-        <div className="lg:hidden absolute top-full left-0 right-0 bg-ivory/98 backdrop-blur-md border-t border-beige shadow-lg">
-          <div className="px-4 py-6 space-y-4">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className={cn(
-                  'block text-base font-medium py-2',
-                  location.pathname === link.href
-                    ? 'text-sage-dark'
-                    : 'text-warm-gray'
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-            {!user ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLoginOpen(true);
-                  setIsMobileMenuOpen(false);
-                }}
-                className="mt-4 flex items-center justify-center gap-2 rounded-full border border-beige bg-ivory px-5 py-3 text-sm font-medium text-charcoal"
-              >
-                <LogIn className="h-4 w-4" />
-                Sign In
-              </button>
-            ) : (
-              <>
-                <Link to="/dashboard" className="mt-4 block rounded-full bg-cream px-5 py-3 text-sm font-medium text-charcoal">My Dashboard</Link>
-                <button type="button" onClick={() => void signOut()} className="block w-full rounded-full border border-beige px-5 py-3 text-sm font-medium text-charcoal">Sign Out</button>
-              </>
-            )}
-            <Link
-              to="/booking"
-              className="block bg-sage text-white px-5 py-3 rounded-full text-center text-sm font-medium mt-4"
-            >
-              Book a Session
-            </Link>
-          </div>
-        </div>
-      )}
-    </nav>
+    </>
   );
 }

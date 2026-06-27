@@ -1,4 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Atma:wght@300;400;500;600;700&display=swap');
+
+/* BM Hanna Air – playful rounded font used site-wide */
+@font-face {
+  font-family: 'BM Hanna Air';
+  src: url('https://cdn.jsdelivr.net/gh/fonts-archive/BMHANNAAir@1/fonts/BMHANNAAir.woff2') format('woff2'),
+       url('https://cdn.jsdelivr.net/gh/fonts-archive/BMHANNAAir@1/fonts/BMHANNAAir.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Tufuli Arabic – used for Arabic text */
+@font-face {
+  font-family: 'Tufuli Arabic';
+  src: url('https://cdn.jsdelivr.net/gh/fonts-archive/TufuliArabic@1/fonts/TufuliArabic.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 
 @tailwind base;
 @tailwind components;
@@ -7,29 +27,38 @@
 @layer base {
   :root {
     color-scheme: light;
-    --color-background: 253 251 247;
-    --color-surface: 245 240 232;
-    --color-border: 232 224 213;
-    --color-ivory: 253 251 247;
-    --color-cream: 245 240 232;
-    --color-beige: 232 224 213;
-    --color-sand: 212 200 184;
-    --color-sage: 156 175 136;
-    --color-sage-dark: 122 143 106;
-    --color-sage-light: 184 201 169;
+    /* ── Mai Brand Palette ── */
+    --color-background: 255 248 248;
+    --color-surface: 241 240 237;
+    --color-border: 229 227 223;
+    --color-ivory: 255 248 248;
+    --color-cream: 241 240 237;
+    --color-beige: 229 227 223;
+    --color-sand: 213 211 207;
+    /* Mint */
+    --color-sage: 146 207 202;
+    --color-sage-dark: 107 184 178;
+    --color-sage-light: 155 210 204;
+    /* Keep olive/dusty-blue as neutral tones */
     --color-olive: 139 154 107;
     --color-olive-light: 168 184 138;
     --color-dusty-blue: 143 163 184;
     --color-dusty-blue-light: 176 196 212;
     --color-dusty-blue-dark: 110 132 152;
-    --color-terracotta: 196 149 106;
-    --color-terracotta-light: 212 176 138;
-    --color-terracotta-dark: 166 123 82;
-    --color-charcoal: 61 61 61;
-    --color-warm-gray: 107 101 96;
-    --color-soft-gray: 163 158 153;
-    --font-sans: Inter, system-ui, -apple-system, sans-serif;
-    --font-serif: Georgia, Cambria, 'Times New Roman', serif;
+    /* Orange */
+    --color-terracotta: 241 135 59;
+    --color-terracotta-light: 245 168 112;
+    --color-terracotta-dark: 219 98 61;
+    /* Logo yellow */
+    --color-gold: 244 215 33;
+    /* Typography */
+    --color-charcoal: 59 54 56;
+    --color-warm-gray: 122 115 117;
+    --color-soft-gray: 172 168 170;
+    /* Fonts */
+    --font-sans: 'BM Hanna Air', 'Atma', system-ui, -apple-system, sans-serif;
+    --font-serif: 'Atma', 'BM Hanna Air', Georgia, serif;
+    --font-arabic: 'Tufuli Arabic', system-ui, sans-serif;
     --radius-xl: 1rem;
     --radius-2xl: 1.5rem;
     --radius-3xl: 2rem;

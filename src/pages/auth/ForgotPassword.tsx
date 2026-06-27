@@ -23,7 +23,12 @@ const ForgotPassword = (): JSX.Element => {
     setLoading(false);
 
     if (error) {
-      setError(error.message);
+      const msg = error.message ?? '';
+      setError(
+        msg.toLowerCase().includes('after') && msg.toLowerCase().includes('seconds')
+          ? 'Please wait a moment before trying again.'
+          : msg
+      );
       return;
     }
 

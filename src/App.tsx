@@ -28,6 +28,13 @@ import AuthCallback from './pages/auth/AuthCallback';
 import Dashboard from './pages/dashboard/Dashboard';
 import MyCourses from './pages/dashboard/MyCourses';
 import ProfileSettings from './pages/dashboard/ProfileSettings';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminMessages from './pages/admin/AdminMessages';
+import AdminCourses from './pages/admin/AdminCourses';
+import AdminBlog from './pages/admin/AdminBlog';
+import AdminBookings from './pages/admin/AdminBookings';
+import AdminOrders from './pages/admin/AdminOrders';
 import { ThemeSwitcher } from './theme.tsx';
 
 function App() {
@@ -63,6 +70,14 @@ function App() {
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/dashboard/courses" element={<ProtectedRoute><MyCourses /></ProtectedRoute>} />
               <Route path="/dashboard/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+              {/* Admin routes — require admin role */}
+              <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><AdminUsers /></ProtectedRoute>} />
+              <Route path="/admin/messages" element={<ProtectedRoute requiredRole="admin"><AdminMessages /></ProtectedRoute>} />
+              <Route path="/admin/courses" element={<ProtectedRoute requiredRole="admin"><AdminCourses /></ProtectedRoute>} />
+              <Route path="/admin/blog" element={<ProtectedRoute requiredRole="admin"><AdminBlog /></ProtectedRoute>} />
+              <Route path="/admin/bookings" element={<ProtectedRoute requiredRole="admin"><AdminBookings /></ProtectedRoute>} />
+              <Route path="/admin/orders" element={<ProtectedRoute requiredRole="admin"><AdminOrders /></ProtectedRoute>} />
             </Routes>
           </main>
           <Footer />

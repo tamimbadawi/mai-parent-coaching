@@ -21,10 +21,10 @@ const Register = (): JSX.Element => {
 
   const passwordStrength = useMemo<number>(() => {
     let score = 0;
+    if (password.length >= 6) score += 1;
     if (password.length >= 8) score += 1;
-    if (/[A-Z]/.test(password)) score += 1;
-    if (/\d/.test(password)) score += 1;
-    if (password.length >= 12) score += 1;
+    if (password.length >= 10) score += 1;
+    if (password.length >= 14) score += 1;
     return score;
   }, [password]);
 
@@ -39,10 +39,8 @@ const Register = (): JSX.Element => {
       nextErrors.email = 'Please enter a valid email address.';
     }
 
-    if (password.length < 8) {
-      nextErrors.password = 'Use at least 8 characters.';
-    } else if (!/[A-Z]/.test(password) || !/\d/.test(password)) {
-      nextErrors.password = 'Include one uppercase letter and one number.';
+    if (password.length < 6) {
+      nextErrors.password = 'Use at least 6 characters.';
     }
 
     if (confirmPassword !== password) {
@@ -66,7 +64,12 @@ const Register = (): JSX.Element => {
     setLoading(false);
 
     if (error) {
-      setSubmitError(error.message);
+      const msg = error.message ?? '';
+      setSubmitError(
+        msg.toLowerCase().includes('after') && msg.toLowerCase().includes('seconds')
+          ? 'Please wait a moment before trying again.'
+          : msg
+      );
       return;
     }
 

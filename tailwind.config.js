@@ -22,6 +22,7 @@ export default {
         charcoal: 'rgb(var(--color-charcoal))',
         'warm-gray': 'rgb(var(--color-warm-gray))',
         'soft-gray': 'rgb(var(--color-soft-gray))',
+        gold: 'rgb(var(--color-gold))',
         background: 'rgb(var(--color-background))',
         surface: 'rgb(var(--color-surface))',
         border: 'rgb(var(--color-border))',
