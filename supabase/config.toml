@@ -1,0 +1,19 @@
+# Supabase Project Configuration
+
+# API Settings
+[api]
+enabled = true
+
+# Database Settings
+[db]
+port = 54322
+major_version = 15
+
+# Studio Settings
+[studio]
+enabled = true
+port = 54323
+
+# Functions Settings
+[functions.hello-supabase]
+verify_jwt = true
