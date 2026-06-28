@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { BookOpen, CalendarDays, UserRound, Compass, Sparkles, Play } from 'lucide-react';
+import { Link, Navigate } from 'react-router-dom';
+import { BookOpen, CalendarDays, UserRound, Compass, Sparkles, Play, Menu, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { courses } from '../../data/content';
 import { supabase } from '../../lib/supabase';
@@ -9,12 +9,22 @@ import type { VideoProgress } from '../../types';
 const Dashboard = (): JSX.Element => {
   const { profile, enrollments, refreshEnrollments } = useAuth();
   const [videoProgress, setVideoProgress] = useState<VideoProgress[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  console.log('Dashboard - profile:', profile, 'enrollments:', enrollments);
+
+  if (profile?.role === 'admin') {
+    console.log('Dashboard - Admin user, redirecting to /admin');
+    return <Navigate to="/admin" replace />;
+  }
 
   useEffect((): (() => void) => {
     let isMounted = true;
 
     const loadProgress = async (): Promise<void> => {
+      console.log('Dashboard - Loading video progress...');
       const { data, error } = await supabase.from('video_progress').select('*');
+      console.log('Dashboard - Video progress data:', data, 'error:', error);
       if (!isMounted) {
         return;
       }
@@ -38,8 +48,39 @@ const Dashboard = (): JSX.Element => {
 
   return (
     <div className="min-h-screen bg-ivory pt-24">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-charcoal/40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:flex-row lg:px-8">
-        <aside className="w-full rounded-[24px] border border-beige bg-white p-4 shadow-sm lg:w-64">
+        {/* Mobile top bar */}
+        <div className="flex items-center justify-between rounded-2xl border border-beige bg-white px-4 py-3 shadow-sm lg:hidden">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sage text-white">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <span className="text-sm font-medium text-charcoal">{firstName}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen((v) => !v)}
+            className="rounded-xl border border-beige bg-white p-2 text-charcoal"
+            aria-label="Toggle sidebar"
+          >
+            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
+
+        <aside className={`
+          fixed top-0 left-0 z-50 h-full w-[260px] overflow-y-auto bg-white shadow-2xl transition-transform duration-300
+          lg:static lg:z-auto lg:h-auto lg:w-64 lg:overflow-visible lg:translate-x-0 lg:shadow-none lg:rounded-[24px] lg:border lg:border-beige lg:bg-white lg:p-4
+          p-6
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}>
           <div className="flex items-center gap-3 rounded-2xl bg-cream p-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sage text-white">
               <Sparkles className="h-5 w-5" />
@@ -51,13 +92,13 @@ const Dashboard = (): JSX.Element => {
           </div>
 
           <nav className="mt-6 space-y-2 text-sm">
-            <Link to="/dashboard" className="flex items-center gap-3 rounded-2xl bg-sage/10 px-4 py-3 text-sage-dark">
+            <Link to="/dashboard" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 rounded-2xl bg-sage/10 px-4 py-3 text-sage-dark">
               <Compass className="h-4 w-4" /> Overview
             </Link>
-            <Link to="/dashboard/courses" className="flex items-center gap-3 rounded-2xl px-4 py-3 text-warm-gray hover:bg-cream">
+            <Link to="/dashboard/courses" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-warm-gray hover:bg-cream">
               <BookOpen className="h-4 w-4" /> My Courses
             </Link>
-            <Link to="/dashboard/profile" className="flex items-center gap-3 rounded-2xl px-4 py-3 text-warm-gray hover:bg-cream">
+            <Link to="/dashboard/profile" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-warm-gray hover:bg-cream">
               <UserRound className="h-4 w-4" /> Profile Settings
             </Link>
             <div className="flex items-center gap-3 rounded-2xl px-4 py-3 text-warm-gray">

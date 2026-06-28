@@ -121,9 +121,18 @@ export default function Navbar() {
                       <p className="text-xs text-warm-gray">{user.email}</p>
                     </div>
                     <div className="my-2 h-px bg-beige" />
-                    <Link to="/dashboard" className="block rounded-xl px-2 py-2 text-sm text-warm-gray hover:bg-cream">My Dashboard</Link>
-                    <Link to="/dashboard/courses" className="block rounded-xl px-2 py-2 text-sm text-warm-gray hover:bg-cream">My Courses</Link>
-                    <Link to="/dashboard/profile" className="block rounded-xl px-2 py-2 text-sm text-warm-gray hover:bg-cream">Profile Settings</Link>
+                    {profile?.role === 'admin' ? (
+                      <>
+                        <Link to="/admin" onClick={() => setIsProfileMenuOpen(false)} className="block rounded-xl px-2 py-2 text-sm text-sage-dark hover:bg-cream">Admin Dashboard</Link>
+                        <Link to="/admin/users" onClick={() => setIsProfileMenuOpen(false)} className="block rounded-xl px-2 py-2 text-sm text-warm-gray hover:bg-cream">User Control Center</Link>
+                      </>
+                    ) : (
+                      <>
+                        <Link to="/dashboard" onClick={() => setIsProfileMenuOpen(false)} className="block rounded-xl px-2 py-2 text-sm text-warm-gray hover:bg-cream">My Dashboard</Link>
+                        <Link to="/dashboard/courses" onClick={() => setIsProfileMenuOpen(false)} className="block rounded-xl px-2 py-2 text-sm text-warm-gray hover:bg-cream">My Courses</Link>
+                        <Link to="/dashboard/profile" onClick={() => setIsProfileMenuOpen(false)} className="block rounded-xl px-2 py-2 text-sm text-warm-gray hover:bg-cream">Profile Settings</Link>
+                      </>
+                    )}
                     <div className="my-2 h-px bg-beige" />
                     <button type="button" onClick={() => void signOut()} className="block w-full rounded-xl px-2 py-2 text-left text-sm text-terracotta hover:bg-cream">Sign Out</button>
                   </div>
@@ -173,7 +182,14 @@ export default function Navbar() {
               </button>
             ) : (
               <>
-                <Link to="/dashboard" className="mt-4 block rounded-full bg-cream px-5 py-3 text-sm font-medium text-charcoal">My Dashboard</Link>
+                {profile?.role === 'admin' ? (
+                  <>
+                    <Link to="/admin" className="mt-4 block rounded-full bg-sage/10 px-5 py-3 text-sm font-medium text-sage-dark">Admin Dashboard</Link>
+                    <Link to="/admin/users" className="block rounded-full bg-cream px-5 py-3 text-sm font-medium text-charcoal">User Control Center</Link>
+                  </>
+                ) : (
+                  <Link to="/dashboard" className="mt-4 block rounded-full bg-cream px-5 py-3 text-sm font-medium text-charcoal">My Dashboard</Link>
+                )}
                 <button type="button" onClick={() => void signOut()} className="block w-full rounded-full border border-beige px-5 py-3 text-sm font-medium text-charcoal">Sign Out</button>
               </>
             )}
@@ -212,8 +228,9 @@ export default function Navbar() {
             </div>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <button
-                type="button"
+              <Link
+                to="/auth/login"
+                onClick={() => setIsLoginOpen(false)}
                 className="rounded-2xl border border-beige bg-white p-5 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sage/10 text-sage-dark">
@@ -224,10 +241,11 @@ export default function Navbar() {
                   Sign in to continue your journey and revisit your resources.
                 </p>
                 <span className="mt-4 inline-flex text-sm font-medium text-sage-dark">Log in</span>
-              </button>
+              </Link>
 
-              <button
-                type="button"
+              <Link
+                to="/auth/register"
+                onClick={() => setIsLoginOpen(false)}
                 className="rounded-2xl border border-sage/20 bg-sage/5 p-5 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sage text-white">
@@ -238,11 +256,7 @@ export default function Navbar() {
                   Join the community and unlock support tailored to your goals.
                 </p>
                 <span className="mt-4 inline-flex text-sm font-medium text-sage-dark">Create account</span>
-              </button>
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-beige/80 bg-cream/50 px-4 py-3 text-sm text-warm-gray">
-              Coming soon: secure sign-in and account creation will be connected to Supabase Auth.
+              </Link>
             </div>
           </div>
         </div>

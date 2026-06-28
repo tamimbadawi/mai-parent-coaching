@@ -123,7 +123,7 @@ export default function Services() {
         description="Book a free initial consultation. We'll talk about what's happening in your family and figure out the best path forward together."
         primaryAction={{ label: 'Book Free Consultation', href: '/booking' }}
         secondaryAction={{ label: 'Explore Courses', href: '/courses' }}
-        variant="terracotta"
+        variant="sage"
       />
     </div>
   );

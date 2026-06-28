@@ -1,21 +1,74 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Sparkles } from 'lucide-react';
 import AnimatedSection from '../../components/AnimatedSection';
 import { useAuth } from '../../context/AuthContext';
 
+/* ── Typing quotes ────────────────────────────────────────────────────────── */
+const QUOTES = [
+  "Gentle guidance creates steady growth for both parent and child.",
+  "Every time you choose patience, you teach your child peace.",
+  "You are doing better than you think — keep going.",
+  "Connection before correction: the heart of mindful parenting.",
+  "Small, consistent moments of love shape a lifetime.",
+];
+
+const useTypewriter = (texts: string[], typingSpeed = 55, pauseMs = 2200, deleteSpeed = 28) => {
+  const [displayed, setDisplayed] = useState('');
+  const [quoteIdx, setQuoteIdx] = useState(0);
+  const [phase, setPhase] = useState<'typing' | 'pausing' | 'deleting'>('typing');
+  const charIdx = useRef(0);
+
+  useEffect(() => {
+    const current = texts[quoteIdx];
+    let timer: ReturnType<typeof setTimeout>;
+
+    if (phase === 'typing') {
+      if (charIdx.current < current.length) {
+        timer = setTimeout(() => {
+          setDisplayed(current.slice(0, charIdx.current + 1));
+          charIdx.current += 1;
+        }, typingSpeed);
+      } else {
+        timer = setTimeout(() => setPhase('pausing'), pauseMs);
+      }
+    } else if (phase === 'pausing') {
+      setPhase('deleting');
+    } else {
+      if (charIdx.current > 0) {
+        timer = setTimeout(() => {
+          charIdx.current -= 1;
+          setDisplayed(current.slice(0, charIdx.current));
+        }, deleteSpeed);
+      } else {
+        setQuoteIdx((i) => (i + 1) % texts.length);
+        setPhase('typing');
+      }
+    }
+    return () => clearTimeout(timer);
+  }, [displayed, phase, quoteIdx, texts, typingSpeed, pauseMs, deleteSpeed]);
+
+  return displayed;
+};
+
+/* ── Shared input class ───────────────────────────────────────────────────── */
+const inputCls =
+  'w-full rounded-xl border border-beige bg-white px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage placeholder:text-warm-gray/50';
+
+/* ── Component ────────────────────────────────────────────────────────────── */
 const Login = (): JSX.Element => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signIn, signInWithGoogle, signInWithMagicLink } = useAuth();
+  const typedQuote = useTypewriter(QUOTES);
 
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [magicLinkLoading, setMagicLinkLoading] = useState<boolean>(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [magicLinkLoading, setMagicLinkLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [magicLinkSent, setMagicLinkSent] = useState<boolean>(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
 
   const from = (location.state as { from?: string } | null)?.from ?? '/dashboard';
 
@@ -23,112 +76,132 @@ const Login = (): JSX.Element => {
     event.preventDefault();
     setError(null);
     setLoading(true);
-
     const { error: signInError } = await signIn(email, password);
     setLoading(false);
-
-    if (signInError) {
-      setError(signInError.message);
-      return;
-    }
-
+    if (signInError) { setError(signInError.message); return; }
     navigate(from);
   };
 
   const handleGoogle = async (): Promise<void> => {
     setError(null);
-    const { error } = await signInWithGoogle();
-    if (error) {
-      setError(error.message);
-    }
+    const { error: err } = await signInWithGoogle();
+    if (err) setError(err.message);
   };
 
   const handleMagicLink = async (): Promise<void> => {
-    if (!email) {
-      setError('Please enter your email address first.');
-      return;
-    }
-
+    if (!email) { setError('Please enter your email address first.'); return; }
     setError(null);
     setMagicLinkLoading(true);
-    const { error } = await signInWithMagicLink(email);
+    const { error: err } = await signInWithMagicLink(email);
     setMagicLinkLoading(false);
-
-    if (error) {
-      setError(error.message);
-      return;
-    }
-
+    if (err) { setError(err.message); return; }
     setMagicLinkSent(true);
   };
 
   return (
-    <div className="min-h-screen bg-ivory pt-24">
-      <div className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-7xl flex-col overflow-hidden rounded-[32px] border border-beige bg-white shadow-sm lg:flex-row">
-        <div className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-sage p-10 text-white">
+    <div className="flex min-h-screen flex-col pt-16">
+      <div className="flex flex-1">
+
+        {/* ── Left decorative panel ── */}
+        <div className="hidden lg:flex lg:w-[42%] flex-col justify-between bg-sage px-10 py-8 text-white">
+
+          {/* Top */}
           <div>
-            <div className="text-sm font-medium uppercase tracking-[0.2em] text-white/80">Mai Elbadawy</div>
-            <h1 className="mt-6 font-serif text-4xl leading-tight">
-              “Gentle guidance creates steady growth for both parent and child.”
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15">
+              <Sparkles className="h-5 w-5 text-white" />
+            </div>
+            <div className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
+              Mai Elbadawy
+            </div>
+            <h1 className="mt-3 font-serif text-3xl leading-snug">
+              Welcome back — your journey continues here.
             </h1>
-            <p className="mt-6 max-w-md text-sm leading-7 text-white/80">
-              Sign in to return to your reflection journal, courses, and supportive resources.
+            <p className="mt-4 text-sm leading-6 text-white/75">
+              Sign in to return to your courses, reflection journal, and the community that supports you every step of the way.
             </p>
           </div>
-          <div className="relative mt-12 h-40 overflow-hidden rounded-[24px] border border-white/20 bg-white/10">
-            <div className="absolute left-6 top-6 h-20 w-20 rounded-full border border-white/30" />
-            <div className="absolute bottom-6 right-8 h-16 w-16 rounded-full border border-white/30" />
-            <div className="absolute right-12 top-10 h-24 w-24 rounded-full border border-white/20" />
+
+          {/* Stats row */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { value: '2,400+', label: 'Members' },
+              { value: '18', label: 'Courses' },
+              { value: '4.9★', label: 'Rating' },
+            ].map((s) => (
+              <div key={s.label} className="rounded-2xl border border-white/20 bg-white/10 px-3 py-3 text-center">
+                <div className="font-serif text-xl font-semibold">{s.value}</div>
+                <div className="mt-0.5 text-xs text-white/70">{s.label}</div>
+              </div>
+            ))}
           </div>
+
+          {/* Typewriter quote box */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-white/10 px-6 py-5">
+            <div className="pointer-events-none absolute -right-4 -top-4 h-20 w-20 rounded-full border border-white/20" />
+            <div className="pointer-events-none absolute -bottom-3 -left-3 h-14 w-14 rounded-full border border-white/20" />
+            <p className="relative font-serif text-base italic leading-relaxed text-white/90 min-h-[3.5rem]">
+              "{typedQuote}
+              <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-white/80 align-middle" />
+              "
+            </p>
+            <div className="mt-3 text-xs font-medium uppercase tracking-widest text-white/50">Daily reminder</div>
+          </div>
+
         </div>
 
-        <div className="flex w-full items-center justify-center bg-ivory p-6 sm:p-8 lg:w-1/2 lg:p-10">
-          <AnimatedSection delay={0.05}>
-            <div className="w-full max-w-md">
-              <div className="mb-8 text-center lg:text-left">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-sage/10 text-sage-dark lg:mx-0">
-                  <Sparkles className="h-6 w-6" />
-                </div>
-                <h2 className="mt-4 font-serif text-3xl text-charcoal">Welcome back</h2>
-                <p className="mt-2 text-sm text-warm-gray">Log in to continue your parent coaching journey.</p>
+        {/* ── Right form panel ── */}
+        <div className="flex flex-1 flex-col overflow-y-auto bg-ivory px-6 py-8 sm:px-12">
+          <AnimatedSection delay={0.05} className="flex h-full flex-col justify-center">
+            <div className="mx-auto w-full max-w-md">
+
+              {/* Header */}
+              <div className="mb-7">
+                <h2 className="font-serif text-3xl text-charcoal">Welcome back</h2>
+                <p className="mt-1 text-base text-warm-gray">Log in to continue your parent coaching journey.</p>
               </div>
 
-              <form className="space-y-4" onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} noValidate className="space-y-4">
+
+                {/* Email */}
                 <div>
-                  <label htmlFor="login-email" className="mb-2 block text-sm font-medium text-charcoal">
+                  <label htmlFor="login-email" className="mb-1.5 block text-sm font-medium text-charcoal">
                     Email address
                   </label>
                   <input
                     id="login-email"
-                    aria-label="Email address"
                     type="email"
                     autoFocus
                     value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    className="w-full rounded-2xl border border-beige bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-sage"
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={inputCls}
                     placeholder="you@example.com"
                     required
                   />
                 </div>
 
+                {/* Password */}
                 <div>
-                  <label htmlFor="login-password" className="mb-2 block text-sm font-medium text-charcoal">
-                    Password
-                  </label>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <label htmlFor="login-password" className="text-sm font-medium text-charcoal">
+                      Password
+                    </label>
+                    <Link to="/auth/forgot-password" className="text-sm font-medium text-sage-dark hover:text-sage">
+                      Forgot password?
+                    </Link>
+                  </div>
                   <div className="relative">
                     <input
                       id="login-password"
-                      aria-label="Password"
                       type={showPassword ? 'text' : 'password'}
                       value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      className="w-full rounded-2xl border border-beige bg-white px-4 py-3 pr-12 text-sm text-charcoal outline-none transition focus:border-sage"
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={`${inputCls} pr-10`}
                       placeholder="Enter your password"
                       required
                     />
                     <button
                       type="button"
-                      onClick={() => setShowPassword((value) => !value)}
+                      onClick={() => setShowPassword((v) => !v)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-warm-gray"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
@@ -137,33 +210,32 @@ const Login = (): JSX.Element => {
                   </div>
                 </div>
 
-                {error ? <p className="text-sm text-terracotta">{error}</p> : null}
+                {error && <p className="text-sm text-terracotta">{error}</p>}
 
+                {/* Submit */}
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex w-full items-center justify-center rounded-full bg-sage px-6 py-3 text-sm font-medium text-white transition hover:bg-sage-dark disabled:cursor-not-allowed disabled:opacity-70"
+                  className="flex w-full items-center justify-center rounded-full bg-sage py-3 text-base font-medium text-white transition hover:bg-sage-dark disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : 'Log in'}
+                  {loading
+                    ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    : 'Log in'}
                 </button>
               </form>
 
-              <div className="mt-4 text-right">
-                <Link to="/auth/forgot-password" className="text-sm font-medium text-sage-dark hover:text-sage">
-                  Forgot your password?
-                </Link>
-              </div>
-
-              <div className="my-6 flex items-center gap-3 text-sm text-warm-gray">
+              {/* Divider */}
+              <div className="my-5 flex items-center gap-3 text-sm text-warm-gray">
                 <div className="h-px flex-1 bg-beige" />
                 <span>or</span>
                 <div className="h-px flex-1 bg-beige" />
               </div>
 
+              {/* Google */}
               <button
                 type="button"
                 onClick={handleGoogle}
-                className="flex w-full items-center justify-center gap-3 rounded-full border border-beige bg-white px-6 py-3 text-sm font-medium text-charcoal transition hover:bg-cream"
+                className="flex w-full items-center justify-center gap-3 rounded-full border border-beige bg-white py-3 text-base font-medium text-charcoal transition hover:bg-cream"
               >
                 <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
                   <path fill="#4285F4" d="M21.6 12.23c0-.78-.07-1.53-.2-2.25H12v4.26h5.39a4.6 4.6 0 0 1-2 3.02v2.5h3.24c1.89-1.74 2.97-4.31 2.97-7.53Z" />
@@ -174,29 +246,38 @@ const Login = (): JSX.Element => {
                 Continue with Google
               </button>
 
+              {/* Magic link */}
               <button
                 type="button"
                 onClick={handleMagicLink}
                 disabled={magicLinkLoading}
-                className="mt-3 flex w-full items-center justify-center gap-3 rounded-full border border-beige bg-cream px-6 py-3 text-sm font-medium text-charcoal transition hover:bg-beige"
+                className="mt-3 flex w-full items-center justify-center gap-3 rounded-full border border-beige bg-cream py-3 text-base font-medium text-charcoal transition hover:bg-beige disabled:opacity-60"
               >
-                <Mail className="h-4 w-4" />
-                {magicLinkLoading ? 'Sending...' : 'Send me a login link'}
+                <Mail className="h-5 w-5" />
+                {magicLinkLoading ? 'Sending…' : 'Send me a login link'}
               </button>
 
-              {magicLinkSent ? (
+              {magicLinkSent && (
                 <p className="mt-3 text-sm text-sage-dark">Check your email — we've sent you a magic link.</p>
-              ) : null}
+              )}
 
-              <p className="mt-6 text-center text-sm text-warm-gray">
-                Don’t have an account?{' '}
-                <Link to="/auth/register" className="font-medium text-sage-dark hover:text-sage">
-                  Sign up
-                </Link>
-              </p>
+              {/* Footer */}
+              <div className="mt-6 flex items-center justify-between text-sm text-warm-gray">
+                <span>
+                  Don't have an account?{' '}
+                  <Link to="/auth/register" className="font-medium text-sage-dark hover:text-sage">Sign up</Link>
+                </span>
+                <span className="text-soft-gray">
+                  <Link to="/terms" className="hover:text-sage">Terms</Link>
+                  {' · '}
+                  <Link to="/privacy" className="hover:text-sage">Privacy</Link>
+                </span>
+              </div>
+
             </div>
           </AnimatedSection>
         </div>
+
       </div>
     </div>
   );

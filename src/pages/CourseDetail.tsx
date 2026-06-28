@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, BookOpen, BarChart3, CheckCircle, Play, FileText, Lock, ArrowRight, Star } from 'lucide-react';
 import AnimatedSection from '../components/AnimatedSection';
+import BunnyStreamPlayer from '../components/BunnyStreamPlayer';
 import { useAuth } from '../context/AuthContext';
 import { courses } from '../data/content';
 
@@ -31,6 +32,7 @@ export default function CourseDetail() {
 
   const isPaidCourse = course.price > 0;
   const enrolled = isEnrolled(course.id);
+  const featuredVideo = course.modules.flatMap((module) => module.videos).find((video) => Boolean(video.bunnyVideoId));
 
   return (
     <div className="min-h-screen pt-24">
@@ -79,6 +81,12 @@ export default function CourseDetail() {
                 </div>
 
                 <h2 className="font-serif text-2xl text-charcoal mb-4">Course Curriculum</h2>
+                {featuredVideo?.bunnyVideoId ? (
+                  <div className="mb-8">
+                    <h3 className="mb-3 font-medium text-charcoal">Featured lesson preview</h3>
+                    <BunnyStreamPlayer videoId={featuredVideo.bunnyVideoId} title={featuredVideo.title} />
+                  </div>
+                ) : null}
                 <div className="space-y-4">
                   {course.modules.length > 0 ? (
                     course.modules.map((mod) => (

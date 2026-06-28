@@ -35,6 +35,8 @@ export interface Video {
   title: string;
   duration: string;
   url: string;
+  bunnyVideoId?: string;
+  bunnyCollectionId?: string;
 }
 
 export interface Resource {
@@ -128,9 +130,23 @@ export interface UserProfile {
   full_name: string | null;
   avatar_url: string | null;
   phone: string | null;
+  country: string | null;
   role: 'student' | 'admin';
+  approval_status: 'pending' | 'approved' | 'rejected';
+  approved_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface AdminNotification {
+  id: string;
+  created_at: string;
+  type: string;
+  title: string;
+  message: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  read_at: string | null;
 }
 
 export interface CourseEnrollment {

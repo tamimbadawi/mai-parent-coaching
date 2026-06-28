@@ -17,3 +17,6 @@ port = 54323
 # Functions Settings
 [functions.hello-supabase]
 verify_jwt = true
+
+[functions.admin-user-manager]
+verify_jwt = false

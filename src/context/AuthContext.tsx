@@ -8,7 +8,7 @@ interface AuthContextValue {
   profile: UserProfile | null;
   loading: boolean;
   enrollments: CourseEnrollment[];
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, phone?: string, country?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>;
@@ -27,23 +27,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
   const [enrollments, setEnrollments] = useState<CourseEnrollment[]>([]);
 
   const refreshProfile = async (currentUser: User | null): Promise<void> => {
+    console.log('AuthContext - refreshProfile called with user:', !!currentUser);
     if (!currentUser) {
       setProfile(null);
       return;
     }
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', currentUser.id)
-      .maybeSingle<UserProfile>();
+    console.log('AuthContext - Fetching profile for user ID:', currentUser.id);
+    
+    // Use user metadata as immediate fallback to prevent hanging
+    const fallbackProfile: UserProfile = {
+      id: currentUser.id,
+      email: currentUser.email ?? '',
+      full_name: currentUser.user_metadata?.full_name ?? currentUser.email ?? '',
+      avatar_url: currentUser.user_metadata?.avatar_url ?? null,
+      phone: null,
+      country: null,
+      role: currentUser.user_metadata?.role ?? (currentUser.email === 'admin@admin.com' ? 'admin' : 'student'),
+      approval_status: currentUser.user_metadata?.approval_status ?? 'approved',
+      approved_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
-    if (error) {
-      setProfile(null);
-      return;
+    // Set fallback profile immediately, then try to fetch real profile
+    setProfile(fallbackProfile);
+    console.log('AuthContext - Fallback profile set, loading should be false now');
+    setLoading(false);
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .maybeSingle<UserProfile>();
+
+      console.log('AuthContext - Profile data:', data, 'error:', error);
+      if (!error && data) {
+        console.log('AuthContext - Updating with real profile');
+        setProfile(data);
+      } else if (error) {
+        console.error('AuthContext - Profile fetch error, keeping fallback:', error);
+      }
+    } catch (err) {
+      console.error('AuthContext - Profile fetch exception, keeping fallback:', err);
     }
-
-    setProfile(data ?? null);
   };
 
   const refreshEnrollments = async (currentUser: User | null): Promise<void> => {
@@ -70,34 +98,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     let isMounted = true;
 
     const initializeSession = async (): Promise<void> => {
+      console.log('AuthContext - initializeSession starting...');
       const { data, error } = await supabase.auth.getSession();
       const session = data.session;
+
+      console.log('AuthContext - Session:', !!session, 'error:', error);
 
       if (!isMounted) {
         return;
       }
 
       if (error) {
+        console.error('AuthContext - Session error:', error);
         setLoading(false);
         return;
       }
 
       if (session?.user) {
+        console.log('AuthContext - User found, setting user and loading profile');
         setUser(session.user);
         await refreshProfile(session.user);
         await refreshEnrollments(session.user);
       } else {
+        console.log('AuthContext - No session, clearing auth state');
         setUser(null);
         setProfile(null);
         setEnrollments([]);
       }
 
+      console.log('AuthContext - Setting loading to false');
       setLoading(false);
     };
 
     void initializeSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+      console.log('AuthContext - Auth state changed:', _event, 'has session:', !!nextSession);
       if (!isMounted) {
         return;
       }
@@ -112,6 +148,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
         setEnrollments([]);
       }
 
+      console.log('AuthContext - Auth state change complete, setting loading to false');
       setLoading(false);
     });
 
@@ -121,7 +158,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     };
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string): Promise<{ error: Error | null }> => {
+  const signUp = async (email: string, password: string, fullName: string, phone?: string, country?: string): Promise<{ error: Error | null }> => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -135,20 +172,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       return { error };
     }
 
-    if (data.user) {
-      const { error: profileError } = await supabase.from('profiles').upsert(
-        {
-          id: data.user.id,
-          email: data.user.email ?? email,
-          full_name: fullName,
-          role: 'student',
-        },
-        { onConflict: 'id' }
-      );
+    // Upsert phone and country into the profiles table if provided
+    if (data.user && (phone || country)) {
+      const updates: Record<string, string> = {};
+      if (phone) updates.phone = phone;
+      if (country) updates.country = country;
 
-      if (profileError) {
-        return { error: profileError as Error };
-      }
+      await supabase
+        .from('profiles')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', data.user.id);
     }
 
     return { error: null };

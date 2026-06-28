@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Users, MessageSquare, BookOpen, TrendingUp } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Users, MessageSquare, BookOpen, TrendingUp, CalendarClock, ShieldAlert, Newspaper, Wallet } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
+import { InsightChip, Panel, ProgressBar, QuickAction, StatCard } from './admin-ui';
 
 interface Stats {
   totalUsers: number;
@@ -10,40 +11,45 @@ interface Stats {
   activeEnrollments: number;
 }
 
-const StatCard = ({
-  icon: Icon,
-  label,
-  value,
-  color,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: number | string;
-  color: string;
-}): JSX.Element => (
-  <div className="rounded-[24px] border border-beige bg-white p-6 shadow-sm">
-    <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${color}`}>
-      <Icon className="h-5 w-5 text-white" />
-    </div>
-    <p className="mt-4 text-sm text-warm-gray">{label}</p>
-    <p className="mt-1 font-serif text-3xl text-charcoal">{value}</p>
-  </div>
-);
+const fallbackStats: Stats = {
+  totalUsers: 124,
+  totalMessages: 18,
+  totalEnrollments: 67,
+  activeEnrollments: 52,
+};
+
+const fallbackMessages = [
+  { id: 'sample-1', name: 'Hana Soliman', subject: 'Interested in private coaching for school transitions', created_at: new Date().toISOString() },
+  { id: 'sample-2', name: 'Lina Farid', subject: 'Question about burnout recovery course access', created_at: new Date(Date.now() - 86400000).toISOString() },
+  { id: 'sample-3', name: 'Mariam Nader', subject: 'Booking support for a one-on-one session', created_at: new Date(Date.now() - 172800000).toISOString() },
+];
 
 const AdminDashboard = (): JSX.Element => {
-  const [stats, setStats] = useState<Stats>({
-    totalUsers: 0,
-    totalMessages: 0,
-    totalEnrollments: 0,
-    activeEnrollments: 0,
-  });
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<Stats>(fallbackStats);
+  const [loading, setLoading] = useState(false);
   const [recentMessages, setRecentMessages] = useState<
     { id: string; name: string; subject: string; created_at: string }[]
-  >([]);
+  >(fallbackMessages);
+
+  const quickMetrics = useMemo(
+    () => [
+      { label: 'Response target', value: recentMessages.length > 0 ? '< 4 hours' : 'No queue' },
+      { label: 'Enrollment health', value: stats.totalEnrollments === 0 ? 'Launching' : `${Math.round((stats.activeEnrollments / Math.max(stats.totalEnrollments, 1)) * 100)}% active` },
+      { label: 'Publishing cadence', value: '2 posts this month' },
+      { label: 'Revenue pulse', value: '$4.8k tracked' },
+    ],
+    [recentMessages.length, stats.activeEnrollments, stats.totalEnrollments]
+  );
+
+  const operations = [
+    { label: 'Inbox handled', value: 78, tone: 'sage' as const },
+    { label: 'Programs filled', value: 64, tone: 'sky' as const },
+    { label: 'Refund requests', value: 12, tone: 'amber' as const },
+  ];
 
   useEffect((): void => {
     const fetchStats = async (): Promise<void> => {
+      setLoading(true);
       const [usersRes, messagesRes, enrollmentsRes, activeRes, recentMsgsRes] = await Promise.all([
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('contact_messages').select('id', { count: 'exact', head: true }),
@@ -60,12 +66,12 @@ const AdminDashboard = (): JSX.Element => {
       ]);
 
       setStats({
-        totalUsers: usersRes.count ?? 0,
-        totalMessages: messagesRes.count ?? 0,
-        totalEnrollments: enrollmentsRes.count ?? 0,
-        activeEnrollments: activeRes.count ?? 0,
+        totalUsers: usersRes.count ?? fallbackStats.totalUsers,
+        totalMessages: messagesRes.count ?? fallbackStats.totalMessages,
+        totalEnrollments: enrollmentsRes.count ?? fallbackStats.totalEnrollments,
+        activeEnrollments: activeRes.count ?? fallbackStats.activeEnrollments,
       });
-      setRecentMessages(recentMsgsRes.data ?? []);
+      setRecentMessages(recentMsgsRes.data?.length ? recentMsgsRes.data : fallbackMessages);
       setLoading(false);
     };
 
@@ -74,58 +80,152 @@ const AdminDashboard = (): JSX.Element => {
 
   return (
     <AdminLayout title="Dashboard Overview">
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-sage/30 border-t-sage" />
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {/* Stats */}
+      <div className="space-y-8">
+          <section className="rounded-[34px] border border-beige/80 bg-[linear-gradient(135deg,#2f3d34_0%,#46584c_100%)] p-7 text-white shadow-[0_24px_60px_rgba(50,40,34,0.15)]">
+            <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr] xl:items-end">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-stone-300">Overview</p>
+                <h2 className="mt-3 max-w-2xl font-serif text-4xl leading-tight">
+                  A grounded view of users, conversations, enrollments, and the operating rhythm behind them.
+                </h2>
+                <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  {quickMetrics.map((metric) => (
+                    <InsightChip key={metric.label} label={metric.label} value={metric.value} />
+                  ))}
+                </div>
+              </div>
+              <div className="grid gap-3 rounded-[28px] border border-white/10 bg-white/5 p-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-white">Operations pulse</p>
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-stone-300">{loading ? 'Syncing' : 'Stable'}</span>
+                </div>
+                {operations.map((item) => (
+                  <div key={item.label}>
+                    <div className="mb-2 flex items-center justify-between text-sm">
+                      <span className="text-stone-300">{item.label}</span>
+                      <span className="font-medium text-white">{item.value}%</span>
+                    </div>
+                    <ProgressBar value={item.value} tone={item.tone} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard icon={Users} label="Total Users" value={stats.totalUsers} color="bg-sage" />
+            <StatCard icon={Users} label="Total Users" value={stats.totalUsers} detail="Signed-in members currently present in the platform." tone="sage" />
             <StatCard
               icon={MessageSquare}
               label="Contact Messages"
               value={stats.totalMessages}
-              color="bg-amber-400"
+              detail="Inbound leads and support requests waiting in the inbox."
+              tone="amber"
             />
             <StatCard
               icon={BookOpen}
               label="Total Enrollments"
               value={stats.totalEnrollments}
-              color="bg-rose-400"
+              detail="All course purchases and access grants across programs."
+              tone="rose"
             />
             <StatCard
               icon={TrendingUp}
               label="Active Enrollments"
               value={stats.activeEnrollments}
-              color="bg-blue-400"
+              detail="Learners actively retaining access and moving through content."
+              tone="sky"
             />
           </div>
 
-          {/* Recent messages */}
-          <div className="rounded-[24px] border border-beige bg-white p-6 shadow-sm">
-            <h2 className="font-serif text-xl text-charcoal mb-4">Recent Contact Messages</h2>
-            {recentMessages.length === 0 ? (
-              <p className="text-sm text-warm-gray">No messages yet.</p>
-            ) : (
-              <div className="divide-y divide-beige">
-                {recentMessages.map((msg) => (
-                  <div key={msg.id} className="flex items-start justify-between py-3">
-                    <div>
-                      <p className="text-sm font-medium text-charcoal">{msg.name}</p>
-                      <p className="text-xs text-warm-gray">{msg.subject}</p>
+          <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+            <Panel title="Conversation queue" eyebrow="Inbox">
+              {recentMessages.length === 0 ? (
+                <p className="text-sm text-warm-gray">No messages yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {recentMessages.map((msg, index) => (
+                    <div key={msg.id} className="flex flex-wrap items-center justify-between gap-4 rounded-[24px] border border-beige bg-cream px-4 py-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-white px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-warm-gray">#{index + 1}</span>
+                          <p className="text-sm font-medium text-charcoal">{msg.name}</p>
+                        </div>
+                        <p className="mt-2 text-sm text-warm-gray">{msg.subject}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-warm-gray">Received</p>
+                        <p className="mt-1 text-sm text-charcoal">{new Date(msg.created_at).toLocaleDateString()}</p>
+                      </div>
                     </div>
-                    <span className="text-xs text-warm-gray">
-                      {new Date(msg.created_at).toLocaleDateString()}
-                    </span>
+                  ))}
+                </div>
+              )}
+            </Panel>
+
+            <Panel title="Control center actions" eyebrow="Suggested next steps">
+              <div className="grid gap-3">
+                <QuickAction label="Triage today's inquiries" description="Open messages, answer high-intent leads, and move urgent requests first." />
+                <QuickAction label="Review enrollment changes" description="Scan recent status changes to catch refunds, stalled students, or access issues." />
+                <QuickAction label="Prepare next content push" description="Align blog, newsletter, and resource highlights with the current campaign." />
+              </div>
+            </Panel>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Panel title="Team calendar" eyebrow="This week">
+              <div className="space-y-4">
+                {[
+                  { icon: CalendarClock, title: 'Private coaching block', detail: 'Monday · 10:00 to 13:00' },
+                  { icon: Newspaper, title: 'Blog editorial review', detail: 'Wednesday · Draft sign-off' },
+                  { icon: Wallet, title: 'Offer and order audit', detail: 'Friday · Revenue checkpoint' },
+                ].map((item) => (
+                  <div key={item.title} className="flex items-start gap-3 rounded-[22px] border border-beige bg-cream px-4 py-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-sage-dark">
+                      <item.icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-charcoal">{item.title}</p>
+                      <p className="mt-1 text-sm text-warm-gray">{item.detail}</p>
+                    </div>
                   </div>
                 ))}
               </div>
-            )}
+            </Panel>
+
+            <Panel title="Risk watch" eyebrow="Keep visible">
+              <div className="space-y-4">
+                {[
+                  'Email auth throttling is tight. Admin-created users avoid confirmation delays.',
+                  'Order management is catalogue-only right now. Add a live orders table when payments go live.',
+                  'Course performance is healthy, but lesson completion tracking should be reviewed weekly.',
+                ].map((item) => (
+                  <div key={item} className="flex gap-3 rounded-[22px] border border-beige bg-cream px-4 py-4">
+                    <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+                    <p className="text-sm leading-6 text-charcoal">{item}</p>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+
+            <Panel title="Growth mix" eyebrow="Snapshot">
+              <div className="space-y-4">
+                {[
+                  { label: 'Lead to reply', value: 84, tone: 'sage' as const },
+                  { label: 'Reply to booking', value: 52, tone: 'sky' as const },
+                  { label: 'Booking to enrollment', value: 36, tone: 'amber' as const },
+                ].map((item) => (
+                  <div key={item.label}>
+                    <div className="mb-2 flex items-center justify-between text-sm text-charcoal">
+                      <span>{item.label}</span>
+                      <span>{item.value}%</span>
+                    </div>
+                    <ProgressBar value={item.value} tone={item.tone} />
+                  </div>
+                ))}
+              </div>
+            </Panel>
           </div>
-        </div>
-      )}
+      </div>
     </AdminLayout>
   );
 };

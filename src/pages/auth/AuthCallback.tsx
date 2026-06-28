@@ -22,6 +22,22 @@ const AuthCallback = (): JSX.Element => {
         return;
       }
 
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, approval_status')
+        .eq('id', data.session.user.id)
+        .maybeSingle<{ role: 'student' | 'admin'; approval_status: 'pending' | 'approved' | 'rejected' }>();
+
+      if (profile?.role === 'admin') {
+        void navigate('/admin', { replace: true });
+        return;
+      }
+
+      if (profile?.approval_status !== 'approved') {
+        void navigate('/auth/pending-approval', { replace: true });
+        return;
+      }
+
       void navigate('/dashboard', { replace: true });
     };
 

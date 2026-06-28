@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Sparkles } from 'lucide-react';
 import AnimatedSection from '../../components/AnimatedSection';
 import { supabase } from '../../lib/supabase';
-import { cn } from '../../lib/utils';
 
 const ResetPassword = (): JSX.Element => {
   const navigate = useNavigate();
@@ -27,23 +26,9 @@ const ResetPassword = (): JSX.Element => {
     void verifySession();
   }, []);
 
-  const passwordStrength = useMemo<number>(() => {
-    let score = 0;
-    if (newPassword.length >= 8) score += 1;
-    if (/[A-Z]/.test(newPassword)) score += 1;
-    if (/\d/.test(newPassword)) score += 1;
-    if (newPassword.length >= 12) score += 1;
-    return score;
-  }, [newPassword]);
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     setError(null);
-
-    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/\d/.test(newPassword)) {
-      setError('Use at least 8 characters, one uppercase letter, and one number.');
-      return;
-    }
 
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match.');
@@ -85,7 +70,7 @@ const ResetPassword = (): JSX.Element => {
               <Sparkles className="h-6 w-6" />
             </div>
             <h2 className="mt-4 font-serif text-3xl text-charcoal">Set a new password</h2>
-            <p className="mt-2 text-sm text-warm-gray">Choose a strong password for your account.</p>
+            <p className="mt-2 text-sm text-warm-gray">Enter your new password for your account.</p>
           </div>
 
           {success ? (
@@ -124,11 +109,6 @@ const ResetPassword = (): JSX.Element => {
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
-                </div>
-                <div className="mt-2 flex gap-2">
-                  {[0, 1, 2, 3].map((bar) => (
-                    <div key={bar} className={cn('h-2 flex-1 rounded-full', bar < passwordStrength ? 'bg-sage' : 'bg-beige')} />
-                  ))}
                 </div>
               </div>
 

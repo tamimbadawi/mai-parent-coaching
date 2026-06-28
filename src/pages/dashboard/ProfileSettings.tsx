@@ -2,11 +2,15 @@ import { useMemo, useState } from 'react';
 import { AlertTriangle, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import PhoneInput, { formatPhone, parsePhone } from '../../components/PhoneInput';
 
 const ProfileSettings = (): JSX.Element => {
   const { profile, updateProfile } = useAuth();
   const [fullName, setFullName] = useState<string>(profile?.full_name ?? '');
   const [phone, setPhone] = useState<string>(profile?.phone ?? '');
+  const { dialCode: initDial, local: initLocal } = parsePhone(profile?.phone ?? null);
+  const [dialCode, setDialCode] = useState<string>(initDial);
+  const [localPhone, setLocalPhone] = useState<string>(initLocal);
   const [avatarUrl, setAvatarUrl] = useState<string>(profile?.avatar_url ?? '');
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
@@ -32,7 +36,7 @@ const ProfileSettings = (): JSX.Element => {
     setSaving(true);
     setMessage(null);
 
-    const { error } = await updateProfile({ full_name: fullName, phone, avatar_url: avatarUrl });
+    const { error } = await updateProfile({ full_name: fullName, phone: formatPhone(dialCode, localPhone), avatar_url: avatarUrl });
     setSaving(false);
 
     if (error) {
@@ -131,7 +135,14 @@ const ProfileSettings = (): JSX.Element => {
                   <label htmlFor="profile-phone" className="mb-2 block text-sm font-medium text-charcoal">
                     Phone
                   </label>
-                  <input id="profile-phone" aria-label="Phone" value={phone} onChange={(event) => setPhone(event.target.value)} className="w-full rounded-2xl border border-beige bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-sage" />
+                  <PhoneInput
+                    value={formatPhone(dialCode, localPhone) ?? ''}
+                    onChange={(val) => {
+                      const { dialCode: d, local: l } = parsePhone(val || null);
+                      setDialCode(d);
+                      setLocalPhone(l);
+                    }}
+                  />
                 </div>
                 <div>
                   <label htmlFor="profile-avatar" className="mb-2 block text-sm font-medium text-charcoal">
