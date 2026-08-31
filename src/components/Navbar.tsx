@@ -20,9 +20,11 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [navbarHeight, setNavbarHeight] = useState(80);
   const location = useLocation();
   const navigate = useNavigate();
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
+  const navRef = useRef<HTMLElement | null>(null);
   const { user, profile, signOut } = useAuth();
 
   const handleSignOut = async (): Promise<void> => {
@@ -33,10 +35,39 @@ export default function Navbar() {
   };
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    const handleScroll = () => {
+      const scrolled = window.scrollY > 20;
+      setIsScrolled(scrolled);
+      // Update navbar height whenever scroll state changes
+      if (navRef.current) {
+        setNavbarHeight(navRef.current.offsetHeight);
+      }
+    };
+    
+    handleScroll(); // Initial call
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    // Update navbar height on mount and when menu opens
+    if (navRef.current) {
+      setNavbarHeight(navRef.current.offsetHeight);
+    }
+  }, [isMobileMenuOpen, isScrolled]);
+
+  useEffect(() => {
+    // Prevent body scroll when mobile menu is open
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
@@ -57,8 +88,9 @@ export default function Navbar() {
   return (
     <>
     <nav
+      ref={navRef}
       className={cn(
-        'fixed top-0 left-0 right-0 z-50 transition-all duration-500',
+        'fixed top-0 left-0 right-0 transition-all duration-500 z-50',
         isScrolled
           ? 'bg-ivory/95 backdrop-blur-md shadow-sm py-3'
           : 'bg-transparent py-5'
@@ -66,14 +98,24 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 rounded-full bg-sage flex items-center justify-center group-hover:bg-sage-dark transition-colors">
-              <Heart className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-serif text-xl text-charcoal tracking-tight">
-              Mai <span className="text-sage-dark">Elbadawy</span>
-            </span>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link to="/" className="flex items-center gap-2 group">
+              <div className="w-9 h-9 rounded-full bg-sage flex items-center justify-center group-hover:bg-sage-dark transition-colors">
+                <Heart className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-serif text-xl text-charcoal tracking-tight">
+                Mai <span className="text-sage-dark">Elbadawy</span>
+              </span>
+            </Link>
+            
+            {/* Mobile Book a Session Button */}
+            <Link
+              to="/booking"
+              className="lg:hidden bg-sage text-white px-4 py-2 rounded-full text-xs font-medium hover:bg-sage-dark transition-all duration-300 whitespace-nowrap"
+            >
+              Book Now
+            </Link>
+          </div>
 
           <div className="hidden lg:flex items-center gap-8">
             {navLinks.map((link) => (
@@ -151,16 +193,26 @@ export default function Navbar() {
 
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 text-charcoal"
+            className="lg:hidden p-2 text-charcoal z-[70]"
             aria-label="Toggle menu"
           >
             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </div>
+    </nav>
 
+      {/* Mobile Menu - OUTSIDE navbar, ABSOLUTE positioning */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden absolute top-full left-0 right-0 bg-ivory/98 backdrop-blur-md border-t border-beige shadow-lg">
+        <div 
+          className="lg:hidden absolute left-0 right-0 bg-ivory/98 backdrop-blur-md shadow-lg overflow-y-auto border-t border-beige"
+          style={{ 
+            position: 'fixed',
+            top: `${navbarHeight}px`,
+            bottom: 0,
+            zIndex: 9999
+          }}
+        >
           <div className="px-4 py-6 space-y-4">
             {navLinks.map((link) => (
               <Link
@@ -210,7 +262,6 @@ export default function Navbar() {
           </div>
         </div>
       )}
-    </nav>
 
       {isLoginOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-charcoal/60 px-4 backdrop-blur-sm">

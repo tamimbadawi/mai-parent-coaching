@@ -51,24 +51,24 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 1.2, delay: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-              className="relative hidden lg:block"
+              className="relative"
             >
               <div className="relative rounded-3xl overflow-hidden shadow-2xl">
                 <img
                   src="https://images.pexels.com/photos/3661356/pexels-photo-3661356.jpeg?auto=compress&cs=tinysrgb&w=1200"
                   alt="Parent and child in a warm, connected moment"
-                  className="w-full h-[600px] object-cover"
+                  className="w-full h-[400px] lg:h-[600px] object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-charcoal/20 to-transparent" />
               </div>
-              <div className="absolute -bottom-6 -left-6 bg-ivory rounded-2xl p-6 shadow-lg border border-beige max-w-xs">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-full bg-sage/20 flex items-center justify-center">
-                    <Heart className="w-5 h-5 text-sage" />
+              <div className="absolute -bottom-6 -left-6 bg-ivory rounded-2xl p-4 lg:p-6 shadow-lg border border-beige max-w-[200px] lg:max-w-xs">
+                <div className="flex items-center gap-2 lg:gap-3 mb-2">
+                  <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-sage/20 flex items-center justify-center">
+                    <Heart className="w-4 h-4 lg:w-5 lg:h-5 text-sage" />
                   </div>
                   <div>
-                    <p className="font-medium text-charcoal text-sm">500+ Families</p>
-                    <p className="text-xs text-warm-gray">Supported with care</p>
+                    <p className="font-medium text-charcoal text-xs lg:text-sm">500+ Families</p>
+                    <p className="text-[10px] lg:text-xs text-warm-gray">Supported with care</p>
                   </div>
                 </div>
               </div>
