@@ -38,7 +38,6 @@ import AdminCourses from './pages/admin/AdminCourses';
 import AdminBlog from './pages/admin/AdminBlog';
 import AdminBookings from './pages/admin/AdminBookings';
 import AdminOrders from './pages/admin/AdminOrders';
-import { ThemeSwitcher } from './theme.tsx';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -95,7 +94,6 @@ function AppShell() {
         </Routes>
       </main>
       {isAdminRoute ? null : <Footer />}
-      {isAdminRoute ? null : <ThemeSwitcher />}
     </div>
   );
 }
