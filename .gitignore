@@ -1,3 +1,4 @@
+# Logs
 logs
 *.log
 npm-debug.log*
@@ -11,6 +12,7 @@ dist
 dist-ssr
 *.local
 
+# Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -20,4 +22,25 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment variables
 .env
+.env.local
+.env.*.local
+
+# Supabase
+.supabase
+
+# Test files
+test-supabase-connection.js
+
+# Archives
+*.rar
+*.zip
+
+# PDFs (if you don't want to commit them)
+*.pdf
+
+# Cursor AI
+.cursor
+.bolt
