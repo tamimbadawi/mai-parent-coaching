@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Heart, LogIn, Sparkles, UserRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
@@ -21,8 +21,16 @@ export default function Navbar() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const { user, profile, signOut } = useAuth();
+
+  const handleSignOut = async (): Promise<void> => {
+    setIsProfileMenuOpen(false);
+    setIsMobileMenuOpen(false);
+    await signOut();
+    navigate('/');
+  };
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -134,7 +142,7 @@ export default function Navbar() {
                       </>
                     )}
                     <div className="my-2 h-px bg-beige" />
-                    <button type="button" onClick={() => void signOut()} className="block w-full rounded-xl px-2 py-2 text-left text-sm text-terracotta hover:bg-cream">Sign Out</button>
+                    <button type="button" onClick={() => void handleSignOut()} className="block w-full rounded-xl px-2 py-2 text-left text-sm text-terracotta hover:bg-cream">Sign Out</button>
                   </div>
                 ) : null}
               </div>
@@ -190,7 +198,7 @@ export default function Navbar() {
                 ) : (
                   <Link to="/dashboard" className="mt-4 block rounded-full bg-cream px-5 py-3 text-sm font-medium text-charcoal">My Dashboard</Link>
                 )}
-                <button type="button" onClick={() => void signOut()} className="block w-full rounded-full border border-beige px-5 py-3 text-sm font-medium text-charcoal">Sign Out</button>
+                <button type="button" onClick={() => void handleSignOut()} className="block w-full rounded-full border border-beige px-5 py-3 text-sm font-medium text-charcoal">Sign Out</button>
               </>
             )}
             <Link

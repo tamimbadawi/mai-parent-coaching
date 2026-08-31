@@ -5,6 +5,7 @@ import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import Home from './pages/Home';
+import HomePreview from './pages/HomePreview';
 import About from './pages/About';
 import Services from './pages/Services';
 import Courses from './pages/Courses';
@@ -58,6 +59,7 @@ function AppShell() {
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/home-preview" element={<HomePreview />} />
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />
           <Route path="/courses" element={<Courses />} />

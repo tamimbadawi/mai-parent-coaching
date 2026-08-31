@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { CourseEnrollment, UserProfile } from '../types';
@@ -25,17 +25,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [enrollments, setEnrollments] = useState<CourseEnrollment[]>([]);
+  const authEpochRef = useRef(0);
 
-  const refreshProfile = async (currentUser: User | null): Promise<void> => {
-    console.log('AuthContext - refreshProfile called with user:', !!currentUser);
+  const bumpAuthEpoch = (): number => {
+    authEpochRef.current += 1;
+    return authEpochRef.current;
+  };
+
+  const refreshProfile = async (currentUser: User | null, epoch: number): Promise<void> => {
     if (!currentUser) {
       setProfile(null);
       return;
     }
 
-    console.log('AuthContext - Fetching profile for user ID:', currentUser.id);
-    
-    // Use user metadata as immediate fallback to prevent hanging
     const fallbackProfile: UserProfile = {
       id: currentUser.id,
       email: currentUser.email ?? '',
@@ -50,9 +52,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       updated_at: new Date().toISOString(),
     };
 
-    // Set fallback profile immediately, then try to fetch real profile
+    if (epoch !== authEpochRef.current) {
+      return;
+    }
+
     setProfile(fallbackProfile);
-    console.log('AuthContext - Fallback profile set, loading should be false now');
     setLoading(false);
 
     try {
@@ -62,9 +66,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
         .eq('id', currentUser.id)
         .maybeSingle<UserProfile>();
 
-      console.log('AuthContext - Profile data:', data, 'error:', error);
+      if (epoch !== authEpochRef.current) {
+        return;
+      }
+
       if (!error && data) {
-        console.log('AuthContext - Updating with real profile');
         setProfile(data);
       } else if (error) {
         console.error('AuthContext - Profile fetch error, keeping fallback:', error);
@@ -74,7 +80,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     }
   };
 
-  const refreshEnrollments = async (currentUser: User | null): Promise<void> => {
+  const refreshEnrollments = async (currentUser: User | null, epoch: number): Promise<void> => {
     if (!currentUser) {
       setEnrollments([]);
       return;
@@ -85,6 +91,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       .select('*')
       .eq('user_id', currentUser.id)
       .order('enrolled_at', { ascending: false });
+
+    if (epoch !== authEpochRef.current) {
+      return;
+    }
 
     if (error) {
       setEnrollments([]);
@@ -98,11 +108,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     let isMounted = true;
 
     const initializeSession = async (): Promise<void> => {
-      console.log('AuthContext - initializeSession starting...');
       const { data, error } = await supabase.auth.getSession();
       const session = data.session;
-
-      console.log('AuthContext - Session:', !!session, 'error:', error);
 
       if (!isMounted) {
         return;
@@ -114,41 +121,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
         return;
       }
 
+      const epoch = authEpochRef.current;
+
       if (session?.user) {
-        console.log('AuthContext - User found, setting user and loading profile');
         setUser(session.user);
-        await refreshProfile(session.user);
-        await refreshEnrollments(session.user);
+        await refreshProfile(session.user, epoch);
+        await refreshEnrollments(session.user, epoch);
       } else {
-        console.log('AuthContext - No session, clearing auth state');
         setUser(null);
         setProfile(null);
         setEnrollments([]);
       }
 
-      console.log('AuthContext - Setting loading to false');
       setLoading(false);
     };
 
     void initializeSession();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-      console.log('AuthContext - Auth state changed:', _event, 'has session:', !!nextSession);
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!isMounted) {
         return;
       }
 
+      const epoch = bumpAuthEpoch();
+
       if (nextSession?.user) {
         setUser(nextSession.user);
-        await refreshProfile(nextSession.user);
-        await refreshEnrollments(nextSession.user);
+        void refreshProfile(nextSession.user, epoch);
+        void refreshEnrollments(nextSession.user, epoch);
       } else {
         setUser(null);
         setProfile(null);
         setEnrollments([]);
       }
 
-      console.log('AuthContext - Auth state change complete, setting loading to false');
       setLoading(false);
     });
 
@@ -215,10 +221,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
   };
 
   const signOut = async (): Promise<void> => {
-    await supabase.auth.signOut();
+    bumpAuthEpoch();
     setUser(null);
     setProfile(null);
     setEnrollments([]);
+
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error('AuthContext - Sign out error, trying local scope:', error);
+      await supabase.auth.signOut({ scope: 'local' });
+    }
   };
 
   const updateProfile = async (updates: Partial<UserProfile>): Promise<{ error: Error | null }> => {
@@ -235,14 +248,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       return { error: error as Error };
     }
 
-    await refreshProfile(user);
+    await refreshProfile(user, authEpochRef.current);
     return { error: null };
   };
 
   const isEnrolled = (courseId: string): boolean => enrollments.some((enrollment) => enrollment.course_id === courseId);
 
   const refreshEnrollmentsHandler = async (): Promise<void> => {
-    await refreshEnrollments(user);
+    await refreshEnrollments(user, authEpochRef.current);
   };
 
   const value: AuthContextValue = {
