@@ -24,7 +24,7 @@ export default function Footer() {
                 <Heart className="w-4 h-4 text-white" />
               </div>
               <span className="font-serif text-xl text-charcoal">
-                Dr. <span className="text-sage-dark">[Name]</span>
+                <span className="text-sage-dark">Mai Elbadawy</span>
               </span>
             </div>
             <p className="text-warm-gray text-sm leading-relaxed">
@@ -116,7 +116,7 @@ export default function Footer() {
         <div className="mt-12 pt-8 border-t border-beige">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-soft-gray text-sm">
-              {new Date().getFullYear()} Dr. [Name]. All rights reserved.
+              {new Date().getFullYear()} Mai Elbadawy. All rights reserved.
             </p>
             <div className="flex gap-6">
               <Link to="/privacy" className="text-soft-gray text-sm hover:text-warm-gray transition-colors">Privacy Policy</Link>
