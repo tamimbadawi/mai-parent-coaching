@@ -105,7 +105,7 @@ const AdminCourses = (): JSX.Element => {
                   </div>
                 </div>
                 <p className="mt-4 text-sm leading-6 text-warm-gray">
-                  Finish setup by adding Bunny environment values locally and Bunny API secrets to the hosted Supabase project. See <span className="font-medium text-charcoal">BUNNY_STREAM_SETUP.md</span> for the exact commands.
+                  Finish setup by adding Bunny environment values locally and Bunny API secrets to the hosted Supabase project. See <span className="font-medium text-charcoal">docs/BUNNY_STREAM_SETUP.md</span> for the exact commands.
                 </p>
               </div>
             </Panel>

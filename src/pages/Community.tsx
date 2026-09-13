@@ -41,13 +41,13 @@ export default function Community() {
             ].map((item, i) => {
               const Icon = item.icon;
               return (
-                <AnimatedSection key={item.title} delay={i * 0.1}>
-                  <div className="bg-cream rounded-2xl p-8 text-center border border-beige/50 hover:border-beige hover:shadow-md transition-all duration-300">
-                    <div className="w-12 h-12 rounded-xl bg-sage/10 flex items-center justify-center mx-auto mb-4">
+                <AnimatedSection key={item.title} delay={i * 0.1} className="h-full">
+                  <div className="bg-cream rounded-2xl p-8 text-center border border-beige/50 hover:border-beige hover:shadow-md transition-all duration-300 h-full flex flex-col items-center">
+                    <div className="w-12 h-12 rounded-xl bg-sage/10 flex items-center justify-center mx-auto mb-4 shrink-0">
                       <Icon className="w-6 h-6 text-sage-dark" />
                     </div>
                     <h3 className="font-serif text-lg text-charcoal mb-2">{item.title}</h3>
-                    <p className="text-warm-gray text-sm">{item.desc}</p>
+                    <p className="text-warm-gray text-sm flex-grow">{item.desc}</p>
                   </div>
                 </AnimatedSection>
               );
