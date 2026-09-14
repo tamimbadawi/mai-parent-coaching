@@ -18,9 +18,11 @@ Follow these implementation steps in exact sequential order:
 3. **[x] Fix AdminBookings Screen** *(Completed & Verified)*:
    - Refactored `AdminBookings` to query real records from the `bookings` table.
    - Added live metrics, status filters, direct status update actions, and empty/loading states.
-4. **[ ] Set Up Google OAuth Connection Flow** *(Next Task)*:
-   - Configure coach's Google Calendar OAuth credentials and secure server-side token storage.
-5. **Build `get-availability` Edge Function**:
+4. **[x] Set Up Google OAuth Connection Flow** *(Completed & Ready for Credentials)*:
+   - Created reusable Google Calendar API helper in `supabase/functions/_shared/google-calendar.ts`.
+   - Created `google-calendar-auth` Edge Function for generating auth URLs, exchanging tokens, and testing connection.
+   - Documented setup walkthrough in `project-plan/booking/google-calendar-setup.md`.
+5. **[ ] Build `get-availability` Edge Function** *(Next Task)*:
    - Implement availability calculation using Google Calendar FreeBusy API, configured working hours, and slot duration buffers.
 6. **Build `create-booking` Edge Function**:
    - Implement atomic slot reservation, Supabase booking record creation, and Google Calendar event creation (with `pending_calendar_sync` fallback).
