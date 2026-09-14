@@ -55,7 +55,13 @@ supabase secrets set GOOGLE_CLIENT_SECRET="your-client-secret"
 
 # 2. Set Calendar ID (default is 'primary')
 supabase secrets set GOOGLE_CALENDAR_ID="primary"
+
+# 3. Booking schedule (all times are in the configured IANA timezone)
+supabase secrets set BOOKING_TIMEZONE="Africa/Cairo"
+supabase secrets set BOOKING_WORKING_HOURS='{"0":[{"start":"09:00","end":"12:00"},{"start":"13:00","end":"16:00"}],"1":[{"start":"09:00","end":"12:00"},{"start":"13:00","end":"16:00"}],"2":[{"start":"09:00","end":"12:00"},{"start":"13:00","end":"16:00"}],"3":[{"start":"09:00","end":"12:00"},{"start":"13:00","end":"16:00"}],"4":[{"start":"09:00","end":"12:00"},{"start":"13:00","end":"16:00"}]}'
 ```
+
+`BOOKING_WORKING_HOURS` uses JavaScript weekday numbers (`0` is Sunday through `6` is Saturday). Each interval defines valid session start and end boundaries; the availability endpoint applies the selected session's duration and buffer before returning a slot. If it is omitted, the same Sunday–Thursday, 09:00–12:00 and 13:00–16:00 schedule above is used.
 
 ---
 
@@ -87,3 +93,21 @@ curl -X POST https://qqnthevakllugdlioalm.supabase.co/functions/v1/google-calend
 ```
 
 Once configured, the `get-availability` and `create-booking` Edge Functions will operate autonomously in real time.
+
+## 7. Deploy and Check Availability
+
+After the refresh token is stored, deploy the public availability endpoint:
+
+```bash
+supabase functions deploy get-availability --no-verify-jwt
+```
+
+It accepts a `POST` body containing an appointment type ID and a calendar date, for example:
+
+```bash
+curl -X POST https://qqnthevakllugdlioalm.supabase.co/functions/v1/get-availability \
+  -H "Content-Type: application/json" \
+  -d '{"appointmentTypeId":"initial","date":"2026-09-20"}'
+```
+
+The response contains only the available `HH:mm` slots and the coach's configured timezone; it never returns the contents or titles of calendar events.

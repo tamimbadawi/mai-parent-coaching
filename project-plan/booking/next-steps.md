@@ -22,9 +22,10 @@ Follow these implementation steps in exact sequential order:
    - Created reusable Google Calendar API helper in `supabase/functions/_shared/google-calendar.ts`.
    - Created `google-calendar-auth` Edge Function for generating auth URLs, exchanging tokens, and testing connection.
    - Documented setup walkthrough in `project-plan/booking/google-calendar-setup.md`.
-5. **[ ] Build `get-availability` Edge Function** *(Next Task)*:
-   - Implement availability calculation using Google Calendar FreeBusy API, configured working hours, and slot duration buffers.
-6. **Build `create-booking` Edge Function**:
+5. **[x] Build `get-availability` Edge Function** *(Completed & Tested)*:
+   - Implemented dynamic slot calculation using Google Calendar FreeBusy API, working hours (Sunday-Thursday 09:00-17:00), dynamic session duration (45-90 min), and buffer margins (15-30 min).
+   - Graceful fallback support for database reservations.
+6. **[ ] Build `create-booking` Edge Function** *(Next Task)*:
    - Implement atomic slot reservation, Supabase booking record creation, and Google Calendar event creation (with `pending_calendar_sync` fallback).
 7. **Add Visible Timezone Handling to the UI**:
    - Add timezone detector, user dropdown, and automatic conversion in the booking UI.

@@ -29,8 +29,8 @@
 
 ## What's Next & In Progress
 
-- **Google OAuth Connection Flow (Next Task - Step 4)**: Configure coach's Google Calendar OAuth credentials and secure server-side token storage.
-- **`get-availability` Edge Function (Step 5)**: Calculate availability using Google Calendar FreeBusy API, configured working hours, and slot buffers.
+- **Google OAuth Connection Flow**: Configure coach's Google Calendar OAuth credentials and secure server-side token storage before deployment.
+- **`get-availability` Edge Function (Step 5)**: Completed. It calculates 30-minute start slots from Google Calendar FreeBusy data, persisted active bookings, working hours, appointment durations, and buffers.
 - **`create-booking` Edge Function (Step 6)**: Atomic slot reservation and Google Calendar event dispatch (with `pending_calendar_sync` fallback).
 - **Timezone Handling (Step 7)**: Explicit timezone selection and conversion for international clients.
 - **Visually Disable Booked Days (Step 8)**: Reflect real-time availability in date picker calendar.
