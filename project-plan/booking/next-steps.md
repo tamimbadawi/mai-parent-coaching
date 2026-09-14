@@ -9,12 +9,12 @@ Follow these implementation steps in exact sequential order:
 
 ## Ordered Implementation Plan
 
-1. **Create Bookings Table Migration + RLS**:
-   - Write timestamped SQL migration in `supabase/migrations`.
-   - Setup Row Level Security: public insert allowed, public read denied, authenticated users read their own bookings via `user_id`, admins read/manage all bookings.
-2. **Wire Booking Form to Real Supabase Insert**:
+1. **[x] Create Bookings Table Migration + RLS** *(Completed & Verified)*:
+   - Written in `supabase/migrations/20260914173000_create_bookings_table.sql`.
+   - RLS verified with live tests: anonymous insert allowed, anonymous select denied (0 rows), authenticated user isolation (`auth.uid() = user_id`), and admin full read/update.
+2. **[ ] Wire Booking Form to Real Supabase Insert** *(Next Task)*:
    - Connect `/booking` client submission to insert into the `bookings` table.
-   - Remove fake success state / timeout mocks.
+   - Replace fake/optimistic success state and timeout mocks with real Supabase insert responses and error handling.
 3. **Fix AdminBookings Screen**:
    - Refactor `AdminBookings` to query real records from the `bookings` table instead of sample enrollment data.
 4. **Set Up Google OAuth Connection Flow**:

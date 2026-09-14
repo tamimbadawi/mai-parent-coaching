@@ -35,11 +35,17 @@ import {
   Star,
   CalendarDays,
   MessageCircle,
+  AlertCircle,
+  Loader2,
+  Phone,
+  Globe,
+  Baby,
 } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type { UserProfile } from '../types';
 import { appointmentTypes } from '../data/content';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
 
 const TIMES = [
@@ -136,7 +142,17 @@ export default function Booking() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
   const [timePickerOpen, setTimePickerOpen] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', notes: '' });
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    country: '',
+    childName: '',
+    childAge: '',
+    notes: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [hoveredSession, setHoveredSession] = useState<{ id: string; rect: DOMRect } | null>(null);
   const timeSectionRef = useRef<HTMLDivElement>(null);
@@ -183,16 +199,61 @@ export default function Booking() {
       ...prev,
       name: name || prev.name,
       email: email || prev.email,
+      phone: profile?.phone || prev.phone,
+      country: profile?.country || prev.country,
     }));
   }, [user, profile, authLoading]);
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setSubmitted(true);
+    if (!canSubmit || !selectedAppointment || !selectedDate || !selectedTime || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const bookingPayload = {
+        user_id: user?.id ?? null,
+        appointment_type_id: selectedType,
+        appointment_type_title: selectedAppointment.title,
+        appointment_date: selectedDate,
+        appointment_time: selectedTime,
+        parent_name: formData.name.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phone: formData.phone?.trim() || profile?.phone || null,
+        country: formData.country?.trim() || profile?.country || null,
+        child_name: formData.childName?.trim() || null,
+        child_age: formData.childAge?.trim() || null,
+        notes: formData.notes?.trim() || null,
+        status: 'pending' as const,
+      };
+
+      // Perform real insert into Supabase bookings table
+      // Note: We do NOT use .select() here because anonymous guests have SELECT denied by RLS
+      const { error } = await supabase
+        .from('bookings')
+        .insert([bookingPayload]);
+
+      if (error) {
+        console.error('Supabase booking insert error:', error);
+        setSubmitError(error.message || 'Unable to save your booking. Please try again.');
+        return;
+      }
+
+      // Genuinely persisted in database
+      setSubmitted(true);
+    } catch (err: unknown) {
+      console.error('Unexpected booking error:', err);
+      const message =
+        err instanceof Error ? err.message : 'An unexpected error occurred while submitting your booking.';
+      setSubmitError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const canSubmit = Boolean(
-    selectedType && selectedDate && selectedTime && formData.name && formData.email,
+    selectedType && selectedDate && selectedTime && formData.name.trim() && formData.email.trim(),
   );
 
   const hoveredType = hoveredSession
@@ -499,7 +560,7 @@ export default function Booking() {
                       </Link>
                     </p>
                   )}
-                  <div className="shrink-0 flex flex-col gap-2.5">
+                  <div className="shrink-0 flex flex-col gap-2">
                     <Field label="Full Name" icon={<User className="h-3 w-3" />}>
                       <input
                         type="text"
@@ -524,6 +585,46 @@ export default function Booking() {
                         placeholder="your@email.com"
                       />
                     </Field>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="Phone (optional)" icon={<Phone className="h-3 w-3" />}>
+                        <input
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          className="w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                          placeholder="+1 (555) 000-0000"
+                        />
+                      </Field>
+                      <Field label="Country (optional)" icon={<Globe className="h-3 w-3" />}>
+                        <input
+                          type="text"
+                          value={formData.country}
+                          onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                          className="w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                          placeholder="e.g. Egypt, UAE"
+                        />
+                      </Field>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="Child's Name (opt)" icon={<Baby className="h-3 w-3" />}>
+                        <input
+                          type="text"
+                          value={formData.childName}
+                          onChange={(e) => setFormData({ ...formData, childName: e.target.value })}
+                          className="w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                          placeholder="Child's name"
+                        />
+                      </Field>
+                      <Field label="Child's Age (opt)" icon={<Sparkles className="h-3 w-3" />}>
+                        <input
+                          type="text"
+                          value={formData.childAge}
+                          onChange={(e) => setFormData({ ...formData, childAge: e.target.value })}
+                          className="w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                          placeholder="e.g. 4 years"
+                        />
+                      </Field>
+                    </div>
                     <Field label="Notes (optional)" icon={<MessageSquare className="h-3 w-3" />}>
                       <textarea
                         rows={2}
@@ -568,12 +669,35 @@ export default function Booking() {
                       </div>
                     </div>
 
+                    {submitError && (
+                      <div
+                        role="alert"
+                        className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-2.5 text-[11px] text-rose-800"
+                      >
+                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-600" />
+                        <div className="flex-1 leading-snug">
+                          <p className="font-semibold text-rose-900">Booking could not be saved</p>
+                          <p className="mt-0.5 text-rose-700">{submitError}</p>
+                        </div>
+                      </div>
+                    )}
+
                     <button
                       type="submit"
-                      disabled={!canSubmit}
+                      disabled={!canSubmit || isSubmitting}
                       className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sage py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-sage-dark disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      Confirm Booking <Check className="h-3.5 w-3.5" />
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                          <span>Saving booking...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Confirm Booking</span>
+                          <Check className="h-3.5 w-3.5" />
+                        </>
+                      )}
                     </button>
                   </div>
                 </form>

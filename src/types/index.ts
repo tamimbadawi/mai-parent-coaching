@@ -95,13 +95,21 @@ export interface AppointmentType {
 
 export interface Booking {
   id: string;
-  appointmentTypeId: string;
-  date: string;
-  time: string;
-  status: 'pending' | 'confirmed' | 'cancelled';
-  clientName: string;
-  clientEmail: string;
-  notes?: string;
+  user_id: string | null;
+  appointment_type_id: string;
+  appointment_type_title: string;
+  appointment_date: string;
+  appointment_time: string;
+  parent_name: string;
+  email: string;
+  phone: string | null;
+  country: string | null;
+  child_name: string | null;
+  child_age: string | null;
+  notes: string | null;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'pending_calendar_sync';
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ShopProduct {
