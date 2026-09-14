@@ -76,6 +76,17 @@ When fixing bugs, locate the root cause and patch the smallest area while preser
 
 ---
 
+## Git & Branch Discipline
+
+- Before starting any new feature or risky change, check the current git branch. If on main, stop and ask for explicit confirmation before proceeding — do not create a branch or make changes automatically without asking first.
+- Once a branch is confirmed or created (e.g. `feature/short-description`), always state the current branch name at the start of any task involving file changes, so it's clear before work begins.
+- Never commit directly to main except for trivial, already-tested fixes explicitly approved in the moment.
+- At logical checkpoints — a completed step in a multi-step plan, a working feature, a fixed bug — pause and suggest a commit with a short, clear message describing what changed. Do not wait until an entire feature is finished to suggest the first commit; suggest one after each meaningful, individually-working chunk of progress.
+- Never suggest pushing to GitHub or merging a branch into main without explicit confirmation that the feature has been tested and approved.
+- If asked to revert or undo a change, first explain what will be reverted and to which commit/state, and wait for confirmation before acting.
+
+---
+
 ## 3. React & TypeScript Guidelines
 
 - Use functional React components with interfaces/types from `src/types/index.ts`.
