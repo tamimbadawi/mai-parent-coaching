@@ -8,22 +8,20 @@ on:
 
 jobs:
   ping-supabase:
-    name: Ping Supabase REST API
+    name: Ping Supabase Auth Health
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase Endpoint
+      - name: Ping Supabase Auth Health Endpoint
         run: |
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/?apikey=${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+            -X GET "${{ secrets.SUPABASE_URL }}/auth/v1/health")
           
-          echo "Supabase REST API returned HTTP status: $HTTP_STATUS"
+          echo "Supabase Auth health endpoint returned HTTP status: $HTTP_STATUS"
           
           if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
-            echo "Ping successful! Database is active."
+            echo "Ping successful! Database and Auth service are active."
             exit 0
           else
-            echo "Failed to reach Supabase REST API with status $HTTP_STATUS"
+            echo "Failed to reach Supabase Auth health endpoint with status $HTTP_STATUS"
             exit 1
           fi
