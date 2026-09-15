@@ -36,10 +36,14 @@
   - Atomic collision validation, DB booking persistence, and Google Calendar event dispatch with Google Meet links.
 - **Timezone Handling in UI (Complete & Verified)**:
   - Auto-detection with `Intl.DateTimeFormat`, user selector dropdown, dynamic slot recalculation, and timezone summary display.
+- **Visually Disable Booked Days (Step 8 - Complete & Verified)**:
+  - Month-level availability computation across Google Calendar FreeBusy and DB records.
+  - Interactive date picker disables fully-booked days and non-working weekends with clear visual cues.
 
 ---
 
 ## What's Next & In Progress
 
-- **Visually Disable Booked Days (Step 8)**: Reflect real-time month availability in date picker calendar.
-- **Test Session Durations and Buffers (Step 9)**: Verify slot calculations and 10–15 minute buffer logic across all session types.
+- **Booking hardening (Complete & Verified)**:
+  - UTC reservation intervals, overlap exclusion constraint, timezone-safe slot calculation, and fail-closed availability/confirmation handling are implemented.
+  - Typecheck, lint (no errors), production build, and all five duration/buffer scheduling checks pass.

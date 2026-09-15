@@ -33,7 +33,14 @@ Follow these implementation steps in exact sequential order:
 7. **[x] Add Visible Timezone Handling to the UI** *(Completed & Verified)*:
    - Added automatic timezone detection (`Intl.DateTimeFormat`), user dropdown selector with regional options (`TIMEZONES`), and dynamic slot calculation invoking `get-availability`.
    - Updated Time picker with async slot fetching indicator, empty slot handling, and timezone summary label.
-8. **[ ] Visually Disable Fully-Booked Days** *(Next Task)*:
-   - Reflect real-time availability in the date picker calendar.
-9. **Test Session Durations and Buffers**:
-   - Thoroughly verify slot calculations and 10–15 minute buffer logic across all session types (45–90 min).
+8. **[x] Visually Disable Fully-Booked Days** *(Completed & Verified)*:
+   - Enhanced `get-availability` to support month/date range queries in a single fast call against Google Calendar FreeBusy and Supabase bookings.
+   - Updated UI calendar with regional working days (Sunday–Thursday), visual availability indicators, and disabled styling for fully-booked/non-working dates.
+9. **[x] Test Session Durations and Buffers** *(Completed & Verified)*:
+   - Verified all five appointment types produce only slots that fit completely inside configured working intervals.
+   - Verified duration and buffer reservation spans for 45, 60, 75, and 90 minute sessions.
+   - Added UTC interval storage plus a database exclusion constraint to prevent overlapping active reservations under concurrent requests.
+10. **[x] Harden Booking Confirmation and Failure Handling** *(Completed & Verified)*:
+   - Removed unsafe direct-insert fallback from the frontend.
+   - Server validates appointment type, timezone, working hours, advance notice, Google availability, and database overlap before inserting.
+   - Calendar/database failures fail closed or persist as `pending_calendar_sync` without silently losing the lead.

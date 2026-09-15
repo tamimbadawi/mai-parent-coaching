@@ -10,7 +10,6 @@ import {
   isBefore,
   isSameMonth,
   isToday,
-  isWeekend,
   startOfDay,
   startOfMonth,
   startOfWeek,
@@ -165,6 +164,10 @@ export default function Booking() {
       return 'Africa/Cairo';
     }
   });
+  const [monthAvailability, setMonthAvailability] = useState<
+    Record<string, { totalSlots: number; isFullyBooked: boolean }>
+  >({});
+  const [loadingMonth, setLoadingMonth] = useState(false);
   const [availableSlots, setAvailableSlots] = useState<string[]>(TIMES);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [formData, setFormData] = useState({
@@ -191,13 +194,52 @@ export default function Booking() {
     return eachDayOfInterval({ start: startOfWeek(monthStart), end: endOfWeek(monthEnd) });
   }, [calendarMonth]);
 
-  const isBookable = (date: Date) => !isBefore(date, today) && !isWeekend(date);
+  // Working days: Sunday (0) through Thursday (4)
+  const isWorkingDay = (date: Date) => {
+    const day = date.getDay();
+    return day >= 0 && day <= 4;
+  };
 
   const handleSelectDate = (key: string) => {
     setSelectedDate(key);
     setSelectedTime(null);
     setTimePickerOpen(true);
   };
+
+  // Fetch month-level availability to visually disable booked days
+  useEffect(() => {
+    let isCancelled = false;
+    const monthKey = format(calendarMonth, 'yyyy-MM');
+
+    const fetchMonthAvailability = async () => {
+      setLoadingMonth(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('get-availability', {
+          body: {
+            month: monthKey,
+            appointmentTypeId: selectedType || 'initial',
+            timeZone,
+          },
+        });
+
+        if (!isCancelled) {
+          if (!error && data?.days) {
+            setMonthAvailability(data.days);
+          }
+        }
+      } catch (err) {
+        console.warn('Month availability fetch error:', err);
+      } finally {
+        if (!isCancelled) setLoadingMonth(false);
+      }
+    };
+
+    void fetchMonthAvailability();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [calendarMonth, selectedType, timeZone]);
 
   // Fetch real-time availability slots when date, type, or timezone changes
   useEffect(() => {
@@ -217,9 +259,10 @@ export default function Booking() {
 
         if (!isCancelled) {
           if (error) {
-            console.warn('Could not fetch dynamic slots, falling back:', error);
-            setAvailableSlots(TIMES);
-          } else if (data?.availableSlots) {
+            console.error('Could not fetch dynamic slots:', error);
+            setAvailableSlots([]);
+            setSelectedTime(null);
+          } else if (Array.isArray(data?.availableSlots)) {
             setAvailableSlots(data.availableSlots);
             if (selectedTime && !data.availableSlots.includes(selectedTime)) {
               setSelectedTime(null);
@@ -227,8 +270,11 @@ export default function Booking() {
           }
         }
       } catch (err) {
-        console.warn('Availability fetch error:', err);
-        if (!isCancelled) setAvailableSlots(TIMES);
+        console.error('Availability fetch error:', err);
+        if (!isCancelled) {
+          setAvailableSlots([]);
+          setSelectedTime(null);
+        }
       } finally {
         if (!isCancelled) setLoadingSlots(false);
       }
@@ -239,7 +285,7 @@ export default function Booking() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedDate, selectedType, timeZone]);
+  }, [selectedDate, selectedType, selectedTime, timeZone]);
 
   useEffect(() => {
     if (!timePickerOpen) return;
@@ -280,9 +326,7 @@ export default function Booking() {
 
     try {
       const bookingPayload = {
-        user_id: user?.id ?? null,
         appointment_type_id: selectedType,
-        appointment_type_title: selectedAppointment.title,
         appointment_date: selectedDate,
         appointment_time: selectedTime,
         parent_name: formData.name.trim(),
@@ -300,20 +344,8 @@ export default function Booking() {
         body: bookingPayload,
       });
 
-      if (functionError) {
-        // Fallback: If edge function network fails, perform direct database insert
-        console.warn('create-booking function error, attempting direct DB insert fallback:', functionError);
-        const { error: dbError } = await supabase
-          .from('bookings')
-          .insert([{ ...bookingPayload, status: 'pending' }]);
-
-        if (dbError) {
-          console.error('Supabase direct insert error:', dbError);
-          setSubmitError(dbError.message || 'Unable to save your booking. Please try again.');
-          return;
-        }
-      } else if (data?.error) {
-        setSubmitError(data.error);
+      if (functionError || data?.error) {
+        setSubmitError(data?.error || functionError?.message || 'Unable to save your booking. Please try again.');
         return;
       }
 
@@ -514,16 +546,19 @@ export default function Booking() {
                       <button
                         type="button"
                         onClick={() => setCalendarMonth((m) => subMonths(m, 1))}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-beige/50"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-charcoal transition hover:bg-beige/50"
                         aria-label="Previous month"
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </button>
-                      <p className="text-xs font-semibold text-charcoal">{format(calendarMonth, 'MMMM yyyy')}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-semibold text-charcoal">{format(calendarMonth, 'MMMM yyyy')}</p>
+                        {loadingMonth && <Loader2 className="h-3 w-3 animate-spin text-sage-dark" />}
+                      </div>
                       <button
                         type="button"
                         onClick={() => setCalendarMonth((m) => addMonths(m, 1))}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-beige/50"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-charcoal transition hover:bg-beige/50"
                         aria-label="Next month"
                       >
                         <ChevronRight className="h-4 w-4" />
@@ -538,24 +573,52 @@ export default function Booking() {
                       {calendarDays.map((day) => {
                         const key = toDateKey(day);
                         const inMonth = isSameMonth(day, calendarMonth);
-                        const bookable = isBookable(day);
+                        const isPast = isBefore(day, today);
+                        const workingDay = isWorkingDay(day);
+                        const dayStatus = monthAvailability[key];
+                        const availabilityKnown = !inMonth || !workingDay || isPast || Boolean(dayStatus);
+                        const fullyBooked = inMonth && !isPast && workingDay && dayStatus?.isFullyBooked;
+                        const bookable = inMonth && !isPast && workingDay && availabilityKnown && !fullyBooked;
                         const sel = selectedDate === key;
+
+                        let titleText = '';
+                        if (!inMonth) titleText = '';
+                        else if (isPast) titleText = 'Past date';
+                        else if (!workingDay) titleText = 'Non-working day (Weekend)';
+                        else if (fullyBooked) titleText = 'Fully booked';
+                        else if (dayStatus && dayStatus.totalSlots > 0)
+                          titleText = `${dayStatus.totalSlots} slots open`;
+                        else titleText = loadingMonth ? 'Checking availability' : 'Availability unavailable';
+
                         return (
                           <button
                             key={key}
                             type="button"
                             disabled={!bookable}
+                            title={titleText}
                             onClick={() => handleSelectDate(key)}
                             className={cn(
-                              'flex h-10 items-center justify-center rounded-lg text-xs font-medium transition',
+                              'relative flex h-10 flex-col items-center justify-center rounded-lg text-xs font-medium transition',
                               !inMonth && 'text-soft-gray/40',
-                              inMonth && !bookable && 'cursor-not-allowed text-soft-gray/35',
+                              inMonth && isPast && 'cursor-not-allowed text-soft-gray/35',
+                              inMonth && !isPast && !workingDay && 'cursor-not-allowed text-soft-gray/30 bg-beige/10',
+                              inMonth &&
+                                fullyBooked &&
+                                'cursor-not-allowed text-soft-gray/40 bg-rose-50/60 line-through decoration-rose-300',
                               inMonth && bookable && !sel && 'text-charcoal hover:bg-sage/10',
-                              sel && 'bg-sage text-white',
-                              isToday(day) && !sel && bookable && 'ring-1 ring-sage/40',
+                              sel && 'bg-sage text-white shadow-sm',
+                              isToday(day) && !sel && bookable && 'ring-1 ring-sage/40 font-semibold',
                             )}
                           >
-                            {format(day, 'd')}
+                            <span>{format(day, 'd')}</span>
+                            {inMonth && fullyBooked && (
+                              <span className="text-[8px] leading-none no-underline font-normal text-rose-500">
+                                Full
+                              </span>
+                            )}
+                            {inMonth && bookable && !sel && dayStatus && dayStatus.totalSlots > 0 && (
+                              <span className="absolute bottom-1 h-1 w-1 rounded-full bg-sage/60" />
+                            )}
                           </button>
                         );
                       })}
