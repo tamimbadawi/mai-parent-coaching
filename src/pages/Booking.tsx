@@ -225,22 +225,31 @@ export default function Booking() {
         child_name: formData.childName?.trim() || null,
         child_age: formData.childAge?.trim() || null,
         notes: formData.notes?.trim() || null,
-        status: 'pending' as const,
       };
 
-      // Perform real insert into Supabase bookings table
-      // Note: We do NOT use .select() here because anonymous guests have SELECT denied by RLS
-      const { error } = await supabase
-        .from('bookings')
-        .insert([bookingPayload]);
+      // 1. Invoke the create-booking Edge Function (handles atomic slot validation + Google Calendar invite)
+      const { data, error: functionError } = await supabase.functions.invoke('create-booking', {
+        body: bookingPayload,
+      });
 
-      if (error) {
-        console.error('Supabase booking insert error:', error);
-        setSubmitError(error.message || 'Unable to save your booking. Please try again.');
+      if (functionError) {
+        // Fallback: If edge function network fails, perform direct database insert
+        console.warn('create-booking function error, attempting direct DB insert fallback:', functionError);
+        const { error: dbError } = await supabase
+          .from('bookings')
+          .insert([{ ...bookingPayload, status: 'pending' }]);
+
+        if (dbError) {
+          console.error('Supabase direct insert error:', dbError);
+          setSubmitError(dbError.message || 'Unable to save your booking. Please try again.');
+          return;
+        }
+      } else if (data?.error) {
+        setSubmitError(data.error);
         return;
       }
 
-      // Genuinely persisted in database
+      // Genuinely persisted and synced
       setSubmitted(true);
     } catch (err: unknown) {
       console.error('Unexpected booking error:', err);

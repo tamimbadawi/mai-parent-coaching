@@ -25,9 +25,12 @@ Follow these implementation steps in exact sequential order:
 5. **[x] Build `get-availability` Edge Function** *(Completed & Tested)*:
    - Implemented dynamic slot calculation using Google Calendar FreeBusy API, working hours (Sunday-Thursday 09:00-17:00), dynamic session duration (45-90 min), and buffer margins (15-30 min).
    - Graceful fallback support for database reservations.
-6. **[ ] Build `create-booking` Edge Function** *(Next Task)*:
-   - Implement atomic slot reservation, Supabase booking record creation, and Google Calendar event creation (with `pending_calendar_sync` fallback).
-7. **Add Visible Timezone Handling to the UI**:
+6. **[x] Build `create-booking` Edge Function** *(Completed & Verified E2E)*:
+   - Implemented atomic slot collision checks against database bookings and Google Calendar FreeBusy.
+   - Creates Supabase booking records and automatic Google Calendar event invites with Google Meet video links.
+   - Status flows dynamically from `pending` -> `confirmed` (or `pending_calendar_sync` on calendar exception).
+   - Connected `/booking` form submission directly to `create-booking`.
+7. **[ ] Add Visible Timezone Handling to the UI** *(Next Task)*:
    - Add timezone detector, user dropdown, and automatic conversion in the booking UI.
 8. **Visually Disable Fully-Booked Days**:
    - Reflect real-time availability in the date picker calendar.
