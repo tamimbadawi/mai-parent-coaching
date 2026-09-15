@@ -44,3 +44,5 @@ test-supabase-connection.js
 # Cursor AI
 .cursor
 .bolt
+
+.vercel

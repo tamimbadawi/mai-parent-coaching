@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Mai Parent Coaching</string>
+    <string name="title_activity_main">Mai Parent Coaching</string>
+    <string name="package_name">com.maiparentcoaching.app</string>
+    <string name="custom_url_scheme">com.maiparentcoaching.app</string>
+</resources>

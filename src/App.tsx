@@ -39,6 +39,8 @@ import AdminBlog from './pages/admin/AdminBlog';
 import AdminBookings from './pages/admin/AdminBookings';
 import AdminOrders from './pages/admin/AdminOrders';
 
+import { useCapacitorApp } from './hooks/useCapacitorApp';
+
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -48,14 +50,15 @@ function ScrollToTop() {
 }
 
 function AppShell() {
+  useCapacitorApp();
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
 
   return (
-    <div className="min-h-screen bg-ivory">
+    <div className="min-h-screen bg-ivory flex flex-col">
       <ScrollToTop />
       {isAdminRoute ? null : <Navbar />}
-      <main>
+      <main className="flex-grow">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/home-preview" element={<HomePreview />} />

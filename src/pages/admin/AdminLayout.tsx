@@ -61,7 +61,7 @@ const AdminLayout = ({ children, title }: AdminLayoutProps): JSX.Element => {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(221,231,214,0.8),_transparent_32%),linear-gradient(180deg,#fbf8f2_0%,#f6f0e6_100%)] px-4 py-6 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(221,231,214,0.8),_transparent_32%),linear-gradient(180deg,#fbf8f2_0%,#f6f0e6_100%)] px-4 py-6 sm:px-6 lg:px-8 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div

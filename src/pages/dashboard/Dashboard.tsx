@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
   BookOpen,
@@ -31,7 +31,7 @@ const statusBadgeClasses: Record<Booking['status'], { label: string; className: 
 };
 
 const Dashboard = (): JSX.Element => {
-  const { user, profile, enrollments, refreshEnrollments } = useAuth();
+  const { user, profile, enrollments } = useAuth();
   const [videoProgress, setVideoProgress] = useState<VideoProgress[]>([]);
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
@@ -42,7 +42,7 @@ const Dashboard = (): JSX.Element => {
   const [rescheduleBooking, setRescheduleBooking] = useState<Booking | null>(null);
   const [cancelBooking, setCancelBooking] = useState<Booking | null>(null);
 
-  const fetchBookings = async (): Promise<void> => {
+  const fetchBookings = useCallback(async (): Promise<void> => {
     if (!user) return;
     setLoadingBookings(true);
     try {
@@ -61,7 +61,7 @@ const Dashboard = (): JSX.Element => {
     } finally {
       setLoadingBookings(false);
     }
-  };
+  }, [user]);
 
   useEffect((): (() => void) => {
     let isMounted = true;
@@ -77,13 +77,12 @@ const Dashboard = (): JSX.Element => {
     };
 
     void loadProgress();
-    void refreshEnrollments();
     void fetchBookings();
 
     return () => {
       isMounted = false;
     };
-  }, [refreshEnrollments, user]);
+  }, [user?.id, fetchBookings]);
 
   const enrolledCourses = useMemo(() => courses.filter((course) => enrollments.some((enrollment) => enrollment.course_id === course.id)), [enrollments]);
   const completedLessons = useMemo(() => videoProgress.filter((item) => item.completed).length, [videoProgress]);

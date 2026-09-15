@@ -16,7 +16,7 @@ This directory is the single source of truth for **project status, architectural
 | :--- | :--- | :--- | :--- |
 | **Booking System** | [`/booking`](file:///d:/Cursor/Mai_Website/project-plan/booking) | **In Progress (#1 Priority)** | Frontend built; awaiting real database persistence and Google Calendar sync. |
 | **Payments** | [`/payments`](file:///d:/Cursor/Mai_Website/project-plan/payments) | **Planned** | Gateway chosen (PayTabs); pending clean backend build after booking persistence. |
-| **Mobile App** | [`/mobile-app`](file:///d:/Cursor/Mai_Website/project-plan/mobile-app) | **Planned** | Build plan defined (Capacitor wrap); not started yet. |
+| **Mobile App** | [`/mobile-app`](file:///d:/Cursor/Mai_Website/project-plan/mobile-app) | **In Progress** | Capacitor native wrapper initialized (Step 1 & 2 completed, Android & iOS synced). |
 | **Infrastructure** | [`/infrastructure`](file:///d:/Cursor/Mai_Website/project-plan/infrastructure) | **Live** | Keep-alive workflow live and confirmed working. |
 
 ---

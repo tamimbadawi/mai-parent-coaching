@@ -245,7 +245,7 @@ export default function Booking() {
 
   useEffect(() => {
     void fetchUserBookings();
-  }, [user, formData.email]);
+  }, [user?.id, formData.email]);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -349,7 +349,7 @@ export default function Booking() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-ivory" style={{ paddingTop: '64px' }}>
+    <div className="flex min-h-screen flex-col bg-ivory pt-safe pb-safe" style={{ paddingTop: 'calc(64px + env(safe-area-inset-top, 0px))' }}>
       <div className="shrink-0 border-b border-beige/70 bg-ivory/80 px-4 py-3 backdrop-blur-sm sm:px-6">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between">
           <div>

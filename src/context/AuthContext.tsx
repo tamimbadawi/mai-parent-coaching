@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { CourseEnrollment, UserProfile } from '../types';
@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     return authEpochRef.current;
   };
 
-  const refreshProfile = async (currentUser: User | null, epoch: number): Promise<void> => {
+  const refreshProfile = useCallback(async (currentUser: User | null, epoch: number): Promise<void> => {
     if (!currentUser) {
       setProfile(null);
       return;
@@ -78,9 +78,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     } catch (err) {
       console.error('AuthContext - Profile fetch exception, keeping fallback:', err);
     }
-  };
+  }, []);
 
-  const refreshEnrollments = async (currentUser: User | null, epoch: number): Promise<void> => {
+  const refreshEnrollments = useCallback(async (currentUser: User | null, epoch: number): Promise<void> => {
     if (!currentUser) {
       setEnrollments([]);
       return;
@@ -102,7 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     }
 
     setEnrollments(data ?? []);
-  };
+  }, []);
 
   useEffect((): (() => void) => {
     let isMounted = true;
@@ -162,9 +162,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       isMounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [refreshProfile, refreshEnrollments]);
 
-  const signUp = async (email: string, password: string, fullName: string, phone?: string, country?: string): Promise<{ error: Error | null }> => {
+  const signUp = useCallback(async (email: string, password: string, fullName: string, phone?: string, country?: string): Promise<{ error: Error | null }> => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -191,14 +191,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     }
 
     return { error: null };
-  };
+  }, []);
 
-  const signIn = async (email: string, password: string): Promise<{ error: Error | null }> => {
+  const signIn = useCallback(async (email: string, password: string): Promise<{ error: Error | null }> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error ?? null };
-  };
+  }, []);
 
-  const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
+  const signInWithGoogle = useCallback(async (): Promise<{ error: Error | null }> => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -207,9 +207,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     });
 
     return { error: error ?? null };
-  };
+  }, []);
 
-  const signInWithMagicLink = async (email: string): Promise<{ error: Error | null }> => {
+  const signInWithMagicLink = useCallback(async (email: string): Promise<{ error: Error | null }> => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -218,9 +218,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     });
 
     return { error: error ?? null };
-  };
+  }, []);
 
-  const signOut = async (): Promise<void> => {
+  const signOut = useCallback(async (): Promise<void> => {
     bumpAuthEpoch();
     setUser(null);
     setProfile(null);
@@ -232,9 +232,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       console.error('AuthContext - Sign out error, trying local scope:', error);
       await supabase.auth.signOut({ scope: 'local' });
     }
-  };
+  }, []);
 
-  const updateProfile = async (updates: Partial<UserProfile>): Promise<{ error: Error | null }> => {
+  const updateProfile = useCallback(async (updates: Partial<UserProfile>): Promise<{ error: Error | null }> => {
     if (!user) {
       return { error: new Error('You need to be signed in to update your profile.') };
     }
@@ -250,28 +250,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
 
     await refreshProfile(user, authEpochRef.current);
     return { error: null };
-  };
+  }, [user, refreshProfile]);
 
-  const isEnrolled = (courseId: string): boolean => enrollments.some((enrollment) => enrollment.course_id === courseId);
+  const isEnrolled = useCallback((courseId: string): boolean => enrollments.some((enrollment) => enrollment.course_id === courseId), [enrollments]);
 
-  const refreshEnrollmentsHandler = async (): Promise<void> => {
+  const refreshEnrollmentsHandler = useCallback(async (): Promise<void> => {
     await refreshEnrollments(user, authEpochRef.current);
-  };
+  }, [user, refreshEnrollments]);
 
-  const value: AuthContextValue = {
-    user,
-    profile,
-    loading,
-    enrollments,
-    signUp,
-    signIn,
-    signInWithGoogle,
-    signInWithMagicLink,
-    signOut,
-    updateProfile,
-    isEnrolled,
-    refreshEnrollments: refreshEnrollmentsHandler,
-  };
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      profile,
+      loading,
+      enrollments,
+      signUp,
+      signIn,
+      signInWithGoogle,
+      signInWithMagicLink,
+      signOut,
+      updateProfile,
+      isEnrolled,
+      refreshEnrollments: refreshEnrollmentsHandler,
+    }),
+    [
+      user,
+      profile,
+      loading,
+      enrollments,
+      signUp,
+      signIn,
+      signInWithGoogle,
+      signInWithMagicLink,
+      signOut,
+      updateProfile,
+      isEnrolled,
+      refreshEnrollmentsHandler,
+    ]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
@@ -285,3 +301,4 @@ export const useAuth = (): AuthContextValue => {
 
   return context;
 };
+

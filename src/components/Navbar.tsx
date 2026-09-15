@@ -90,7 +90,7 @@ export default function Navbar() {
     <nav
       ref={navRef}
       className={cn(
-        'fixed top-0 left-0 right-0 transition-all duration-500 z-50',
+        'fixed top-0 left-0 right-0 transition-all duration-500 z-50 pt-safe',
         isScrolled
           ? 'bg-ivory/95 backdrop-blur-md shadow-sm py-3'
           : 'bg-transparent py-5'
