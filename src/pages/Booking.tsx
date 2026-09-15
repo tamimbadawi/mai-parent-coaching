@@ -49,8 +49,24 @@ import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
 
 const TIMES = [
-  '9:00', '9:30', '10:00', '10:30', '11:00', '11:30',
-  '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
+  '15:00', '15:30',
+];
+
+const TIMEZONES = [
+  { value: 'Africa/Cairo', label: 'Cairo (GMT+2 / GMT+3)' },
+  { value: 'Asia/Riyadh', label: 'Riyadh / Mecca (GMT+3)' },
+  { value: 'Asia/Dubai', label: 'Dubai / UAE (GMT+4)' },
+  { value: 'Asia/Kuwait', label: 'Kuwait (GMT+3)' },
+  { value: 'Asia/Qatar', label: 'Doha (GMT+3)' },
+  { value: 'Asia/Amman', label: 'Amman (GMT+3)' },
+  { value: 'Europe/London', label: 'London (GMT / BST)' },
+  { value: 'Europe/Paris', label: 'Paris / CET (GMT+1)' },
+  { value: 'America/New_York', label: 'New York / Eastern (EST/EDT)' },
+  { value: 'America/Chicago', label: 'Chicago / Central (CST/CDT)' },
+  { value: 'America/Los_Angeles', label: 'Los Angeles / Pacific (PST/PDT)' },
+  { value: 'UTC', label: 'UTC (Universal Coordinated Time)' },
 ];
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -142,6 +158,15 @@ export default function Booking() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
   const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const [timeZone, setTimeZone] = useState(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Cairo';
+    } catch {
+      return 'Africa/Cairo';
+    }
+  });
+  const [availableSlots, setAvailableSlots] = useState<string[]>(TIMES);
+  const [loadingSlots, setLoadingSlots] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -173,6 +198,48 @@ export default function Booking() {
     setSelectedTime(null);
     setTimePickerOpen(true);
   };
+
+  // Fetch real-time availability slots when date, type, or timezone changes
+  useEffect(() => {
+    if (!selectedDate) return;
+
+    let isCancelled = false;
+    const fetchSlots = async () => {
+      setLoadingSlots(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('get-availability', {
+          body: {
+            date: selectedDate,
+            appointmentTypeId: selectedType || 'initial',
+            timeZone,
+          },
+        });
+
+        if (!isCancelled) {
+          if (error) {
+            console.warn('Could not fetch dynamic slots, falling back:', error);
+            setAvailableSlots(TIMES);
+          } else if (data?.availableSlots) {
+            setAvailableSlots(data.availableSlots);
+            if (selectedTime && !data.availableSlots.includes(selectedTime)) {
+              setSelectedTime(null);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Availability fetch error:', err);
+        if (!isCancelled) setAvailableSlots(TIMES);
+      } finally {
+        if (!isCancelled) setLoadingSlots(false);
+      }
+    };
+
+    void fetchSlots();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedDate, selectedType, timeZone]);
 
   useEffect(() => {
     if (!timePickerOpen) return;
@@ -225,6 +292,7 @@ export default function Booking() {
         child_name: formData.childName?.trim() || null,
         child_age: formData.childAge?.trim() || null,
         notes: formData.notes?.trim() || null,
+        timeZone,
       };
 
       // 1. Invoke the create-booking Edge Function (handles atomic slot validation + Google Calendar invite)
@@ -288,9 +356,13 @@ export default function Booking() {
                   day: 'numeric',
                 })}
             </span>{' '}
-            at <span className="font-medium text-charcoal">{selectedTime}</span>.
+            at{' '}
+            <span className="font-medium text-charcoal">
+              {selectedTime} ({timeZone})
+            </span>
+            .
             <br />
-            Confirmation sent to <span className="font-medium text-charcoal">{formData.email}</span>.
+            Confirmation & Calendar invite sent to <span className="font-medium text-charcoal">{formData.email}</span>.
           </p>
           <Link
             to="/"
@@ -491,24 +563,64 @@ export default function Booking() {
                   </div>
                 </div>
 
+                {/* Timezone Selector */}
+                <div className="shrink-0 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <SectionHeader icon={<Globe className="h-3 w-3 text-sage-dark" />} label="Timezone" />
+                    <span className="text-[10px] text-soft-gray">Times shown in your timezone</span>
+                  </div>
+                  <div className="relative">
+                    <select
+                      value={timeZone}
+                      onChange={(e) => {
+                        setTimeZone(e.target.value);
+                        setSelectedTime(null);
+                      }}
+                      className="w-full appearance-none rounded-xl border border-beige bg-cream px-3 py-2 pr-8 text-xs font-medium text-charcoal transition-all hover:border-sage/40 focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    >
+                      {!TIMEZONES.some((tz) => tz.value === timeZone) && (
+                        <option value={timeZone}>{timeZone} (Detected)</option>
+                      )}
+                      {TIMEZONES.map((tz) => (
+                        <option key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-soft-gray" />
+                  </div>
+                </div>
+
                 <div ref={timeSectionRef} className="relative shrink-0">
-                  <SectionHeader icon={<Clock className="h-3 w-3 text-terracotta" />} label="Time" />
+                  <div className="flex items-center justify-between">
+                    <SectionHeader icon={<Clock className="h-3 w-3 text-terracotta" />} label="Time" />
+                    {loadingSlots && (
+                      <div className="flex items-center gap-1.5 text-[10px] text-sage-dark">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>Checking availability...</span>
+                      </div>
+                    )}
+                  </div>
                   <button
                     type="button"
-                    disabled={!selectedDate}
+                    disabled={!selectedDate || loadingSlots}
                     onClick={() => selectedDate && setTimePickerOpen((open) => !open)}
                     aria-expanded={timePickerOpen}
                     aria-haspopup="listbox"
                     className={cn(
                       'mt-2 flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm transition-all',
-                      !selectedDate && 'cursor-not-allowed opacity-50',
+                      (!selectedDate || loadingSlots) && 'cursor-not-allowed opacity-50',
                       selectedTime
                         ? 'border-sage bg-sage/10 text-sage-dark ring-1 ring-sage/20'
                         : 'border-beige bg-cream hover:border-sage/40',
                     )}
                   >
                     <span className={cn('font-medium', !selectedTime && 'text-soft-gray')}>
-                      {!selectedDate ? 'Select a date first' : selectedTime ?? 'Choose a time'}
+                      {!selectedDate
+                        ? 'Select a date first'
+                        : loadingSlots
+                        ? 'Calculating available times...'
+                        : selectedTime ?? 'Choose a time'}
                     </span>
                     <ChevronDown
                       className={cn(
@@ -518,37 +630,43 @@ export default function Booking() {
                     />
                   </button>
 
-                  {timePickerOpen && selectedDate && (
+                  {timePickerOpen && selectedDate && !loadingSlots && (
                     <div
                       role="listbox"
                       aria-label="Available times"
                       className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-beige bg-white shadow-xl ring-1 ring-sage/15"
                     >
-                      <ul className="max-h-44 space-y-0.5 overflow-y-auto overscroll-contain p-1.5">
-                        {TIMES.map((time) => {
-                          const sel = selectedTime === time;
-                          return (
-                            <li key={time}>
-                              <button
-                                type="button"
-                                role="option"
-                                aria-selected={sel}
-                                onClick={() => {
-                                  setSelectedTime(time);
-                                  setTimePickerOpen(false);
-                                }}
-                                className={cn(
-                                  'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold transition',
-                                  sel ? 'bg-sage text-white' : 'text-charcoal hover:bg-sage/10',
-                                )}
-                              >
-                                {time}
-                                {sel && <Check className="h-4 w-4" />}
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
+                      {availableSlots.length === 0 ? (
+                        <div className="p-4 text-center text-xs text-warm-gray">
+                          No slots available for this date in your selected timezone.
+                        </div>
+                      ) : (
+                        <ul className="max-h-44 space-y-0.5 overflow-y-auto overscroll-contain p-1.5">
+                          {availableSlots.map((time) => {
+                            const sel = selectedTime === time;
+                            return (
+                              <li key={time}>
+                                <button
+                                  type="button"
+                                  role="option"
+                                  aria-selected={sel}
+                                  onClick={() => {
+                                    setSelectedTime(time);
+                                    setTimePickerOpen(false);
+                                  }}
+                                  className={cn(
+                                    'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold transition',
+                                    sel ? 'bg-sage text-white' : 'text-charcoal hover:bg-sage/10',
+                                  )}
+                                >
+                                  {time}
+                                  {sel && <Check className="h-4 w-4" />}
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
                     </div>
                   )}
                 </div>
@@ -666,7 +784,14 @@ export default function Booking() {
                               : '—'
                           }
                         />
-                        <SummaryRow label="Time" value={selectedTime ?? '—'} />
+                        <SummaryRow
+                          label="Time"
+                          value={
+                            selectedTime
+                              ? `${selectedTime} (${timeZone.split('/').pop()?.replace('_', ' ') || timeZone})`
+                              : '—'
+                          }
+                        />
                         {selectedAppointment && (
                           <div className="flex justify-between gap-2 border-t border-beige/80 pt-1.5">
                             <span className="text-soft-gray">Total</span>

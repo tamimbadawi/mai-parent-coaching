@@ -27,10 +27,19 @@
 
 ---
 
+- **Google OAuth Connection & Live Sync (Complete & Verified)**:
+  - OAuth flow configured and tested live via `google-calendar-auth`.
+  - Secure server-side token management via `google-calendar.ts`.
+- **`get-availability` Edge Function (Complete & Live)**:
+  - Computes real-time 30-minute start slots from Google Calendar FreeBusy data, active DB bookings, working hours, durations, and buffers.
+- **`create-booking` Edge Function (Complete & Live)**:
+  - Atomic collision validation, DB booking persistence, and Google Calendar event dispatch with Google Meet links.
+- **Timezone Handling in UI (Complete & Verified)**:
+  - Auto-detection with `Intl.DateTimeFormat`, user selector dropdown, dynamic slot recalculation, and timezone summary display.
+
+---
+
 ## What's Next & In Progress
 
-- **Google OAuth Connection Flow**: Configure coach's Google Calendar OAuth credentials and secure server-side token storage before deployment.
-- **`get-availability` Edge Function (Step 5)**: Completed. It calculates 30-minute start slots from Google Calendar FreeBusy data, persisted active bookings, working hours, appointment durations, and buffers.
-- **`create-booking` Edge Function (Step 6)**: Atomic slot reservation and Google Calendar event dispatch (with `pending_calendar_sync` fallback).
-- **Timezone Handling (Step 7)**: Explicit timezone selection and conversion for international clients.
-- **Visually Disable Booked Days (Step 8)**: Reflect real-time availability in date picker calendar.
+- **Visually Disable Booked Days (Step 8)**: Reflect real-time month availability in date picker calendar.
+- **Test Session Durations and Buffers (Step 9)**: Verify slot calculations and 10–15 minute buffer logic across all session types.

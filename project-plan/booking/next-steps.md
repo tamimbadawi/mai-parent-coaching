@@ -30,9 +30,10 @@ Follow these implementation steps in exact sequential order:
    - Creates Supabase booking records and automatic Google Calendar event invites with Google Meet video links.
    - Status flows dynamically from `pending` -> `confirmed` (or `pending_calendar_sync` on calendar exception).
    - Connected `/booking` form submission directly to `create-booking`.
-7. **[ ] Add Visible Timezone Handling to the UI** *(Next Task)*:
-   - Add timezone detector, user dropdown, and automatic conversion in the booking UI.
-8. **Visually Disable Fully-Booked Days**:
+7. **[x] Add Visible Timezone Handling to the UI** *(Completed & Verified)*:
+   - Added automatic timezone detection (`Intl.DateTimeFormat`), user dropdown selector with regional options (`TIMEZONES`), and dynamic slot calculation invoking `get-availability`.
+   - Updated Time picker with async slot fetching indicator, empty slot handling, and timezone summary label.
+8. **[ ] Visually Disable Fully-Booked Days** *(Next Task)*:
    - Reflect real-time availability in the date picker calendar.
 9. **Test Session Durations and Buffers**:
    - Thoroughly verify slot calculations and 10–15 minute buffer logic across all session types (45–90 min).
