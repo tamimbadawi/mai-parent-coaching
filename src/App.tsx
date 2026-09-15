@@ -50,12 +50,11 @@ function ScrollToTop() {
 function AppShell() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
-  const isBookingRoute = location.pathname === '/booking';
 
   return (
     <div className="min-h-screen bg-ivory">
       <ScrollToTop />
-      {isAdminRoute || isBookingRoute ? null : <Navbar />}
+      {isAdminRoute ? null : <Navbar />}
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -94,7 +93,7 @@ function AppShell() {
           <Route path="/admin/orders" element={<ProtectedRoute requiredRole="admin"><AdminOrders /></ProtectedRoute>} />
         </Routes>
       </main>
-      {isAdminRoute || isBookingRoute ? null : <Footer />}
+      {isAdminRoute ? null : <Footer />}
     </div>
   );
 }

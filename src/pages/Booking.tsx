@@ -412,47 +412,49 @@ export default function Booking() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-ivory" style={{ paddingTop: '64px' }}>
-      <div className="shrink-0 border-b border-beige/70 bg-ivory/80 px-4 py-3 backdrop-blur-sm sm:px-6">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
+    <div className="min-h-screen bg-ivory pt-24 lg:pt-28 pb-16">
+      {/* Top Progress & Title Header */}
+      <div className="border-b border-beige/70 bg-ivory/90 px-4 py-4 backdrop-blur-sm sm:px-6">
+        <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div>
-            <h1 className="font-serif text-lg leading-none text-charcoal">Book a Session</h1>
-            <p className="mt-0.5 hidden text-xs text-soft-gray sm:block">Fill in your preferences below</p>
+            <h1 className="font-serif text-2xl font-bold text-charcoal sm:text-3xl">Book a Session</h1>
+            <p className="mt-0.5 text-xs text-warm-gray sm:text-sm">
+              Evidence-based parent coaching & consultation
+            </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {[
-              { label: 'Session', done: !!selectedType, icon: <Sparkles className="h-2.5 w-2.5" /> },
-              { label: 'Date', done: !!selectedDate, icon: <CalendarDays className="h-2.5 w-2.5" /> },
-              { label: 'Time', done: !!selectedTime, icon: <Clock className="h-2.5 w-2.5" /> },
+              { label: 'Session', done: Boolean(selectedType), icon: <Sparkles className="h-3 w-3" /> },
+              { label: 'Date', done: Boolean(selectedDate), icon: <CalendarDays className="h-3 w-3" /> },
+              { label: 'Time', done: Boolean(selectedTime), icon: <Clock className="h-3 w-3" /> },
               {
                 label: 'Details',
-                done: !!(formData.name && formData.email),
-                icon: <User className="h-2.5 w-2.5" />,
+                done: Boolean(formData.name && formData.email),
+                icon: <User className="h-3 w-3" />,
               },
             ].map(({ label, done, icon }) => (
               <div key={label} className="flex items-center gap-1.5">
                 <div
                   className={cn(
-                    'flex h-5 w-5 items-center justify-center rounded-full transition-all duration-300',
+                    'flex h-6 w-6 items-center justify-center rounded-full transition-all duration-300',
                     done ? 'scale-105 bg-sage text-white shadow-sm' : 'bg-beige text-soft-gray',
                   )}
                 >
-                  {done ? <Check className="h-2.5 w-2.5" /> : icon}
+                  {done ? <Check className="h-3 w-3" /> : icon}
                 </div>
-                <span className="hidden text-[10px] text-soft-gray sm:inline">{label}</span>
+                <span className="hidden text-xs font-medium text-charcoal/80 sm:inline">{label}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto lg:overflow-hidden lg:flex lg:flex-col">
-        <div
-          className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-4 sm:px-6
-          lg:h-full lg:min-h-0 lg:grid lg:grid-cols-12 lg:items-start lg:gap-4 lg:flex-none"
-        >
-          <div className="flex flex-col gap-3 lg:col-span-5 lg:min-h-0">
-            <SectionHeader icon={<Heart className="h-3 w-3 text-sage-dark" />} label="Session Type" />
+      {/* Main 3-Column Middle Section */}
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
+          {/* Column 1: Session Types (col-span-4) */}
+          <div className="flex flex-col gap-3 lg:col-span-4">
+            <SectionHeader icon={<Heart className="h-3.5 w-3.5 text-sage-dark" />} label="1. Select Session" />
             <div className="flex flex-col gap-2.5">
               {appointmentTypes.map((type) => {
                 const sel = selectedType === type.id;
@@ -479,16 +481,16 @@ export default function Booking() {
                     onBlur={() => setHoveredSession((current) => (current?.id === type.id ? null : current))}
                     aria-describedby={hoveredSession?.id === type.id ? `session-tip-${type.id}` : undefined}
                     className={cn(
-                      'group rounded-xl border px-3.5 py-2.5 text-left transition-all duration-200',
+                      'group rounded-2xl border p-3.5 text-left transition-all duration-200',
                       sel
                         ? 'border-sage bg-sage/8 shadow-sm ring-1 ring-sage/20'
                         : 'border-beige bg-cream hover:border-sage/40 hover:bg-cream/80',
                     )}
                   >
-                    <div className="flex items-start gap-2.5">
+                    <div className="flex items-start gap-3">
                       <div
                         className={cn(
-                          'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl transition-all',
+                          'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all',
                           sel ? `${meta.bg} ${meta.text}` : 'bg-beige/60 text-soft-gray group-hover:bg-beige',
                         )}
                       >
@@ -498,29 +500,29 @@ export default function Booking() {
                         <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
                           <span
                             className={cn(
-                              'font-serif text-[13px] leading-snug',
+                              'font-serif text-sm font-semibold leading-snug',
                               sel ? 'text-sage-dark' : 'text-charcoal',
                             )}
                           >
                             {type.title}
                           </span>
                           {type.price === 0 && (
-                            <span className="shrink-0 rounded-full bg-sage/20 px-1.5 py-0.5 text-[9px] font-semibold text-sage-dark">
+                            <span className="shrink-0 rounded-full bg-sage/20 px-2 py-0.5 text-[10px] font-semibold text-sage-dark">
                               Free
                             </span>
                           )}
                         </div>
-                        <p className="line-clamp-2 text-[11px] leading-relaxed text-warm-gray">
+                        <p className="line-clamp-2 text-xs leading-relaxed text-warm-gray">
                           {type.description}
                         </p>
-                        <div className="mt-1 flex gap-3 text-[10px] text-soft-gray">
+                        <div className="mt-2 flex gap-3 text-xs text-soft-gray">
                           <span className="flex items-center gap-1">
-                            <Clock className="h-2.5 w-2.5" />
+                            <Clock className="h-3 w-3" />
                             {type.duration}
                           </span>
                           {type.price > 0 && (
-                            <span className="flex items-center gap-1">
-                              <CreditCard className="h-2.5 w-2.5" />${type.price}
+                            <span className="flex items-center gap-1 font-semibold text-charcoal">
+                              <CreditCard className="h-3 w-3" />${type.price}
                             </span>
                           )}
                         </div>
@@ -540,373 +542,377 @@ export default function Booking() {
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-col gap-3 lg:col-span-7 lg:h-full">
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-7 lg:items-start lg:gap-4">
-              <div className="flex flex-col gap-2.5 lg:col-span-4 lg:self-start">
-                <div>
-                  <SectionHeader icon={<Calendar className="h-3 w-3 text-sage-dark" />} label="Date" />
-                  <div className="mt-2 rounded-xl border border-beige bg-cream p-4">
-                    <div className="mb-2 flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => setCalendarMonth((m) => subMonths(m, 1))}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-charcoal transition hover:bg-beige/50"
-                        aria-label="Previous month"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </button>
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-xs font-semibold text-charcoal">{format(calendarMonth, 'MMMM yyyy')}</p>
-                        {loadingMonth && <Loader2 className="h-3 w-3 animate-spin text-sage-dark" />}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setCalendarMonth((m) => addMonths(m, 1))}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-charcoal transition hover:bg-beige/50"
-                        aria-label="Next month"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-7 gap-0.5 text-center">
-                      {WEEKDAYS.map((day) => (
-                        <div key={day} className="py-1 text-[10px] font-semibold text-soft-gray">
-                          {day}
-                        </div>
-                      ))}
-                      {calendarDays.map((day) => {
-                        const key = toDateKey(day);
-                        const inMonth = isSameMonth(day, calendarMonth);
-                        const isPast = isBefore(day, today);
-                        const workingDay = isWorkingDay(day);
-                        const dayStatus = monthAvailability[key];
-                        const availabilityKnown = !inMonth || !workingDay || isPast || Boolean(dayStatus);
-                        const fullyBooked = inMonth && !isPast && workingDay && dayStatus?.isFullyBooked;
-                        const bookable = inMonth && !isPast && workingDay && availabilityKnown && !fullyBooked;
-                        const sel = selectedDate === key;
-
-                        let titleText = '';
-                        if (!inMonth) titleText = '';
-                        else if (isPast) titleText = 'Past date';
-                        else if (!workingDay) titleText = 'Non-working day (Weekend)';
-                        else if (fullyBooked) titleText = 'Fully booked';
-                        else if (dayStatus && dayStatus.totalSlots > 0)
-                          titleText = `${dayStatus.totalSlots} slots open`;
-                        else titleText = loadingMonth ? 'Checking availability' : 'Availability unavailable';
-
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            disabled={!bookable}
-                            title={titleText}
-                            onClick={() => handleSelectDate(key)}
-                            className={cn(
-                              'relative flex h-10 flex-col items-center justify-center rounded-lg text-xs font-medium transition',
-                              !inMonth && 'text-soft-gray/40',
-                              inMonth && isPast && 'cursor-not-allowed text-soft-gray/35',
-                              inMonth && !isPast && !workingDay && 'cursor-not-allowed text-soft-gray/30 bg-beige/10',
-                              inMonth &&
-                                fullyBooked &&
-                                'cursor-not-allowed text-soft-gray/40 bg-rose-50/60 line-through decoration-rose-300',
-                              inMonth && bookable && !sel && 'text-charcoal hover:bg-sage/10',
-                              sel && 'bg-sage text-white shadow-sm',
-                              isToday(day) && !sel && bookable && 'ring-1 ring-sage/40 font-semibold',
-                            )}
-                          >
-                            <span>{format(day, 'd')}</span>
-                            {inMonth && fullyBooked && (
-                              <span className="text-[8px] leading-none no-underline font-normal text-rose-500">
-                                Full
-                              </span>
-                            )}
-                            {inMonth && bookable && !sel && dayStatus && dayStatus.totalSlots > 0 && (
-                              <span className="absolute bottom-1 h-1 w-1 rounded-full bg-sage/60" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Timezone Selector */}
-                <div className="shrink-0 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <SectionHeader icon={<Globe className="h-3 w-3 text-sage-dark" />} label="Timezone" />
-                    <span className="text-[10px] text-soft-gray">Times shown in your timezone</span>
-                  </div>
-                  <div className="relative">
-                    <select
-                      value={timeZone}
-                      onChange={(e) => {
-                        setTimeZone(e.target.value);
-                        setSelectedTime(null);
-                      }}
-                      className="w-full appearance-none rounded-xl border border-beige bg-cream px-3 py-2 pr-8 text-xs font-medium text-charcoal transition-all hover:border-sage/40 focus:outline-none focus:ring-2 focus:ring-sage/30"
-                    >
-                      {!TIMEZONES.some((tz) => tz.value === timeZone) && (
-                        <option value={timeZone}>{timeZone} (Detected)</option>
-                      )}
-                      {TIMEZONES.map((tz) => (
-                        <option key={tz.value} value={tz.value}>
-                          {tz.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-soft-gray" />
-                  </div>
-                </div>
-
-                <div ref={timeSectionRef} className="relative shrink-0">
-                  <div className="flex items-center justify-between">
-                    <SectionHeader icon={<Clock className="h-3 w-3 text-terracotta" />} label="Time" />
-                    {loadingSlots && (
-                      <div className="flex items-center gap-1.5 text-[10px] text-sage-dark">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        <span>Checking availability...</span>
-                      </div>
-                    )}
+          {/* Column 2: Date & Time Picker (col-span-4) */}
+          <div className="flex flex-col gap-4 lg:col-span-4">
+            <SectionHeader icon={<Calendar className="h-3.5 w-3.5 text-sage-dark" />} label="2. Date & Time" />
+            <div>
+              <div className="rounded-2xl border border-beige bg-cream p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setCalendarMonth((m) => subMonths(m, 1))}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-charcoal transition hover:bg-beige/50"
+                    aria-label="Previous month"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-semibold text-charcoal">{format(calendarMonth, 'MMMM yyyy')}</p>
+                    {loadingMonth && <Loader2 className="h-3.5 w-3.5 animate-spin text-sage-dark" />}
                   </div>
                   <button
                     type="button"
-                    disabled={!selectedDate || loadingSlots}
-                    onClick={() => selectedDate && setTimePickerOpen((open) => !open)}
-                    aria-expanded={timePickerOpen}
-                    aria-haspopup="listbox"
-                    className={cn(
-                      'mt-2 flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm transition-all',
-                      (!selectedDate || loadingSlots) && 'cursor-not-allowed opacity-50',
-                      selectedTime
-                        ? 'border-sage bg-sage/10 text-sage-dark ring-1 ring-sage/20'
-                        : 'border-beige bg-cream hover:border-sage/40',
-                    )}
+                    onClick={() => setCalendarMonth((m) => addMonths(m, 1))}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-charcoal transition hover:bg-beige/50"
+                    aria-label="Next month"
                   >
-                    <span className={cn('font-medium', !selectedTime && 'text-soft-gray')}>
-                      {!selectedDate
-                        ? 'Select a date first'
-                        : loadingSlots
-                        ? 'Calculating available times...'
-                        : selectedTime ?? 'Choose a time'}
-                    </span>
-                    <ChevronDown
-                      className={cn(
-                        'h-4 w-4 text-soft-gray transition-transform',
-                        timePickerOpen && 'rotate-180',
-                      )}
-                    />
+                    <ChevronRight className="h-4 w-4" />
                   </button>
+                </div>
+                <div className="grid grid-cols-7 gap-1 text-center">
+                  {WEEKDAYS.map((day) => (
+                    <div key={day} className="py-1 text-[11px] font-semibold text-soft-gray">
+                      {day}
+                    </div>
+                  ))}
+                  {calendarDays.map((day) => {
+                    const key = toDateKey(day);
+                    const inMonth = isSameMonth(day, calendarMonth);
+                    const isPast = isBefore(day, today);
+                    const workingDay = isWorkingDay(day);
+                    const dayStatus = monthAvailability[key];
+                    const availabilityKnown = !inMonth || !workingDay || isPast || Boolean(dayStatus);
+                    const fullyBooked = inMonth && !isPast && workingDay && dayStatus?.isFullyBooked;
+                    const bookable = inMonth && !isPast && workingDay && availabilityKnown && !fullyBooked;
+                    const sel = selectedDate === key;
 
-                  {timePickerOpen && selectedDate && !loadingSlots && (
-                    <div
-                      role="listbox"
-                      aria-label="Available times"
-                      className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-beige bg-white shadow-xl ring-1 ring-sage/15"
-                    >
-                      {availableSlots.length === 0 ? (
-                        <div className="p-4 text-center text-xs text-warm-gray">
-                          No slots available for this date in your selected timezone.
-                        </div>
-                      ) : (
-                        <ul className="max-h-44 space-y-0.5 overflow-y-auto overscroll-contain p-1.5">
-                          {availableSlots.map((time) => {
-                            const sel = selectedTime === time;
-                            return (
-                              <li key={time}>
-                                <button
-                                  type="button"
-                                  role="option"
-                                  aria-selected={sel}
-                                  onClick={() => {
-                                    setSelectedTime(time);
-                                    setTimePickerOpen(false);
-                                  }}
-                                  className={cn(
-                                    'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold transition',
-                                    sel ? 'bg-sage text-white' : 'text-charcoal hover:bg-sage/10',
-                                  )}
-                                >
-                                  {time}
-                                  {sel && <Check className="h-4 w-4" />}
-                                </button>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
+                    let titleText = '';
+                    if (!inMonth) titleText = '';
+                    else if (isPast) titleText = 'Past date';
+                    else if (!workingDay) titleText = 'Non-working day (Weekend)';
+                    else if (fullyBooked) titleText = 'Fully booked';
+                    else if (dayStatus && dayStatus.totalSlots > 0)
+                      titleText = `${dayStatus.totalSlots} slots open`;
+                    else titleText = loadingMonth ? 'Checking availability' : 'Available';
+
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        disabled={!bookable}
+                        title={titleText}
+                        onClick={() => handleSelectDate(key)}
+                        className={cn(
+                          'relative flex h-10 flex-col items-center justify-center rounded-xl text-xs font-medium transition',
+                          !inMonth && 'text-soft-gray/40',
+                          inMonth && isPast && 'cursor-not-allowed text-soft-gray/35',
+                          inMonth && !isPast && !workingDay && 'cursor-not-allowed text-soft-gray/30 bg-beige/10',
+                          inMonth &&
+                            fullyBooked &&
+                            'cursor-not-allowed text-soft-gray/40 bg-rose-50/60 line-through decoration-rose-300',
+                          inMonth && bookable && !sel && 'text-charcoal hover:bg-sage/15 hover:shadow-xs',
+                          sel && 'bg-sage text-white shadow-sm ring-1 ring-sage/30',
+                          isToday(day) && !sel && bookable && 'ring-1 ring-sage/40 font-semibold',
+                        )}
+                      >
+                        <span>{format(day, 'd')}</span>
+                        {inMonth && fullyBooked && (
+                          <span className="text-[8px] leading-none no-underline font-normal text-rose-500">
+                            Full
+                          </span>
+                        )}
+                        {inMonth && bookable && !sel && dayStatus && dayStatus.totalSlots > 0 && (
+                          <span className="absolute bottom-1 h-1 w-1 rounded-full bg-sage/60" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Timezone Selector */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <SectionHeader icon={<Globe className="h-3.5 w-3.5 text-sage-dark" />} label="Timezone" />
+                <span className="text-[10px] text-soft-gray">Times in your timezone</span>
+              </div>
+              <div className="relative">
+                <select
+                  value={timeZone}
+                  onChange={(e) => {
+                    setTimeZone(e.target.value);
+                    setSelectedTime(null);
+                  }}
+                  className="w-full appearance-none rounded-2xl border border-beige bg-cream px-3.5 py-2.5 pr-8 text-xs font-medium text-charcoal transition hover:border-sage/40 focus:outline-none focus:ring-2 focus:ring-sage/30"
+                >
+                  {!TIMEZONES.some((tz) => tz.value === timeZone) && (
+                    <option value={timeZone}>{timeZone} (Detected)</option>
+                  )}
+                  {TIMEZONES.map((tz) => (
+                    <option key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-soft-gray" />
+              </div>
+            </div>
+
+            {/* Time Slot Picker */}
+            <div ref={timeSectionRef} className="relative">
+              <div className="flex items-center justify-between">
+                <SectionHeader icon={<Clock className="h-3.5 w-3.5 text-terracotta" />} label="Time Slot" />
+                {loadingSlots && (
+                  <div className="flex items-center gap-1.5 text-[10px] text-sage-dark">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>Checking availability...</span>
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                disabled={!selectedDate || loadingSlots}
+                onClick={() => selectedDate && setTimePickerOpen((open) => !open)}
+                aria-expanded={timePickerOpen}
+                aria-haspopup="listbox"
+                className={cn(
+                  'mt-2 flex w-full items-center justify-between rounded-2xl border px-3.5 py-2.5 text-left text-sm transition-all',
+                  (!selectedDate || loadingSlots) && 'cursor-not-allowed opacity-50',
+                  selectedTime
+                    ? 'border-sage bg-sage/10 text-sage-dark ring-1 ring-sage/20'
+                    : 'border-beige bg-cream hover:border-sage/40',
+                )}
+              >
+                <span className={cn('font-medium', !selectedTime && 'text-soft-gray')}>
+                  {!selectedDate
+                    ? 'Select a date first'
+                    : loadingSlots
+                    ? 'Calculating open times...'
+                    : selectedTime ?? 'Choose a time slot'}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 text-soft-gray transition-transform',
+                    timePickerOpen && 'rotate-180',
+                  )}
+                />
+              </button>
+
+              {timePickerOpen && selectedDate && !loadingSlots && (
+                <div
+                  role="listbox"
+                  aria-label="Available times"
+                  className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-beige bg-white shadow-xl ring-1 ring-sage/15"
+                >
+                  {availableSlots.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-warm-gray">
+                      No slots available for this date in your selected timezone.
+                    </div>
+                  ) : (
+                    <ul className="max-h-48 space-y-0.5 overflow-y-auto overscroll-contain p-2">
+                      {availableSlots.map((time) => {
+                        const sel = selectedTime === time;
+                        return (
+                          <li key={time}>
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={sel}
+                              onClick={() => {
+                                setSelectedTime(time);
+                                setTimePickerOpen(false);
+                              }}
+                              className={cn(
+                                'flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-semibold transition',
+                                sel ? 'bg-sage text-white' : 'text-charcoal hover:bg-sage/10',
+                              )}
+                            >
+                              {time}
+                              {sel && <Check className="h-4 w-4" />}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Column 3: Client Details Form & Confirmation (col-span-4) */}
+          <div className="flex flex-col gap-4 lg:col-span-4">
+            <SectionHeader icon={<User className="h-3.5 w-3.5 text-dusty-blue-dark" />} label="3. Your Details" />
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+              {!authLoading && !user && (
+                <p className="text-xs leading-relaxed text-warm-gray">
+                  Have an account?{' '}
+                  <Link
+                    to="/auth/login"
+                    state={{ from: '/booking' }}
+                    className="font-medium text-sage-dark hover:underline"
+                  >
+                    Sign in
+                  </Link>{' '}
+                  to auto-fill your details.
+                </p>
+              )}
+              <div className="flex flex-col gap-2.5">
+                <Field label="Full Name" icon={<User className="h-3 w-3" />}>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full rounded-2xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    placeholder="Your name"
+                  />
+                </Field>
+                <Field label="Email Address" icon={<Mail className="h-3 w-3" />}>
+                  <input
+                    type="email"
+                    required
+                    readOnly={Boolean(user)}
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className={cn(
+                      'w-full rounded-2xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30',
+                      user && 'cursor-default bg-beige/40 text-warm-gray',
+                    )}
+                    placeholder="your@email.com"
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Phone (optional)" icon={<Phone className="h-3 w-3" />}>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full rounded-2xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      placeholder="+20..."
+                    />
+                  </Field>
+                  <Field label="Country (optional)" icon={<Globe className="h-3 w-3" />}>
+                    <input
+                      type="text"
+                      value={formData.country}
+                      onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                      className="w-full rounded-2xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      placeholder="e.g. Egypt"
+                    />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Child's Name (opt)" icon={<Baby className="h-3 w-3" />}>
+                    <input
+                      type="text"
+                      value={formData.childName}
+                      onChange={(e) => setFormData({ ...formData, childName: e.target.value })}
+                      className="w-full rounded-2xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      placeholder="Child's name"
+                    />
+                  </Field>
+                  <Field label="Child's Age (opt)" icon={<Sparkles className="h-3 w-3" />}>
+                    <input
+                      type="text"
+                      value={formData.childAge}
+                      onChange={(e) => setFormData({ ...formData, childAge: e.target.value })}
+                      className="w-full rounded-2xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      placeholder="e.g. 4 years"
+                    />
+                  </Field>
+                </div>
+                <Field label="Notes (optional)" icon={<MessageSquare className="h-3 w-3" />}>
+                  <textarea
+                    rows={2}
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    className="w-full resize-none rounded-2xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    placeholder="Anything to share before our session..."
+                  />
+                </Field>
+              </div>
+
+              {/* Summary Card */}
+              <div
+                className={cn(
+                  'rounded-2xl border p-3.5 transition-all duration-300',
+                  selectedAppointment ? 'border-sage/30 bg-sage/5' : 'border-beige bg-cream/60',
+                )}
+              >
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-warm-gray">
+                  Booking Summary
+                </p>
+                <div className="space-y-1.5 text-xs">
+                  <SummaryRow label="Session" value={selectedAppointment?.title ?? '—'} />
+                  <SummaryRow
+                    label="Date"
+                    value={
+                      selectedDate
+                        ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                          })
+                        : '—'
+                    }
+                  />
+                  <SummaryRow
+                    label="Time"
+                    value={
+                      selectedTime
+                        ? `${selectedTime} (${timeZone.split('/').pop()?.replace('_', ' ') || timeZone})`
+                        : '—'
+                    }
+                  />
+                  {selectedAppointment && (
+                    <div className="flex justify-between gap-2 border-t border-beige/80 pt-2 font-semibold">
+                      <span className="text-warm-gray">Total</span>
+                      <span className="text-charcoal">
+                        {selectedAppointment.price === 0 ? 'Free' : `$${selectedAppointment.price}`}
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="flex min-h-0 flex-col lg:col-span-3 lg:self-start">
-                <SectionHeader icon={<User className="h-3 w-3 text-dusty-blue-dark" />} label="Your Details" />
-                <form onSubmit={handleSubmit} className="mt-2 flex min-h-0 flex-col gap-2.5">
-                  {!authLoading && !user && (
-                    <p className="text-[11px] leading-relaxed text-warm-gray">
-                      Sign in to save your booking, course progress, and resources in one place.{' '}
-                      <Link
-                        to="/auth/login"
-                        state={{ from: '/booking' }}
-                        className="font-medium text-sage-dark hover:underline"
-                      >
-                        Sign in
-                      </Link>
-                    </p>
-                  )}
-                  <div className="shrink-0 flex flex-col gap-2">
-                    <Field label="Full Name" icon={<User className="h-3 w-3" />}>
-                      <input
-                        type="text"
-                        required
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
-                        placeholder="Your name"
-                      />
-                    </Field>
-                    <Field label="Email" icon={<Mail className="h-3 w-3" />}>
-                      <input
-                        type="email"
-                        required
-                        readOnly={Boolean(user)}
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className={cn(
-                          'w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30',
-                          user && 'cursor-default bg-beige/40 text-warm-gray',
-                        )}
-                        placeholder="your@email.com"
-                      />
-                    </Field>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Field label="Phone (optional)" icon={<Phone className="h-3 w-3" />}>
-                        <input
-                          type="tel"
-                          value={formData.phone}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          className="w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
-                          placeholder="+1 (555) 000-0000"
-                        />
-                      </Field>
-                      <Field label="Country (optional)" icon={<Globe className="h-3 w-3" />}>
-                        <input
-                          type="text"
-                          value={formData.country}
-                          onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                          className="w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
-                          placeholder="e.g. Egypt, UAE"
-                        />
-                      </Field>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Field label="Child's Name (opt)" icon={<Baby className="h-3 w-3" />}>
-                        <input
-                          type="text"
-                          value={formData.childName}
-                          onChange={(e) => setFormData({ ...formData, childName: e.target.value })}
-                          className="w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
-                          placeholder="Child's name"
-                        />
-                      </Field>
-                      <Field label="Child's Age (opt)" icon={<Sparkles className="h-3 w-3" />}>
-                        <input
-                          type="text"
-                          value={formData.childAge}
-                          onChange={(e) => setFormData({ ...formData, childAge: e.target.value })}
-                          className="w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
-                          placeholder="e.g. 4 years"
-                        />
-                      </Field>
-                    </div>
-                    <Field label="Notes (optional)" icon={<MessageSquare className="h-3 w-3" />}>
-                      <textarea
-                        rows={2}
-                        value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        className="w-full resize-none rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
-                        placeholder="Anything to share before our session..."
-                      />
-                    </Field>
+              {submitError && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800"
+                >
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+                  <div className="flex-1 leading-snug">
+                    <p className="font-semibold text-rose-900">Booking could not be saved</p>
+                    <p className="mt-0.5 text-rose-700">{submitError}</p>
                   </div>
+                </div>
+              )}
 
-                  <div className="shrink-0 flex flex-col gap-2.5">
-                    <div
-                      className={cn(
-                        'rounded-xl border p-3 transition-all duration-300',
-                        selectedAppointment ? 'border-sage/20 bg-sage/5' : 'border-beige bg-cream/50',
-                      )}
-                    >
-                      <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-warm-gray">Summary</p>
-                      <div className="space-y-1.5 text-[11px]">
-                        <SummaryRow label="Session" value={selectedAppointment?.title ?? '—'} />
-                        <SummaryRow
-                          label="Date"
-                          value={
-                            selectedDate
-                              ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                })
-                              : '—'
-                          }
-                        />
-                        <SummaryRow
-                          label="Time"
-                          value={
-                            selectedTime
-                              ? `${selectedTime} (${timeZone.split('/').pop()?.replace('_', ' ') || timeZone})`
-                              : '—'
-                          }
-                        />
-                        {selectedAppointment && (
-                          <div className="flex justify-between gap-2 border-t border-beige/80 pt-1.5">
-                            <span className="text-soft-gray">Total</span>
-                            <span className="font-semibold text-charcoal">
-                              {selectedAppointment.price === 0 ? 'Free' : `$${selectedAppointment.price}`}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {submitError && (
-                      <div
-                        role="alert"
-                        className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-2.5 text-[11px] text-rose-800"
-                      >
-                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-600" />
-                        <div className="flex-1 leading-snug">
-                          <p className="font-semibold text-rose-900">Booking could not be saved</p>
-                          <p className="mt-0.5 text-rose-700">{submitError}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    <button
-                      type="submit"
-                      disabled={!canSubmit || isSubmitting}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sage py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-sage-dark disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
-                          <span>Saving booking...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Confirm Booking</span>
-                          <Check className="h-3.5 w-3.5" />
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-
-            <BookingQuoteFooter />
+              <button
+                type="submit"
+                disabled={!canSubmit || isSubmitting}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sage py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-sage-dark disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-white" />
+                    <span>Confirming Booking...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Confirm Booking</span>
+                    <Check className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+            </form>
           </div>
+        </div>
+
+        <div className="mt-10">
+          <BookingQuoteFooter />
         </div>
       </div>
 
