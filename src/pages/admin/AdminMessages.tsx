@@ -37,20 +37,17 @@ const fallbackMessages: ContactMessage[] = [
 
 const AdminMessages = (): JSX.Element => {
   const [messages, setMessages] = useState<ContactMessage[]>(fallbackMessages);
-  const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const highTouchCount = messages.filter((message) => /book|help|support|session|course/i.test(message.subject)).length;
 
   useEffect((): void => {
     const fetch = async (): Promise<void> => {
-      setLoading(true);
       const { data } = await supabase
         .from('contact_messages')
         .select('*')
         .order('created_at', { ascending: false });
       setMessages(data?.length ? data : fallbackMessages);
-      setLoading(false);
     };
     void fetch();
   }, []);

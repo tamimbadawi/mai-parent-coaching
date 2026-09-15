@@ -51,6 +51,16 @@ export interface CreatedCalendarEvent {
   hangoutLink?: string;
 }
 
+export interface CalendarEventLookup {
+  id: string;
+  status: string;
+  htmlLink?: string;
+  start?: { dateTime?: string; timeZone?: string };
+  end?: { dateTime?: string; timeZone?: string };
+  hangoutLink?: string;
+  attendees?: Array<{ email?: string; responseStatus?: string }>;
+}
+
 /**
  * Exchange the stored refresh token for a fresh Google OAuth2 access token.
  */
@@ -201,3 +211,81 @@ export async function createCalendarEvent(
     hangoutLink: event.hangoutLink || event.conferenceData?.entryPoints?.[0]?.uri,
   };
 }
+
+/** Fetch a single event directly from Google Calendar using server-side OAuth credentials. */
+export async function getCalendarEvent(
+  eventId: string,
+  calendarId?: string
+): Promise<CalendarEventLookup> {
+  const targetCalendarId = calendarId || Deno.env.get('GOOGLE_CALENDAR_ID') || 'primary';
+  const accessToken = await getGoogleAccessToken();
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(targetCalendarId)}/events/${encodeURIComponent(eventId)}`;
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Google Calendar event lookup failed:', response.status, errorText);
+    throw new Error(`Event lookup failed: ${response.statusText}`);
+  }
+  return (await response.json()) as CalendarEventLookup;
+}
+
+export async function deleteCalendarEvent(eventId: string, calendarId?: string): Promise<void> {
+  const targetCalendarId = calendarId || Deno.env.get('GOOGLE_CALENDAR_ID') || 'primary';
+  const accessToken = await getGoogleAccessToken();
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(targetCalendarId)}/events/${encodeURIComponent(eventId)}?sendUpdates=all`;
+  const response = await fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!response.ok && response.status !== 404) {
+    const errorText = await response.text();
+    console.error('Google Calendar event deletion failed:', response.status, errorText);
+    throw new Error(`Event deletion failed: ${response.statusText}`);
+  }
+}
+
+export async function updateCalendarEvent(
+  eventId: string,
+  updates: Partial<CalendarEventPayload>,
+  calendarId?: string
+): Promise<CreatedCalendarEvent> {
+  const targetCalendarId = calendarId || Deno.env.get('GOOGLE_CALENDAR_ID') || 'primary';
+  const accessToken = await getGoogleAccessToken();
+
+  const patchBody: Record<string, unknown> = {};
+  if (updates.summary) patchBody.summary = updates.summary;
+  if (updates.description) patchBody.description = updates.description;
+  if (updates.startDateTime) {
+    patchBody.start = { dateTime: updates.startDateTime, timeZone: updates.timeZone || 'UTC' };
+  }
+  if (updates.endDateTime) {
+    patchBody.end = { dateTime: updates.endDateTime, timeZone: updates.timeZone || 'UTC' };
+  }
+
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+    targetCalendarId
+  )}/events/${encodeURIComponent(eventId)}?sendUpdates=all`;
+
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(patchBody),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Google Calendar event update failed:', response.status, errorText);
+    throw new Error(`Event update failed: ${response.statusText} - ${errorText}`);
+  }
+
+  const event = await response.json();
+  return {
+    id: event.id,
+    htmlLink: event.htmlLink,
+    status: event.status,
+    hangoutLink: event.hangoutLink || event.conferenceData?.entryPoints?.[0]?.uri,
+  };
+}
+

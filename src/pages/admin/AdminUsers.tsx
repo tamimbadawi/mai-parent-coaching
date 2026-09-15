@@ -29,7 +29,6 @@ const emptyDraft: UserDraft = {
 
 const AdminUsers = (): JSX.Element => {
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<UserDraft>(emptyDraft);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
@@ -46,7 +45,6 @@ const AdminUsers = (): JSX.Element => {
   );
 
   const fetchUsers = async (): Promise<void> => {
-    setLoading(true);
 
     // Get the current session token and pass it explicitly so RLS works
     const { data: sessionData } = await supabase.auth.getSession();
@@ -54,7 +52,6 @@ const AdminUsers = (): JSX.Element => {
 
     if (!token) {
       setError('No active session — please log out and back in.');
-      setLoading(false);
       return;
     }
 
@@ -86,12 +83,10 @@ const AdminUsers = (): JSX.Element => {
       setUsers([]);
     }
 
-    setLoading(false);
   };
 
   useEffect((): void => {
     void fetchUsers();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openCreate = (): void => {

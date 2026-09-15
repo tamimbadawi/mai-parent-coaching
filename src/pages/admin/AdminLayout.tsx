@@ -19,7 +19,6 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import type { AdminNotification } from '../../types';
 
 const navItems = [
   { to: '/admin', label: 'Overview', icon: LayoutDashboard },

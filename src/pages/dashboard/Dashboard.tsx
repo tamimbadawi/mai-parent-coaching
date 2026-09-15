@@ -11,20 +11,11 @@ const Dashboard = (): JSX.Element => {
   const [videoProgress, setVideoProgress] = useState<VideoProgress[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  console.log('Dashboard - profile:', profile, 'enrollments:', enrollments);
-
-  if (profile?.role === 'admin') {
-    console.log('Dashboard - Admin user, redirecting to /admin');
-    return <Navigate to="/admin" replace />;
-  }
-
   useEffect((): (() => void) => {
     let isMounted = true;
 
     const loadProgress = async (): Promise<void> => {
-      console.log('Dashboard - Loading video progress...');
       const { data, error } = await supabase.from('video_progress').select('*');
-      console.log('Dashboard - Video progress data:', data, 'error:', error);
       if (!isMounted) {
         return;
       }
@@ -45,6 +36,8 @@ const Dashboard = (): JSX.Element => {
   const completedLessons = useMemo(() => videoProgress.filter((item) => item.completed).length, [videoProgress]);
   const hoursWatched = useMemo(() => Math.round((videoProgress.reduce((sum, item) => sum + item.progress_seconds, 0) / 3600) * 10) / 10, [videoProgress]);
   const firstName = profile?.full_name?.split(' ')[0] ?? profile?.email?.split('@')[0] ?? 'friend';
+
+  if (profile?.role === 'admin') return <Navigate to="/admin" replace />;
 
   return (
     <div className="min-h-screen bg-ivory pt-24">

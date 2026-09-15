@@ -44,3 +44,8 @@ Follow these implementation steps in exact sequential order:
    - Removed unsafe direct-insert fallback from the frontend.
    - Server validates appointment type, timezone, working hours, advance notice, Google availability, and database overlap before inserting.
    - Calendar/database failures fail closed or persist as `pending_calendar_sync` without silently losing the lead.
+11. **[x] Admin Booking Management & Schedule Controls** *(Completed & Verified)*:
+   - Created `admin-booking-manager` Edge Function for reschedule, cancel, edit, and calendar sync operations.
+   - Created `booking_blackouts` and `booking_settings` database tables and integrated with `get-availability`.
+   - Built interactive Reschedule, Edit Info, Manual Booking, and Blackout Dates modals in `/admin/bookings`.
+   - Added live search, date range filters (*Today*, *This Week*, *Upcoming*, *Past*), and interactive monthly Calendar View.

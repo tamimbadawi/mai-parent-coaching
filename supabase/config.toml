@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.create-booking]
 verify_jwt = false
+
+[functions.verify-calendar-event]
+verify_jwt = false

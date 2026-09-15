@@ -326,7 +326,11 @@ export default function Booking() {
 
     try {
       const bookingPayload = {
+        // Keep these fields for compatibility with the currently deployed function;
+        // the server still resolves the canonical title and authenticated user.
+        user_id: user?.id ?? null,
         appointment_type_id: selectedType,
+        appointment_type_title: selectedAppointment.title,
         appointment_date: selectedDate,
         appointment_time: selectedTime,
         parent_name: formData.name.trim(),

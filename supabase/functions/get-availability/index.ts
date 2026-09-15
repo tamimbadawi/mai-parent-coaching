@@ -122,6 +122,22 @@ Deno.serve(async (request) => {
       reservedUntil: new Date(booking.reserved_until),
     }));
 
+    // Check blackout / vacation dates
+    const { data: blackouts } = await supabase
+      .from('booking_blackouts')
+      .select('start_date, end_date')
+      .lte('start_date', endDate)
+      .gte('end_date', startDate);
+
+    if (blackouts) {
+      for (const blackout of blackouts) {
+        busyIntervals.push({
+          startsAt: new Date(`${blackout.start_date}T00:00:00Z`),
+          reservedUntil: new Date(`${blackout.end_date}T23:59:59Z`),
+        });
+      }
+    }
+
     let googleCalendarConnected = false;
     if (Deno.env.get('GOOGLE_CLIENT_ID') && Deno.env.get('GOOGLE_CLIENT_SECRET') && Deno.env.get('GOOGLE_REFRESH_TOKEN')) {
       let googleBusy: FreeBusyBlock[];

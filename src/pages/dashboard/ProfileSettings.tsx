@@ -7,7 +7,6 @@ import PhoneInput, { formatPhone, parsePhone } from '../../components/PhoneInput
 const ProfileSettings = (): JSX.Element => {
   const { profile, updateProfile } = useAuth();
   const [fullName, setFullName] = useState<string>(profile?.full_name ?? '');
-  const [phone, setPhone] = useState<string>(profile?.phone ?? '');
   const { dialCode: initDial, local: initLocal } = parsePhone(profile?.phone ?? null);
   const [dialCode, setDialCode] = useState<string>(initDial);
   const [localPhone, setLocalPhone] = useState<string>(initLocal);

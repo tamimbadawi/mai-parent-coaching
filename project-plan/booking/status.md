@@ -42,8 +42,8 @@
 
 ---
 
-## What's Next & In Progress
-
-- **Booking hardening (Complete & Verified)**:
-  - UTC reservation intervals, overlap exclusion constraint, timezone-safe slot calculation, and fail-closed availability/confirmation handling are implemented.
-  - Typecheck, lint (no errors), production build, and all five duration/buffer scheduling checks pass.
+- **Admin Booking Management & Schedule Controls (Complete & Verified)**:
+  - `admin-booking-manager` Edge Function deployed for reschedule, cancel, edit, and calendar sync.
+  - Interactive Reschedule, Edit Details, Add Manual Booking, and Blackout Dates modals.
+  - Live search, date range filters (*Today*, *This Week*, *Upcoming*, *Past*), and interactive monthly Calendar View.
+  - `booking_blackouts` database table and schema migrations active and integrated.

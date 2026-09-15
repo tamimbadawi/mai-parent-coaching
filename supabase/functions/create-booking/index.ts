@@ -1,35 +1,31 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { createCalendarEvent, getCalendarFreeBusy } from '../_shared/google-calendar.ts';
 import {
-  createCalendarEvent,
-  getCalendarFreeBusy,
-} from '../_shared/google-calendar.ts';
+  APPOINTMENT_CONFIG,
+  candidateSlotsForClientDate,
+  intervalsOverlap,
+  isValidDateKey,
+  isValidTime,
+  isValidTimeZone,
+  parseWorkingHours,
+  zonedDateTimeToUtc,
+} from '../_shared/booking-scheduling.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
-
-const json = (body: unknown, status = 200): Response =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-
-const APPOINTMENT_CONFIG: Record<string, { duration: number; buffer: number }> = {
-  initial: { duration: 75, buffer: 15 },
-  'coaching-60': { duration: 60, buffer: 15 },
-  'intensive-90': { duration: 90, buffer: 30 },
-  family: { duration: 75, buffer: 15 },
-  'follow-up': { duration: 45, buffer: 15 },
-};
+const json = (body: unknown, status = 200): Response => new Response(JSON.stringify(body), {
+  status,
+  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+});
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface BookingPayload {
-  user_id?: string | null;
   appointment_type_id: string;
-  appointment_type_title: string;
-  appointment_date: string; // YYYY-MM-DD
-  appointment_time: string; // HH:mm
+  appointment_date: string;
+  appointment_time: string;
   parent_name: string;
   email: string;
   phone?: string | null;
@@ -41,238 +37,145 @@ interface BookingPayload {
 }
 
 Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-
-  if (request.method !== 'POST') {
-    return json({ error: 'Method not allowed. Use POST.' }, 405);
-  }
+  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (request.method !== 'POST') return json({ error: 'Method not allowed. Use POST.' }, 405);
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!supabaseUrl || !serviceRoleKey) {
-      return json({ error: 'Supabase server configuration is missing.' }, 500);
-    }
+    if (!supabaseUrl || !serviceRoleKey) return json({ error: 'Booking database configuration is missing.' }, 503);
 
     const payload = (await request.json()) as BookingPayload;
-
-    // ── 1. Validate Required Fields ─────────────────────────────────────────
-    if (
-      !payload.appointment_type_id ||
-      !payload.appointment_type_title ||
-      !payload.appointment_date ||
-      !payload.appointment_time ||
-      !payload.parent_name?.trim() ||
-      !payload.email?.trim()
-    ) {
-      return json(
-        {
-          error:
-            'Missing required booking fields (appointment_type_id, appointment_type_title, appointment_date, appointment_time, parent_name, email).',
-        },
-        400
-      );
+    const appointment = APPOINTMENT_CONFIG[payload.appointment_type_id];
+    if (!appointment) return json({ error: 'Unknown appointment type.' }, 400);
+    if (!isValidDateKey(payload.appointment_date) || !isValidTime(payload.appointment_time)) {
+      return json({ error: 'Invalid appointment date or time.' }, 400);
+    }
+    if (!payload.parent_name?.trim() || payload.parent_name.trim().length > 120 || !EMAIL_PATTERN.test(payload.email?.trim() ?? '') || payload.email.trim().length > 254) {
+      return json({ error: 'A valid name and email address are required.' }, 400);
     }
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(payload.appointment_date)) {
-      return json({ error: 'Invalid appointment_date format. Expected YYYY-MM-DD.' }, 400);
+    const clientTimeZone = payload.timeZone || 'Africa/Cairo';
+    const coachTimeZone = Deno.env.get('BOOKING_TIMEZONE') || 'Africa/Cairo';
+    if (!isValidTimeZone(clientTimeZone) || !isValidTimeZone(coachTimeZone)) return json({ error: 'Invalid booking timezone.' }, 400);
+    const workingHours = parseWorkingHours(Deno.env.get('BOOKING_WORKING_HOURS'));
+    const startsAt = zonedDateTimeToUtc(payload.appointment_date, payload.appointment_time, clientTimeZone);
+    const endsAt = new Date(startsAt.getTime() + appointment.durationMinutes * 60_000);
+    const reservedUntil = new Date(endsAt.getTime() + appointment.bufferMinutes * 60_000);
+    if (startsAt <= new Date(Date.now() + 60 * 60_000)) return json({ error: 'Bookings require at least one hour of advance notice.' }, 400);
+
+    const validSlot = candidateSlotsForClientDate({
+      clientDate: payload.appointment_date,
+      clientTimeZone,
+      coachTimeZone,
+      durationMinutes: appointment.durationMinutes,
+      bufferMinutes: appointment.bufferMinutes,
+      workingHours,
+    }).some((slot) => slot.startsAt.getTime() === startsAt.getTime());
+    if (!validSlot) return json({ error: 'The selected time is outside booking hours.' }, 400);
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+    let userId: string | null = null;
+    const authorization = request.headers.get('Authorization');
+    if (authorization?.startsWith('Bearer ')) {
+      const { data: { user } } = await supabaseAdmin.auth.getUser(authorization.slice(7));
+      userId = user?.id ?? null;
     }
 
-    const timeZone =
-      payload.timeZone || Deno.env.get('BOOKING_TIMEZONE') || 'Africa/Cairo';
-
-    const config =
-      APPOINTMENT_CONFIG[payload.appointment_type_id] || { duration: 60, buffer: 15 };
-    const durationMinutes = config.duration;
-    const bufferMinutes = config.buffer;
-
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    // ── 2. Database Anti-Collision Check ────────────────────────────────────
-    const { data: existingBookings, error: checkError } = await supabaseAdmin
+    const { data: conflicts, error: conflictError } = await supabaseAdmin
       .from('bookings')
-      .select('id, appointment_time, status')
-      .eq('appointment_date', payload.appointment_date)
-      .eq('appointment_time', payload.appointment_time)
-      .in('status', ['confirmed', 'pending', 'pending_calendar_sync']);
-
-    if (checkError) {
-      console.error('Error checking existing bookings:', checkError);
-    } else if (existingBookings && existingBookings.length > 0) {
-      return json(
-        {
-          error:
-            'This appointment time slot is already reserved. Please select another time.',
-        },
-        409
-      );
-    }
-
-    // ── 3. Google Calendar FreeBusy Conflict Check ──────────────────────────
-    const [startHourStr, startMinuteStr] = payload.appointment_time.split(':');
-    const startHour = parseInt(startHourStr, 10);
-    const startMinute = parseInt(startMinuteStr, 10);
-
-    const slotStart = new Date(`${payload.appointment_date}T${payload.appointment_time}:00`);
-    const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60 * 1000);
-    const slotEndWithBuffer = new Date(
-      slotStart.getTime() + (durationMinutes + bufferMinutes) * 60 * 1000
-    );
+      .select('id')
+      .in('status', ['pending', 'confirmed', 'pending_calendar_sync'])
+      .lt('starts_at', reservedUntil.toISOString())
+      .gt('reserved_until', startsAt.toISOString())
+      .limit(1);
+    if (conflictError) throw new Error(`Could not validate reservations: ${conflictError.message}`);
+    if (conflicts?.length) return json({ error: 'This appointment overlaps another reservation. Please select another time.' }, 409);
 
     let googleCalendarEnabled = false;
-
-    if (
-      Deno.env.get('GOOGLE_CLIENT_ID') &&
-      Deno.env.get('GOOGLE_CLIENT_SECRET') &&
-      Deno.env.get('GOOGLE_REFRESH_TOKEN')
-    ) {
+    if (Deno.env.get('GOOGLE_CLIENT_ID') && Deno.env.get('GOOGLE_CLIENT_SECRET') && Deno.env.get('GOOGLE_REFRESH_TOKEN')) {
+      let busyBlocks;
       try {
-        const dayStartISO = new Date(`${payload.appointment_date}T00:00:00Z`).toISOString();
-        const dayEndISO = new Date(`${payload.appointment_date}T23:59:59Z`).toISOString();
-
-        const busyBlocks = await getCalendarFreeBusy(dayStartISO, dayEndISO, timeZone);
+        busyBlocks = await getCalendarFreeBusy(startsAt.toISOString(), reservedUntil.toISOString(), coachTimeZone);
         googleCalendarEnabled = true;
-
-        const hasConflict = busyBlocks.some((block) => {
-          const blockStart = new Date(block.start);
-          const blockEnd = new Date(block.end);
-          return slotStart < blockEnd && slotEndWithBuffer > blockStart;
-        });
-
-        if (hasConflict) {
-          return json(
-            {
-              error:
-                'This time slot is no longer available on the coach’s calendar. Please pick another time.',
-            },
-            409
-          );
-        }
-      } catch (calError) {
-        console.warn('Google FreeBusy conflict check warning:', calError);
+      } catch (error) {
+        console.error('Google Calendar validation failed:', error);
+        return json({ error: 'Live calendar validation is temporarily unavailable. No booking was created.' }, 503);
+      }
+      if (busyBlocks.some((block) => intervalsOverlap(startsAt, reservedUntil, new Date(block.start), new Date(block.end)))) {
+        return json({ error: 'This time is no longer available on the coach’s calendar.' }, 409);
       }
     }
 
-    // ── 4. Insert Booking Record into Postgres ──────────────────────────────
-    const dbRecord = {
-      user_id: payload.user_id || null,
+    const { data: booking, error: insertError } = await supabaseAdmin.from('bookings').insert({
+      user_id: userId,
       appointment_type_id: payload.appointment_type_id,
-      appointment_type_title: payload.appointment_type_title,
+      appointment_type_title: appointment.title,
       appointment_date: payload.appointment_date,
       appointment_time: payload.appointment_time,
+      time_zone: clientTimeZone,
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      reserved_until: reservedUntil.toISOString(),
       parent_name: payload.parent_name.trim(),
       email: payload.email.trim().toLowerCase(),
-      phone: payload.phone?.trim() || null,
-      country: payload.country?.trim() || null,
-      child_name: payload.child_name?.trim() || null,
-      child_age: payload.child_age?.trim() || null,
-      notes: payload.notes?.trim() || null,
+      phone: payload.phone?.trim().slice(0, 50) || null,
+      country: payload.country?.trim().slice(0, 100) || null,
+      child_name: payload.child_name?.trim().slice(0, 120) || null,
+      child_age: payload.child_age?.trim().slice(0, 30) || null,
+      notes: payload.notes?.trim().slice(0, 2_000) || null,
       status: 'pending',
-    };
-
-    const { data: insertedBooking, error: insertError } = await supabaseAdmin
-      .from('bookings')
-      .insert([dbRecord])
-      .select('*')
-      .single();
-
-    if (insertError || !insertedBooking) {
-      console.error('Database insert error:', insertError);
-      return json(
-        {
-          error: insertError?.message || 'Unable to save booking to database.',
-        },
-        500
-      );
+    }).select('id').single();
+    if (insertError) {
+      if (insertError.code === '23P01') return json({ error: 'This appointment was just reserved. Please select another time.' }, 409);
+      throw new Error(`Unable to save booking: ${insertError.message}`);
     }
 
-    const bookingId = insertedBooking.id;
-
-    // ── 5. Create Google Calendar Event ─────────────────────────────────────
-    let calendarEvent = null;
     let finalStatus: 'confirmed' | 'pending_calendar_sync' = 'confirmed';
-
+    let calendarEvent = null;
     if (googleCalendarEnabled) {
       try {
-        const descriptionLines = [
-          `Session: ${payload.appointment_type_title}`,
-          `Parent: ${payload.parent_name}`,
-          `Email: ${payload.email}`,
-          payload.phone ? `Phone: ${payload.phone}` : null,
-          payload.country ? `Country: ${payload.country}` : null,
-          payload.child_name || payload.child_age
-            ? `Child: ${payload.child_name || 'N/A'}${
-                payload.child_age ? ` (Age: ${payload.child_age})` : ''
-              }`
-            : null,
-          payload.notes ? `\nParent Notes:\n${payload.notes}` : null,
-          `\nBooking ID: ${bookingId}`,
-        ]
-          .filter(Boolean)
-          .join('\n');
-
-        // Construct ISO format for start and end datetime
-        const startISO = `${payload.appointment_date}T${payload.appointment_time}:00`;
-        const endISO = new Date(
-          new Date(`${payload.appointment_date}T${payload.appointment_time}:00`).getTime() +
-            durationMinutes * 60 * 1000
-        )
-          .toTimeString()
-          .split(' ')[0];
-        const endDateTimeISO = `${payload.appointment_date}T${endISO}`;
-
         calendarEvent = await createCalendarEvent({
-          summary: `${payload.appointment_type_title} — ${payload.parent_name}`,
-          description: descriptionLines,
-          startDateTime: startISO,
-          endDateTime: endDateTimeISO,
-          timeZone,
-          clientName: payload.parent_name,
-          clientEmail: payload.email,
+          summary: `${appointment.title} — ${payload.parent_name.trim()}`,
+          description: [
+            `Session: ${appointment.title}`,
+            `Parent: ${payload.parent_name.trim()}`,
+            `Email: ${payload.email.trim().toLowerCase()}`,
+            payload.phone ? `Phone: ${payload.phone.trim()}` : null,
+            payload.country ? `Country: ${payload.country.trim()}` : null,
+            payload.child_name || payload.child_age ? `Child: ${payload.child_name?.trim() || 'N/A'}${payload.child_age ? ` (Age: ${payload.child_age.trim()})` : ''}` : null,
+            payload.notes ? `\nParent Notes:\n${payload.notes.trim().slice(0, 2_000)}` : null,
+            `\nBooking ID: ${booking.id}`,
+          ].filter(Boolean).join('\n'),
+          startDateTime: startsAt.toISOString(),
+          endDateTime: endsAt.toISOString(),
+          timeZone: coachTimeZone,
+          clientName: payload.parent_name.trim(),
+          clientEmail: payload.email.trim().toLowerCase(),
         });
-
-        finalStatus = 'confirmed';
-      } catch (eventError) {
-        console.error('Failed to write Google Calendar event:', eventError);
+      } catch (error) {
+        console.error('Calendar event creation failed:', error);
         finalStatus = 'pending_calendar_sync';
       }
-    } else {
-      // If Google credentials are not set up yet, keep record saved as confirmed in DB
-      finalStatus = 'confirmed';
     }
 
-    // ── 6. Update Final Status in DB ────────────────────────────────────────
-    await supabaseAdmin
-      .from('bookings')
-      .update({ status: finalStatus })
-      .eq('id', bookingId);
+    const { error: statusError } = await supabaseAdmin.from('bookings').update({
+      status: finalStatus,
+      google_calendar_event_id: calendarEvent?.id ?? null,
+      google_meet_url: calendarEvent?.hangoutLink ?? null,
+    }).eq('id', booking.id);
+    if (statusError) console.error('Booking saved but final status update failed:', statusError);
 
-    return json(
-      {
-        success: true,
-        bookingId,
-        status: finalStatus,
-        calendarEventId: calendarEvent?.id || null,
-        hangoutLink: calendarEvent?.hangoutLink || null,
-        message:
-          finalStatus === 'confirmed'
-            ? 'Booking confirmed successfully. A calendar invitation has been dispatched.'
-            : 'Booking captured in system. Calendar sync is currently pending.',
-      },
-      200
-    );
-  } catch (err) {
-    console.error('create-booking uncaught error:', err);
-    return json(
-      {
-        error: err instanceof Error ? err.message : 'Internal server error while processing booking.',
-      },
-      500
-    );
+    return json({
+      success: true,
+      bookingId: booking.id,
+      status: statusError ? 'pending' : finalStatus,
+      calendarEventId: calendarEvent?.id ?? null,
+      hangoutLink: calendarEvent?.hangoutLink ?? null,
+      message: finalStatus === 'confirmed' ? 'Booking confirmed successfully.' : 'Booking saved; calendar synchronization is pending.',
+    });
+  } catch (error) {
+    console.error('create-booking error:', error);
+    return json({ error: error instanceof Error ? error.message : 'Unable to process booking.' }, 500);
   }
 });

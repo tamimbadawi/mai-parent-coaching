@@ -100,6 +100,10 @@ export interface Booking {
   appointment_type_title: string;
   appointment_date: string;
   appointment_time: string;
+  time_zone: string;
+  starts_at: string;
+  ends_at: string;
+  reserved_until: string;
   parent_name: string;
   email: string;
   phone: string | null;
@@ -109,6 +113,28 @@ export interface Booking {
   notes: string | null;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'pending_calendar_sync';
   created_at: string;
+  updated_at: string;
+  google_calendar_event_id: string | null;
+  google_meet_url: string | null;
+}
+
+export interface BookingBlackout {
+  id: string;
+  start_date: string;
+  end_date: string;
+  reason: string;
+  created_at: string;
+  created_by: string | null;
+}
+
+export interface BookingSettings {
+  id: string;
+  working_days: number[];
+  work_start_hour: number;
+  work_end_hour: number;
+  slot_interval_minutes: number;
+  booking_notice_hours: number;
+  time_zone: string;
   updated_at: string;
 }
 

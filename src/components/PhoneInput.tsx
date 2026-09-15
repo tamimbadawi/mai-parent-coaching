@@ -105,7 +105,7 @@ const PhoneInput = ({ value, onChange, inputClassName = '', label }: PhoneInputP
 
   const handleLocalChange = (val: string): void => {
     // Only allow digits, spaces, hyphens
-    const cleaned = val.replace(/[^\d\s\-]/g, '');
+    const cleaned = val.replace(/[^\d\s-]/g, '');
     setLocal(cleaned);
     onChange(formatPhone(dialCode, cleaned) ?? '');
   };
