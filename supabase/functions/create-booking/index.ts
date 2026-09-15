@@ -55,11 +55,12 @@ Deno.serve(async (request) => {
       return json({ error: 'A valid name and email address are required.' }, 400);
     }
 
-    const clientTimeZone = payload.timeZone || 'Africa/Cairo';
+    const normalizedTime = payload.appointment_time.length === 4 ? `0${payload.appointment_time}` : payload.appointment_time;
+    const clientTimeZone = (payload as Record<string, any>).time_zone || payload.timeZone || 'Africa/Cairo';
     const coachTimeZone = Deno.env.get('BOOKING_TIMEZONE') || 'Africa/Cairo';
     if (!isValidTimeZone(clientTimeZone) || !isValidTimeZone(coachTimeZone)) return json({ error: 'Invalid booking timezone.' }, 400);
     const workingHours = parseWorkingHours(Deno.env.get('BOOKING_WORKING_HOURS'));
-    const startsAt = zonedDateTimeToUtc(payload.appointment_date, payload.appointment_time, clientTimeZone);
+    const startsAt = zonedDateTimeToUtc(payload.appointment_date, normalizedTime, clientTimeZone);
     const endsAt = new Date(startsAt.getTime() + appointment.durationMinutes * 60_000);
     const reservedUntil = new Date(endsAt.getTime() + appointment.bufferMinutes * 60_000);
     if (startsAt <= new Date(Date.now() + 60 * 60_000)) return json({ error: 'Bookings require at least one hour of advance notice.' }, 400);
@@ -112,7 +113,7 @@ Deno.serve(async (request) => {
       appointment_type_id: payload.appointment_type_id,
       appointment_type_title: appointment.title,
       appointment_date: payload.appointment_date,
-      appointment_time: payload.appointment_time,
+      appointment_time: normalizedTime,
       time_zone: clientTimeZone,
       starts_at: startsAt.toISOString(),
       ends_at: endsAt.toISOString(),
@@ -131,48 +132,11 @@ Deno.serve(async (request) => {
       throw new Error(`Unable to save booking: ${insertError.message}`);
     }
 
-    let finalStatus: 'confirmed' | 'pending_calendar_sync' = 'confirmed';
-    let calendarEvent = null;
-    if (googleCalendarEnabled) {
-      try {
-        calendarEvent = await createCalendarEvent({
-          summary: `${appointment.title} — ${payload.parent_name.trim()}`,
-          description: [
-            `Session: ${appointment.title}`,
-            `Parent: ${payload.parent_name.trim()}`,
-            `Email: ${payload.email.trim().toLowerCase()}`,
-            payload.phone ? `Phone: ${payload.phone.trim()}` : null,
-            payload.country ? `Country: ${payload.country.trim()}` : null,
-            payload.child_name || payload.child_age ? `Child: ${payload.child_name?.trim() || 'N/A'}${payload.child_age ? ` (Age: ${payload.child_age.trim()})` : ''}` : null,
-            payload.notes ? `\nParent Notes:\n${payload.notes.trim().slice(0, 2_000)}` : null,
-            `\nBooking ID: ${booking.id}`,
-          ].filter(Boolean).join('\n'),
-          startDateTime: startsAt.toISOString(),
-          endDateTime: endsAt.toISOString(),
-          timeZone: coachTimeZone,
-          clientName: payload.parent_name.trim(),
-          clientEmail: payload.email.trim().toLowerCase(),
-        });
-      } catch (error) {
-        console.error('Calendar event creation failed:', error);
-        finalStatus = 'pending_calendar_sync';
-      }
-    }
-
-    const { error: statusError } = await supabaseAdmin.from('bookings').update({
-      status: finalStatus,
-      google_calendar_event_id: calendarEvent?.id ?? null,
-      google_meet_url: calendarEvent?.hangoutLink ?? null,
-    }).eq('id', booking.id);
-    if (statusError) console.error('Booking saved but final status update failed:', statusError);
-
     return json({
       success: true,
       bookingId: booking.id,
-      status: statusError ? 'pending' : finalStatus,
-      calendarEventId: calendarEvent?.id ?? null,
-      hangoutLink: calendarEvent?.hangoutLink ?? null,
-      message: finalStatus === 'confirmed' ? 'Booking confirmed successfully.' : 'Booking saved; calendar synchronization is pending.',
+      status: 'pending',
+      message: 'Booking request received and slot reserved. Pending admin confirmation.',
     });
   } catch (error) {
     console.error('create-booking error:', error);

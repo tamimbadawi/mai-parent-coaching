@@ -42,30 +42,39 @@ Deno.serve(async (request) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // 1. Verify Admin Authentication
+    // 1. Verify Authentication
     const authHeader = request.headers.get('Authorization');
     if (!authHeader) {
       return json({ error: 'Missing Authorization header' }, 401);
     }
 
     const token = authHeader.replace(/^Bearer\s+/i, '');
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(token);
+    const isServiceRole = token === serviceRoleKey;
 
-    if (authError || !user) {
-      return json({ error: 'Unauthorized: Invalid token' }, 401);
-    }
+    let callerUser: { id: string; email?: string } | null = null;
+    let isAdmin = isServiceRole;
 
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+    if (!isServiceRole) {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser(token);
 
-    if (profileError || profile?.role !== 'admin') {
-      return json({ error: 'Forbidden: Admin privileges required' }, 403);
+      if (authError || !user) {
+        return json({ error: 'Unauthorized: Invalid token' }, 401);
+      }
+
+      callerUser = user;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.role === 'admin') {
+        isAdmin = true;
+      }
     }
 
     // 2. Parse Request Body
@@ -74,6 +83,79 @@ Deno.serve(async (request) => {
 
     if (!action) {
       return json({ error: 'Action parameter is required' }, 400);
+    }
+
+    // ── ACTION: APPROVE BOOKING (Admin Only) ────────────────────────────────
+    if (action === 'approve') {
+      if (!isAdmin) {
+        return json({ error: 'Forbidden: Admin privileges required' }, 403);
+      }
+      const { bookingId } = body;
+      if (!bookingId) {
+        return json({ error: 'bookingId is required' }, 400);
+      }
+
+      const { data: booking, error: fetchErr } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('id', bookingId)
+        .single();
+
+      if (fetchErr || !booking) {
+        return json({ error: 'Booking not found' }, 404);
+      }
+
+      let calendarEvent = null;
+      let finalStatus: 'confirmed' | 'pending_calendar_sync' = 'confirmed';
+
+      if (Deno.env.get('GOOGLE_CLIENT_ID') && Deno.env.get('GOOGLE_CLIENT_SECRET') && Deno.env.get('GOOGLE_REFRESH_TOKEN')) {
+        try {
+          calendarEvent = await createCalendarEvent({
+            summary: `${booking.appointment_type_title} — ${booking.parent_name}`,
+            description: [
+              `Session: ${booking.appointment_type_title}`,
+              `Parent: ${booking.parent_name}`,
+              `Email: ${booking.email}`,
+              booking.phone ? `Phone: ${booking.phone}` : null,
+              booking.country ? `Country: ${booking.country}` : null,
+              booking.child_name || booking.child_age ? `Child: ${booking.child_name || 'N/A'}${booking.child_age ? ` (Age: ${booking.child_age})` : ''}` : null,
+              booking.notes ? `\nParent Notes:\n${booking.notes}` : null,
+              `\nBooking ID: ${booking.id}`,
+            ].filter(Boolean).join('\n'),
+            startDateTime: booking.starts_at,
+            endDateTime: booking.ends_at,
+            timeZone: booking.time_zone || 'Africa/Cairo',
+            clientName: booking.parent_name,
+            clientEmail: booking.email,
+          });
+        } catch (calErr) {
+          console.error('Google Calendar creation error during approval:', calErr);
+          finalStatus = 'pending_calendar_sync';
+        }
+      }
+
+      const { data: updatedBooking, error: updateErr } = await supabase
+        .from('bookings')
+        .update({
+          status: finalStatus,
+          google_calendar_event_id: calendarEvent?.id ?? booking.google_calendar_event_id ?? null,
+          google_meet_url: calendarEvent?.hangoutLink ?? booking.google_meet_url ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', bookingId)
+        .select('*')
+        .single();
+
+      if (updateErr) {
+        return json({ error: `Failed to approve booking: ${updateErr.message}` }, 400);
+      }
+
+      return json({
+        success: true,
+        booking: updatedBooking,
+        calendarEventId: calendarEvent?.id ?? null,
+        hangoutLink: calendarEvent?.hangoutLink ?? null,
+      });
     }
 
     // ── ACTION: RESCHEDULE BOOKING ──────────────────────────────────────────
@@ -92,6 +174,20 @@ Deno.serve(async (request) => {
 
       if (fetchErr || !booking) {
         return json({ error: 'Booking not found' }, 404);
+      }
+
+      // Check permissions: Admin or Owner
+      if (!isAdmin) {
+        if (!callerUser) {
+          return json({ error: 'Unauthorized: You must be logged in to modify bookings' }, 401);
+        }
+        const isOwner =
+          (booking.user_id && booking.user_id === callerUser.id) ||
+          (booking.email && callerUser.email && booking.email.toLowerCase() === callerUser.email.toLowerCase());
+
+        if (!isOwner) {
+          return json({ error: 'Forbidden: You can only reschedule your own bookings' }, 403);
+        }
       }
 
       const tz = timeZone || booking.time_zone || 'Africa/Cairo';
@@ -129,7 +225,7 @@ Deno.serve(async (request) => {
       if (booking.google_calendar_event_id) {
         try {
           await updateCalendarEvent(booking.google_calendar_event_id, {
-            summary: `Coaching Session: ${booking.appointment_type_title} â€” ${booking.parent_name}`,
+            summary: `Coaching Session: ${booking.appointment_type_title} — ${booking.parent_name}`,
             startDateTime: newStartsAt,
             endDateTime: newEndsAt,
             timeZone: tz,
@@ -164,6 +260,20 @@ Deno.serve(async (request) => {
         return json({ error: 'Booking not found' }, 404);
       }
 
+      // Check permissions: Admin or Owner
+      if (!isAdmin) {
+        if (!callerUser) {
+          return json({ error: 'Unauthorized: You must be logged in to modify bookings' }, 401);
+        }
+        const isOwner =
+          (booking.user_id && booking.user_id === callerUser.id) ||
+          (booking.email && callerUser.email && booking.email.toLowerCase() === callerUser.email.toLowerCase());
+
+        if (!isOwner) {
+          return json({ error: 'Forbidden: You can only cancel your own bookings' }, 403);
+        }
+      }
+
       const { data: updatedBooking, error: updateErr } = await supabase
         .from('bookings')
         .update({
@@ -194,8 +304,11 @@ Deno.serve(async (request) => {
       });
     }
 
-    // ── ACTION: EDIT BOOKING DETAILS ────────────────────────────────────────
+    // ── ACTION: EDIT BOOKING DETAILS (Admin Only) ───────────────────────────
     if (action === 'edit-details') {
+      if (!isAdmin) {
+        return json({ error: 'Forbidden: Admin privileges required' }, 403);
+      }
       const {
         bookingId,
         parent_name,
@@ -243,8 +356,11 @@ Deno.serve(async (request) => {
       });
     }
 
-    // ── ACTION: SYNC CALENDAR EVENT ─────────────────────────────────────────
+    // ── ACTION: SYNC CALENDAR EVENT (Admin Only) ────────────────────────────
     if (action === 'sync-calendar') {
+      if (!isAdmin) {
+        return json({ error: 'Forbidden: Admin privileges required' }, 403);
+      }
       const { bookingId } = body;
       if (!bookingId) {
         return json({ error: 'bookingId is required' }, 400);

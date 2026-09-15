@@ -82,8 +82,8 @@ Deno.serve(async (request) => {
       query = (await request.json()) as AvailabilityQuery;
     }
 
-    const appointment = query.appointmentTypeId ? APPOINTMENT_CONFIG[query.appointmentTypeId] : undefined;
-    if (!appointment) return json({ error: 'Unknown appointment type.' }, 400);
+    const appointmentTypeId = query.appointmentTypeId || 'initial';
+    const appointment = APPOINTMENT_CONFIG[appointmentTypeId] || APPOINTMENT_CONFIG.initial;
     const clientTimeZone = query.timeZone || 'Africa/Cairo';
     const coachTimeZone = Deno.env.get('BOOKING_TIMEZONE') || 'Africa/Cairo';
     if (!isValidTimeZone(clientTimeZone)) return json({ error: 'Invalid IANA timezone.' }, 400);

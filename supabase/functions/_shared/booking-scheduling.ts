@@ -20,15 +20,16 @@ export interface WorkingInterval {
 export type WorkingHours = Partial<Record<number, WorkingInterval[]>>;
 
 export const DEFAULT_WORKING_HOURS: WorkingHours = {
-  0: [{ start: '09:00', end: '12:00' }, { start: '13:00', end: '16:00' }],
-  1: [{ start: '09:00', end: '12:00' }, { start: '13:00', end: '16:00' }],
-  2: [{ start: '09:00', end: '12:00' }, { start: '13:00', end: '16:00' }],
-  3: [{ start: '09:00', end: '12:00' }, { start: '13:00', end: '16:00' }],
-  4: [{ start: '09:00', end: '12:00' }, { start: '13:00', end: '16:00' }],
+  0: [{ start: '09:00', end: '18:00' }],
+  1: [{ start: '09:00', end: '18:00' }],
+  2: [{ start: '09:00', end: '18:00' }],
+  3: [{ start: '09:00', end: '18:00' }],
+  4: [{ start: '09:00', end: '18:00' }],
+  5: [{ start: '09:00', end: '18:00' }],
 };
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const TIME_PATTERN = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 const WEEKDAY_INDEX: Record<string, number> = {
   Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
 };

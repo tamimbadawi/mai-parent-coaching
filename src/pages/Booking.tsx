@@ -10,6 +10,7 @@ import {
   isBefore,
   isSameMonth,
   isToday,
+  isWeekend,
   startOfDay,
   startOfMonth,
   startOfWeek,
@@ -34,38 +35,22 @@ import {
   Star,
   CalendarDays,
   MessageCircle,
-  AlertCircle,
   Loader2,
-  Phone,
-  Globe,
-  Baby,
+  CalendarCheck,
+  Video,
 } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import type { UserProfile } from '../types';
+import type { UserProfile, Booking as BookingType } from '../types';
 import { appointmentTypes } from '../data/content';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
+import { ClientRescheduleModal } from '../components/booking/ClientRescheduleModal';
+import { ClientCancelModal } from '../components/booking/ClientCancelModal';
 
 const TIMES = [
-  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
-  '15:00', '15:30',
-];
-
-const TIMEZONES = [
-  { value: 'Africa/Cairo', label: 'Cairo (GMT+2 / GMT+3)' },
-  { value: 'Asia/Riyadh', label: 'Riyadh / Mecca (GMT+3)' },
-  { value: 'Asia/Dubai', label: 'Dubai / UAE (GMT+4)' },
-  { value: 'Asia/Kuwait', label: 'Kuwait (GMT+3)' },
-  { value: 'Asia/Qatar', label: 'Doha (GMT+3)' },
-  { value: 'Asia/Amman', label: 'Amman (GMT+3)' },
-  { value: 'Europe/London', label: 'London (GMT / BST)' },
-  { value: 'Europe/Paris', label: 'Paris / CET (GMT+1)' },
-  { value: 'America/New_York', label: 'New York / Eastern (EST/EDT)' },
-  { value: 'America/Chicago', label: 'Chicago / Central (CST/CDT)' },
-  { value: 'America/Los_Angeles', label: 'Los Angeles / Pacific (PST/PDT)' },
-  { value: 'UTC', label: 'UTC (Universal Coordinated Time)' },
+  '9:00', '9:30', '10:00', '10:30', '11:00', '11:30',
+  '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
 ];
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -156,34 +141,12 @@ export default function Booking() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
-  const [timePickerOpen, setTimePickerOpen] = useState(false);
-  const [timeZone, setTimeZone] = useState(() => {
-    try {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Cairo';
-    } catch {
-      return 'Africa/Cairo';
-    }
-  });
-  const [monthAvailability, setMonthAvailability] = useState<
-    Record<string, { totalSlots: number; isFullyBooked: boolean }>
-  >({});
-  const [loadingMonth, setLoadingMonth] = useState(false);
-  const [availableSlots, setAvailableSlots] = useState<string[]>(TIMES);
   const [loadingSlots, setLoadingSlots] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    country: '',
-    childName: '',
-    childAge: '',
-    notes: '',
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({ name: '', email: '', notes: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [hoveredSession, setHoveredSession] = useState<{ id: string; rect: DOMRect } | null>(null);
-  const timeSectionRef = useRef<HTMLDivElement>(null);
 
   const selectedAppointment = appointmentTypes.find((a) => a.id === selectedType);
   const today = startOfDay(new Date());
@@ -194,115 +157,95 @@ export default function Booking() {
     return eachDayOfInterval({ start: startOfWeek(monthStart), end: endOfWeek(monthEnd) });
   }, [calendarMonth]);
 
-  // Working days: Sunday (0) through Thursday (4)
-  const isWorkingDay = (date: Date) => {
-    const day = date.getDay();
-    return day >= 0 && day <= 4;
-  };
+  const isBookable = (date: Date) => !isBefore(date, today) && !isWeekend(date);
 
   const handleSelectDate = (key: string) => {
     setSelectedDate(key);
     setSelectedTime(null);
-    setTimePickerOpen(true);
   };
 
-  // Fetch month-level availability to visually disable booked days
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  const [userPreviousBookings, setUserPreviousBookings] = useState<BookingType[]>([]);
+  const [loadingUserBookings, setLoadingUserBookings] = useState(false);
+
   useEffect(() => {
-    let isCancelled = false;
-    const monthKey = format(calendarMonth, 'yyyy-MM');
+    if (!selectedDate) {
+      setAvailableTimes([]);
+      setSelectedTime(null);
+      return;
+    }
 
-    const fetchMonthAvailability = async () => {
-      setLoadingMonth(true);
-      try {
-        const { data, error } = await supabase.functions.invoke('get-availability', {
-          body: {
-            month: monthKey,
-            appointmentTypeId: selectedType || 'initial',
-            timeZone,
-          },
-        });
-
-        if (!isCancelled) {
-          if (!error && data?.days) {
-            setMonthAvailability(data.days);
-          }
-        }
-      } catch (err) {
-        console.warn('Month availability fetch error:', err);
-      } finally {
-        if (!isCancelled) setLoadingMonth(false);
-      }
-    };
-
-    void fetchMonthAvailability();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [calendarMonth, selectedType, timeZone]);
-
-  // Fetch real-time availability slots when date, type, or timezone changes
-  useEffect(() => {
-    if (!selectedDate) return;
-
-    let isCancelled = false;
-    const fetchSlots = async () => {
+    let isMounted = true;
+    async function loadLiveAvailability() {
       setLoadingSlots(true);
       try {
         const { data, error } = await supabase.functions.invoke('get-availability', {
           body: {
             date: selectedDate,
             appointmentTypeId: selectedType || 'initial',
-            timeZone,
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Cairo',
           },
         });
 
-        if (!isCancelled) {
-          if (error) {
-            console.error('Could not fetch dynamic slots:', error);
-            setAvailableSlots([]);
+        if (!isMounted) return;
+
+        if (error || !data) {
+          console.warn('get-availability error:', error);
+          setAvailableTimes([]);
+        } else {
+          const openSlots: string[] = data.availableSlots || [];
+          setAvailableTimes(openSlots);
+          if (selectedTime && !openSlots.includes(selectedTime)) {
             setSelectedTime(null);
-          } else if (Array.isArray(data?.availableSlots)) {
-            setAvailableSlots(data.availableSlots);
-            if (selectedTime && !data.availableSlots.includes(selectedTime)) {
-              setSelectedTime(null);
-            }
           }
         }
       } catch (err) {
-        console.error('Availability fetch error:', err);
-        if (!isCancelled) {
-          setAvailableSlots([]);
-          setSelectedTime(null);
-        }
+        console.error('Error fetching available slots:', err);
+        if (isMounted) setAvailableTimes([]);
       } finally {
-        if (!isCancelled) setLoadingSlots(false);
+        if (isMounted) setLoadingSlots(false);
       }
-    };
+    }
 
-    void fetchSlots();
-
+    loadLiveAvailability();
     return () => {
-      isCancelled = true;
+      isMounted = false;
     };
-  }, [selectedDate, selectedType, selectedTime, timeZone]);
+  }, [selectedDate, selectedType]);
+
+  const fetchUserBookings = async () => {
+    if (!user && !formData.email.trim()) {
+      setUserPreviousBookings([]);
+      return;
+    }
+
+    setLoadingUserBookings(true);
+    try {
+      let query = supabase.from('bookings').select('*');
+      if (user?.id) {
+        query = query.or(`user_id.eq.${user.id},email.eq.${user.email?.toLowerCase() || ''}`);
+      } else if (formData.email.trim()) {
+        query = query.eq('email', formData.email.trim().toLowerCase());
+      }
+      const { data, error } = await query
+        .order('appointment_date', { ascending: false })
+        .order('appointment_time', { ascending: false });
+
+      if (error) {
+        console.warn('Error fetching user previous bookings:', error);
+      } else if (data) {
+        setUserPreviousBookings(data as BookingType[]);
+      }
+    } catch (err) {
+      console.warn('Failed to load user bookings:', err);
+    } finally {
+      setLoadingUserBookings(false);
+    }
+  };
 
   useEffect(() => {
-    if (!timePickerOpen) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (timeSectionRef.current?.contains(event.target as Node)) return;
-      setTimePickerOpen(false);
-    };
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setTimePickerOpen(false);
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onEscape);
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onEscape);
-    };
-  }, [timePickerOpen]);
+    void fetchUserBookings();
+  }, [user, formData.email]);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -312,61 +255,54 @@ export default function Booking() {
       ...prev,
       name: name || prev.name,
       email: email || prev.email,
-      phone: profile?.phone || prev.phone,
-      country: profile?.country || prev.country,
     }));
   }, [user, profile, authLoading]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!canSubmit || !selectedAppointment || !selectedDate || !selectedTime || isSubmitting) return;
-
-    setIsSubmitting(true);
+    if (!canSubmit || submitting) return;
+    setSubmitting(true);
     setSubmitError(null);
 
     try {
-      const bookingPayload = {
-        // Keep these fields for compatibility with the currently deployed function;
-        // the server still resolves the canonical title and authenticated user.
-        user_id: user?.id ?? null,
-        appointment_type_id: selectedType,
-        appointment_type_title: selectedAppointment.title,
-        appointment_date: selectedDate,
-        appointment_time: selectedTime,
-        parent_name: formData.name.trim(),
-        email: formData.email.trim().toLowerCase(),
-        phone: formData.phone?.trim() || profile?.phone || null,
-        country: formData.country?.trim() || profile?.country || null,
-        child_name: formData.childName?.trim() || null,
-        child_age: formData.childAge?.trim() || null,
-        notes: formData.notes?.trim() || null,
-        timeZone,
-      };
-
-      // 1. Invoke the create-booking Edge Function (handles atomic slot validation + Google Calendar invite)
-      const { data, error: functionError } = await supabase.functions.invoke('create-booking', {
-        body: bookingPayload,
+      const { data, error } = await supabase.functions.invoke('create-booking', {
+        body: {
+          appointment_type_id: selectedType,
+          appointment_date: selectedDate,
+          appointment_time: selectedTime,
+          parent_name: formData.name.trim(),
+          email: formData.email.trim(),
+          notes: formData.notes.trim() || null,
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Cairo',
+        },
       });
 
-      if (functionError || data?.error) {
-        setSubmitError(data?.error || functionError?.message || 'Unable to save your booking. Please try again.');
-        return;
+      if (error) {
+        let detailedMsg = error.message;
+        try {
+          if (error.context && typeof error.context.json === 'function') {
+            const errJson = await error.context.json();
+            if (errJson?.error) detailedMsg = errJson.error;
+          }
+        } catch {
+          // ignore
+        }
+        throw new Error(detailedMsg || 'Failed to confirm booking.');
+      } else if (data?.error) {
+        throw new Error(data.error);
       }
 
-      // Genuinely persisted and synced
       setSubmitted(true);
-    } catch (err: unknown) {
-      console.error('Unexpected booking error:', err);
-      const message =
-        err instanceof Error ? err.message : 'An unexpected error occurred while submitting your booking.';
-      setSubmitError(message);
+    } catch (err: any) {
+      console.error('Booking submission error:', err);
+      setSubmitError(err.message || 'Something went wrong while confirming your booking. Please try again.');
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
   const canSubmit = Boolean(
-    selectedType && selectedDate && selectedTime && formData.name.trim() && formData.email.trim(),
+    selectedType && selectedDate && selectedTime && formData.name && formData.email && !submitting,
   );
 
   const hoveredType = hoveredSession
@@ -381,25 +317,26 @@ export default function Booking() {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-sage/15 ring-4 ring-sage/20">
             <Check className="h-6 w-6 text-sage-dark" />
           </div>
-          <h1 className="mb-2 font-serif text-2xl text-charcoal">You&apos;re all set!</h1>
-          <p className="mb-5 text-sm leading-relaxed text-warm-gray">
-            <span className="font-medium text-charcoal">{selectedAppointment?.title}</span> booked for{' '}
-            <span className="font-medium text-charcoal">
-              {selectedDate &&
-                new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-            </span>{' '}
-            at{' '}
-            <span className="font-medium text-charcoal">
-              {selectedTime} ({timeZone})
-            </span>
-            .
-            <br />
-            Confirmation & Calendar invite sent to <span className="font-medium text-charcoal">{formData.email}</span>.
-          </p>
+          <h1 className="mb-2 font-serif text-2xl text-charcoal">Booking Request Received!</h1>
+          <div className="mb-5 space-y-2 text-sm leading-relaxed text-warm-gray">
+            <p>
+              Your time slot for <span className="font-medium text-charcoal">{selectedAppointment?.title}</span> on{' '}
+              <span className="font-medium text-charcoal">
+                {selectedDate &&
+                  new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+              </span>{' '}
+              at <span className="font-medium text-charcoal">{selectedTime}</span> is{' '}
+              <span className="font-semibold text-sage-dark">temporarily reserved</span>.
+            </p>
+            <p className="text-xs text-soft-gray">
+              Mai will review and confirm your session shortly. Once approved, you will receive an email confirmation with your session details and Google Meet link at{' '}
+              <span className="font-medium text-charcoal">{formData.email}</span>.
+            </p>
+          </div>
           <Link
             to="/"
             className="inline-flex items-center gap-2 rounded-full bg-sage px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-sage-dark"
@@ -412,49 +349,48 @@ export default function Booking() {
   }
 
   return (
-    <div className="min-h-screen bg-ivory pt-24 lg:pt-28 pb-16">
-      {/* Top Progress & Title Header */}
-      <div className="border-b border-beige/70 bg-ivory/90 px-4 py-4 backdrop-blur-sm sm:px-6">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
+    <div className="flex min-h-screen flex-col bg-ivory" style={{ paddingTop: '64px' }}>
+      <div className="shrink-0 border-b border-beige/70 bg-ivory/80 px-4 py-3 backdrop-blur-sm sm:px-6">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between">
           <div>
-            <h1 className="font-serif text-2xl font-bold text-charcoal sm:text-3xl">Book a Session</h1>
-            <p className="mt-0.5 text-xs text-warm-gray sm:text-sm">
-              Evidence-based parent coaching & consultation
-            </p>
+            <h1 className="font-serif text-lg leading-none text-charcoal">Book a Session</h1>
+            <p className="mt-0.5 hidden text-xs text-soft-gray sm:block">Fill in your preferences below</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {[
-              { label: 'Session', done: Boolean(selectedType), icon: <Sparkles className="h-3 w-3" /> },
-              { label: 'Date', done: Boolean(selectedDate), icon: <CalendarDays className="h-3 w-3" /> },
-              { label: 'Time', done: Boolean(selectedTime), icon: <Clock className="h-3 w-3" /> },
+              { label: 'Session', done: !!selectedType, icon: <Sparkles className="h-2.5 w-2.5" /> },
+              { label: 'Date', done: !!selectedDate, icon: <CalendarDays className="h-2.5 w-2.5" /> },
+              { label: 'Time', done: !!selectedTime, icon: <Clock className="h-2.5 w-2.5" /> },
               {
                 label: 'Details',
-                done: Boolean(formData.name && formData.email),
-                icon: <User className="h-3 w-3" />,
+                done: !!(formData.name && formData.email),
+                icon: <User className="h-2.5 w-2.5" />,
               },
             ].map(({ label, done, icon }) => (
               <div key={label} className="flex items-center gap-1.5">
                 <div
                   className={cn(
-                    'flex h-6 w-6 items-center justify-center rounded-full transition-all duration-300',
+                    'flex h-5 w-5 items-center justify-center rounded-full transition-all duration-300',
                     done ? 'scale-105 bg-sage text-white shadow-sm' : 'bg-beige text-soft-gray',
                   )}
                 >
-                  {done ? <Check className="h-3 w-3" /> : icon}
+                  {done ? <Check className="h-2.5 w-2.5" /> : icon}
                 </div>
-                <span className="hidden text-xs font-medium text-charcoal/80 sm:inline">{label}</span>
+                <span className="hidden text-[10px] text-soft-gray sm:inline">{label}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Main 3-Column Middle Section */}
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
-          {/* Column 1: Session Types (col-span-4) */}
-          <div className="flex flex-col gap-3 lg:col-span-4">
-            <SectionHeader icon={<Heart className="h-3.5 w-3.5 text-sage-dark" />} label="1. Select Session" />
+      <div className="flex-1 overflow-y-auto">
+        <div
+          className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-4 py-4 sm:px-6
+          lg:grid lg:grid-cols-12 lg:items-start lg:gap-4 xl:gap-5"
+        >
+          {/* Column 1: Session Types */}
+          <div className="flex flex-col gap-3 lg:col-span-4 xl:col-span-3">
+            <SectionHeader icon={<Heart className="h-3 w-3 text-sage-dark" />} label="Session Type" />
             <div className="flex flex-col gap-2.5">
               {appointmentTypes.map((type) => {
                 const sel = selectedType === type.id;
@@ -481,16 +417,16 @@ export default function Booking() {
                     onBlur={() => setHoveredSession((current) => (current?.id === type.id ? null : current))}
                     aria-describedby={hoveredSession?.id === type.id ? `session-tip-${type.id}` : undefined}
                     className={cn(
-                      'group rounded-2xl border p-3.5 text-left transition-all duration-200',
+                      'group rounded-xl border px-3.5 py-2.5 text-left transition-all duration-200',
                       sel
                         ? 'border-sage bg-sage/8 shadow-sm ring-1 ring-sage/20'
                         : 'border-beige bg-cream hover:border-sage/40 hover:bg-cream/80',
                     )}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2.5">
                       <div
                         className={cn(
-                          'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all',
+                          'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl transition-all',
                           sel ? `${meta.bg} ${meta.text}` : 'bg-beige/60 text-soft-gray group-hover:bg-beige',
                         )}
                       >
@@ -500,29 +436,29 @@ export default function Booking() {
                         <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
                           <span
                             className={cn(
-                              'font-serif text-sm font-semibold leading-snug',
+                              'font-serif text-[13px] leading-snug',
                               sel ? 'text-sage-dark' : 'text-charcoal',
                             )}
                           >
                             {type.title}
                           </span>
                           {type.price === 0 && (
-                            <span className="shrink-0 rounded-full bg-sage/20 px-2 py-0.5 text-[10px] font-semibold text-sage-dark">
+                            <span className="shrink-0 rounded-full bg-sage/20 px-1.5 py-0.5 text-[9px] font-semibold text-sage-dark">
                               Free
                             </span>
                           )}
                         </div>
-                        <p className="line-clamp-2 text-xs leading-relaxed text-warm-gray">
+                        <p className="line-clamp-2 text-[11px] leading-relaxed text-warm-gray">
                           {type.description}
                         </p>
-                        <div className="mt-2 flex gap-3 text-xs text-soft-gray">
+                        <div className="mt-1 flex gap-3 text-[10px] text-soft-gray">
                           <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
+                            <Clock className="h-2.5 w-2.5" />
                             {type.duration}
                           </span>
                           {type.price > 0 && (
-                            <span className="flex items-center gap-1 font-semibold text-charcoal">
-                              <CreditCard className="h-3 w-3" />${type.price}
+                            <span className="flex items-center gap-1">
+                              <CreditCard className="h-2.5 w-2.5" />${type.price}
                             </span>
                           )}
                         </div>
@@ -542,88 +478,57 @@ export default function Booking() {
             </div>
           </div>
 
-          {/* Column 2: Date & Time Picker (col-span-4) */}
-          <div className="flex flex-col gap-4 lg:col-span-4">
-            <SectionHeader icon={<Calendar className="h-3.5 w-3.5 text-sage-dark" />} label="2. Date & Time" />
+          {/* Column 2: Date & Available Times */}
+          <div className="flex flex-col gap-3.5 lg:col-span-4 xl:col-span-3">
             <div>
-              <div className="rounded-2xl border border-beige bg-cream p-4">
-                <div className="mb-3 flex items-center justify-between">
+              <SectionHeader icon={<Calendar className="h-3 w-3 text-sage-dark" />} label="Date" />
+              <div className="mt-2 rounded-xl border border-beige bg-cream p-4">
+                <div className="mb-2 flex items-center justify-between">
                   <button
                     type="button"
                     onClick={() => setCalendarMonth((m) => subMonths(m, 1))}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-charcoal transition hover:bg-beige/50"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-beige/50"
                     aria-label="Previous month"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-semibold text-charcoal">{format(calendarMonth, 'MMMM yyyy')}</p>
-                    {loadingMonth && <Loader2 className="h-3.5 w-3.5 animate-spin text-sage-dark" />}
-                  </div>
+                  <p className="text-xs font-semibold text-charcoal">{format(calendarMonth, 'MMMM yyyy')}</p>
                   <button
                     type="button"
                     onClick={() => setCalendarMonth((m) => addMonths(m, 1))}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-charcoal transition hover:bg-beige/50"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-beige/50"
                     aria-label="Next month"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="grid grid-cols-7 gap-1 text-center">
+                <div className="grid grid-cols-7 gap-0.5 text-center">
                   {WEEKDAYS.map((day) => (
-                    <div key={day} className="py-1 text-[11px] font-semibold text-soft-gray">
+                    <div key={day} className="py-1 text-[10px] font-semibold text-soft-gray">
                       {day}
                     </div>
                   ))}
                   {calendarDays.map((day) => {
                     const key = toDateKey(day);
                     const inMonth = isSameMonth(day, calendarMonth);
-                    const isPast = isBefore(day, today);
-                    const workingDay = isWorkingDay(day);
-                    const dayStatus = monthAvailability[key];
-                    const availabilityKnown = !inMonth || !workingDay || isPast || Boolean(dayStatus);
-                    const fullyBooked = inMonth && !isPast && workingDay && dayStatus?.isFullyBooked;
-                    const bookable = inMonth && !isPast && workingDay && availabilityKnown && !fullyBooked;
+                    const bookable = isBookable(day);
                     const sel = selectedDate === key;
-
-                    let titleText = '';
-                    if (!inMonth) titleText = '';
-                    else if (isPast) titleText = 'Past date';
-                    else if (!workingDay) titleText = 'Non-working day (Weekend)';
-                    else if (fullyBooked) titleText = 'Fully booked';
-                    else if (dayStatus && dayStatus.totalSlots > 0)
-                      titleText = `${dayStatus.totalSlots} slots open`;
-                    else titleText = loadingMonth ? 'Checking availability' : 'Available';
-
                     return (
                       <button
                         key={key}
                         type="button"
                         disabled={!bookable}
-                        title={titleText}
                         onClick={() => handleSelectDate(key)}
                         className={cn(
-                          'relative flex h-10 flex-col items-center justify-center rounded-xl text-xs font-medium transition',
+                          'flex h-10 items-center justify-center rounded-lg text-xs font-medium transition',
                           !inMonth && 'text-soft-gray/40',
-                          inMonth && isPast && 'cursor-not-allowed text-soft-gray/35',
-                          inMonth && !isPast && !workingDay && 'cursor-not-allowed text-soft-gray/30 bg-beige/10',
-                          inMonth &&
-                            fullyBooked &&
-                            'cursor-not-allowed text-soft-gray/40 bg-rose-50/60 line-through decoration-rose-300',
-                          inMonth && bookable && !sel && 'text-charcoal hover:bg-sage/15 hover:shadow-xs',
-                          sel && 'bg-sage text-white shadow-sm ring-1 ring-sage/30',
-                          isToday(day) && !sel && bookable && 'ring-1 ring-sage/40 font-semibold',
+                          inMonth && !bookable && 'cursor-not-allowed text-soft-gray/35',
+                          inMonth && bookable && !sel && 'text-charcoal hover:bg-sage/10',
+                          sel && 'bg-sage text-white',
+                          isToday(day) && !sel && bookable && 'ring-1 ring-sage/40',
                         )}
                       >
-                        <span>{format(day, 'd')}</span>
-                        {inMonth && fullyBooked && (
-                          <span className="text-[8px] leading-none no-underline font-normal text-rose-500">
-                            Full
-                          </span>
-                        )}
-                        {inMonth && bookable && !sel && dayStatus && dayStatus.totalSlots > 0 && (
-                          <span className="absolute bottom-1 h-1 w-1 rounded-full bg-sage/60" />
-                        )}
+                        {format(day, 'd')}
                       </button>
                     );
                   })}
@@ -631,145 +536,76 @@ export default function Booking() {
               </div>
             </div>
 
-            {/* Timezone Selector */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <SectionHeader icon={<Globe className="h-3.5 w-3.5 text-sage-dark" />} label="Timezone" />
-                <span className="text-[10px] text-soft-gray">Times in your timezone</span>
-              </div>
-              <div className="relative">
-                <select
-                  value={timeZone}
-                  onChange={(e) => {
-                    setTimeZone(e.target.value);
-                    setSelectedTime(null);
-                  }}
-                  className="w-full appearance-none rounded-2xl border border-beige bg-cream px-3.5 py-2.5 pr-8 text-xs font-medium text-charcoal transition hover:border-sage/40 focus:outline-none focus:ring-2 focus:ring-sage/30"
-                >
-                  {!TIMEZONES.some((tz) => tz.value === timeZone) && (
-                    <option value={timeZone}>{timeZone} (Detected)</option>
-                  )}
-                  {TIMEZONES.map((tz) => (
-                    <option key={tz.value} value={tz.value}>
-                      {tz.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-soft-gray" />
-              </div>
-            </div>
-
-            {/* Time Slot Picker */}
-            <div ref={timeSectionRef} className="relative">
-              <div className="flex items-center justify-between">
-                <SectionHeader icon={<Clock className="h-3.5 w-3.5 text-terracotta" />} label="Time Slot" />
-                {loadingSlots && (
-                  <div className="flex items-center gap-1.5 text-[10px] text-sage-dark">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>Checking availability...</span>
+            <div className="shrink-0">
+              <SectionHeader icon={<Clock className="h-3 w-3 text-terracotta" />} label="Available Times" />
+              <div className="mt-2 rounded-xl border border-beige bg-cream p-3">
+                {!selectedDate ? (
+                  <p className="py-2.5 text-center text-xs text-soft-gray">
+                    Select a date above to view available open times.
+                  </p>
+                ) : loadingSlots ? (
+                  <div className="flex items-center justify-center gap-2 py-3 text-xs text-soft-gray">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-sage" />
+                    <span>Checking open slots...</span>
+                  </div>
+                ) : availableTimes.length === 0 ? (
+                  <p className="py-2.5 text-center text-xs text-warm-gray">
+                    No available slots on this date. Please pick another day.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+                    {availableTimes.map((time) => {
+                      const sel = selectedTime === time;
+                      return (
+                        <button
+                          key={time}
+                          type="button"
+                          onClick={() => setSelectedTime(time)}
+                          className={cn(
+                            'flex items-center justify-center rounded-lg border py-1.5 text-xs font-semibold transition-all duration-150',
+                            sel
+                              ? 'border-sage bg-sage text-white shadow-sm ring-1 ring-sage/30'
+                              : 'border-beige/80 bg-white text-charcoal hover:border-sage/40 hover:bg-sage/5',
+                          )}
+                        >
+                          {time}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
-              <button
-                type="button"
-                disabled={!selectedDate || loadingSlots}
-                onClick={() => selectedDate && setTimePickerOpen((open) => !open)}
-                aria-expanded={timePickerOpen}
-                aria-haspopup="listbox"
-                className={cn(
-                  'mt-2 flex w-full items-center justify-between rounded-2xl border px-3.5 py-2.5 text-left text-sm transition-all',
-                  (!selectedDate || loadingSlots) && 'cursor-not-allowed opacity-50',
-                  selectedTime
-                    ? 'border-sage bg-sage/10 text-sage-dark ring-1 ring-sage/20'
-                    : 'border-beige bg-cream hover:border-sage/40',
-                )}
-              >
-                <span className={cn('font-medium', !selectedTime && 'text-soft-gray')}>
-                  {!selectedDate
-                    ? 'Select a date first'
-                    : loadingSlots
-                    ? 'Calculating open times...'
-                    : selectedTime ?? 'Choose a time slot'}
-                </span>
-                <ChevronDown
-                  className={cn(
-                    'h-4 w-4 text-soft-gray transition-transform',
-                    timePickerOpen && 'rotate-180',
-                  )}
-                />
-              </button>
-
-              {timePickerOpen && selectedDate && !loadingSlots && (
-                <div
-                  role="listbox"
-                  aria-label="Available times"
-                  className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-beige bg-white shadow-xl ring-1 ring-sage/15"
-                >
-                  {availableSlots.length === 0 ? (
-                    <div className="p-4 text-center text-xs text-warm-gray">
-                      No slots available for this date in your selected timezone.
-                    </div>
-                  ) : (
-                    <ul className="max-h-48 space-y-0.5 overflow-y-auto overscroll-contain p-2">
-                      {availableSlots.map((time) => {
-                        const sel = selectedTime === time;
-                        return (
-                          <li key={time}>
-                            <button
-                              type="button"
-                              role="option"
-                              aria-selected={sel}
-                              onClick={() => {
-                                setSelectedTime(time);
-                                setTimePickerOpen(false);
-                              }}
-                              className={cn(
-                                'flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-semibold transition',
-                                sel ? 'bg-sage text-white' : 'text-charcoal hover:bg-sage/10',
-                              )}
-                            >
-                              {time}
-                              {sel && <Check className="h-4 w-4" />}
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Column 3: Client Details Form & Confirmation (col-span-4) */}
-          <div className="flex flex-col gap-4 lg:col-span-4">
-            <SectionHeader icon={<User className="h-3.5 w-3.5 text-dusty-blue-dark" />} label="3. Your Details" />
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          {/* Column 3: Your Details Form */}
+          <div className="flex flex-col gap-3 lg:col-span-4 xl:col-span-3">
+            <SectionHeader icon={<User className="h-3 w-3 text-dusty-blue-dark" />} label="Your Details" />
+            <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-2.5">
               {!authLoading && !user && (
-                <p className="text-xs leading-relaxed text-warm-gray">
-                  Have an account?{' '}
+                <p className="text-[11px] leading-relaxed text-warm-gray">
+                  Sign in to save your booking, course progress, and resources in one place.{' '}
                   <Link
                     to="/auth/login"
                     state={{ from: '/booking' }}
                     className="font-medium text-sage-dark hover:underline"
                   >
                     Sign in
-                  </Link>{' '}
-                  to auto-fill your details.
+                  </Link>
                 </p>
               )}
-              <div className="flex flex-col gap-2.5">
+              <div className="shrink-0 flex flex-col gap-2.5">
                 <Field label="Full Name" icon={<User className="h-3 w-3" />}>
                   <input
                     type="text"
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full rounded-2xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    className="w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
                     placeholder="Your name"
                   />
                 </Field>
-                <Field label="Email Address" icon={<Mail className="h-3 w-3" />}>
+                <Field label="Email" icon={<Mail className="h-3 w-3" />}>
                   <input
                     type="email"
                     required
@@ -777,142 +613,81 @@ export default function Booking() {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className={cn(
-                      'w-full rounded-2xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30',
+                      'w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30',
                       user && 'cursor-default bg-beige/40 text-warm-gray',
                     )}
                     placeholder="your@email.com"
                   />
                 </Field>
-                <div className="grid grid-cols-2 gap-2">
-                  <Field label="Phone (optional)" icon={<Phone className="h-3 w-3" />}>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full rounded-2xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
-                      placeholder="+20..."
-                    />
-                  </Field>
-                  <Field label="Country (optional)" icon={<Globe className="h-3 w-3" />}>
-                    <input
-                      type="text"
-                      value={formData.country}
-                      onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                      className="w-full rounded-2xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
-                      placeholder="e.g. Egypt"
-                    />
-                  </Field>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Field label="Child's Name (opt)" icon={<Baby className="h-3 w-3" />}>
-                    <input
-                      type="text"
-                      value={formData.childName}
-                      onChange={(e) => setFormData({ ...formData, childName: e.target.value })}
-                      className="w-full rounded-2xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
-                      placeholder="Child's name"
-                    />
-                  </Field>
-                  <Field label="Child's Age (opt)" icon={<Sparkles className="h-3 w-3" />}>
-                    <input
-                      type="text"
-                      value={formData.childAge}
-                      onChange={(e) => setFormData({ ...formData, childAge: e.target.value })}
-                      className="w-full rounded-2xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
-                      placeholder="e.g. 4 years"
-                    />
-                  </Field>
-                </div>
                 <Field label="Notes (optional)" icon={<MessageSquare className="h-3 w-3" />}>
                   <textarea
                     rows={2}
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full resize-none rounded-2xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    className="w-full resize-none rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
                     placeholder="Anything to share before our session..."
                   />
                 </Field>
               </div>
 
-              {/* Summary Card */}
-              <div
-                className={cn(
-                  'rounded-2xl border p-3.5 transition-all duration-300',
-                  selectedAppointment ? 'border-sage/30 bg-sage/5' : 'border-beige bg-cream/60',
-                )}
-              >
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-warm-gray">
-                  Booking Summary
-                </p>
-                <div className="space-y-1.5 text-xs">
-                  <SummaryRow label="Session" value={selectedAppointment?.title ?? '—'} />
-                  <SummaryRow
-                    label="Date"
-                    value={
-                      selectedDate
-                        ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                          })
-                        : '—'
-                    }
-                  />
-                  <SummaryRow
-                    label="Time"
-                    value={
-                      selectedTime
-                        ? `${selectedTime} (${timeZone.split('/').pop()?.replace('_', ' ') || timeZone})`
-                        : '—'
-                    }
-                  />
-                  {selectedAppointment && (
-                    <div className="flex justify-between gap-2 border-t border-beige/80 pt-2 font-semibold">
-                      <span className="text-warm-gray">Total</span>
-                      <span className="text-charcoal">
-                        {selectedAppointment.price === 0 ? 'Free' : `$${selectedAppointment.price}`}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {submitError && (
+              <div className="shrink-0 flex flex-col gap-2.5">
                 <div
-                  role="alert"
-                  className="flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800"
+                  className={cn(
+                    'rounded-xl border p-3 transition-all duration-300',
+                    selectedAppointment ? 'border-sage/20 bg-sage/5' : 'border-beige bg-cream/50',
+                  )}
                 >
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
-                  <div className="flex-1 leading-snug">
-                    <p className="font-semibold text-rose-900">Booking could not be saved</p>
-                    <p className="mt-0.5 text-rose-700">{submitError}</p>
+                  <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-warm-gray">Summary</p>
+                  <div className="space-y-1.5 text-[11px]">
+                    <SummaryRow label="Session" value={selectedAppointment?.title ?? '—'} />
+                    <SummaryRow
+                      label="Date"
+                      value={
+                        selectedDate
+                          ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                            })
+                          : '—'
+                      }
+                    />
+                    <SummaryRow label="Time" value={selectedTime ?? '—'} />
+                    {selectedAppointment && (
+                      <div className="flex justify-between gap-2 border-t border-beige/80 pt-1.5">
+                        <span className="text-soft-gray">Total</span>
+                        <span className="font-semibold text-charcoal">
+                          {selectedAppointment.price === 0 ? 'Free' : `$${selectedAppointment.price}`}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
 
-              <button
-                type="submit"
-                disabled={!canSubmit || isSubmitting}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sage py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-sage-dark disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin text-white" />
-                    <span>Confirming Booking...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Confirm Booking</span>
-                    <Check className="h-4 w-4" />
-                  </>
+                {submitError && (
+                  <p className="text-center text-xs text-terracotta-dark">{submitError}</p>
                 )}
-              </button>
+
+                <button
+                  type="submit"
+                  disabled={!canSubmit || submitting}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sage py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-sage-dark disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {submitting ? 'Confirming...' : 'Confirm Booking'} <Check className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </form>
           </div>
-        </div>
 
-        <div className="mt-10">
-          <BookingQuoteFooter />
+          {/* Column 4: Right Column Container with Quote and Previous Sessions */}
+          <div className="flex flex-col gap-3.5 lg:col-span-12 xl:col-span-3">
+            <BookingQuoteFooter />
+            <UserPreviousBookings
+              bookings={userPreviousBookings}
+              loading={loadingUserBookings}
+              user={user}
+              onRefresh={fetchUserBookings}
+            />
+          </div>
         </div>
       </div>
 
@@ -930,6 +705,176 @@ export default function Booking() {
           document.body,
         )}
     </div>
+  );
+}
+
+const bookingStatusBadges: Record<
+  BookingType['status'],
+  { label: string; className: string }
+> = {
+  pending: { label: 'Pending Review', className: 'bg-amber-100 text-amber-800 border-amber-300' },
+  confirmed: { label: 'Confirmed', className: 'bg-sage/20 text-sage-dark border-sage/40' },
+  completed: { label: 'Completed', className: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+  cancelled: { label: 'Cancelled', className: 'bg-rose-100 text-rose-700 border-rose-300' },
+  pending_calendar_sync: { label: 'Sync Pending', className: 'bg-purple-100 text-purple-800 border-purple-300' },
+};
+
+function UserPreviousBookings({
+  bookings,
+  loading,
+  user,
+  onRefresh,
+}: {
+  bookings: BookingType[];
+  loading: boolean;
+  user: SupabaseUser | null;
+  onRefresh: () => Promise<void> | void;
+}) {
+  const [rescheduleBooking, setRescheduleBooking] = useState<BookingType | null>(null);
+  const [cancelBooking, setCancelBooking] = useState<BookingType | null>(null);
+
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-beige/80 bg-cream/90 p-3.5 shadow-sm">
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-sage-dark" />
+          <span className="text-xs text-soft-gray">Checking your session history...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user && bookings.length === 0) {
+    return (
+      <div className="rounded-xl border border-beige/80 bg-cream/90 p-3.5 shadow-sm">
+        <div className="flex items-center gap-2 mb-1.5">
+          <CalendarCheck className="h-3.5 w-3.5 text-sage-dark" />
+          <span className="text-xs font-semibold text-charcoal">Returning Client?</span>
+        </div>
+        <p className="text-[11px] leading-relaxed text-warm-gray">
+          <Link to="/auth/login" state={{ from: '/booking' }} className="font-medium text-sage-dark hover:underline">
+            Sign in
+          </Link>{' '}
+          to view your session history, reschedule sessions, access Google Meet links, and coaching notes in one place.
+        </p>
+      </div>
+    );
+  }
+
+  if (bookings.length === 0) {
+    return (
+      <div className="rounded-xl border border-beige/80 bg-cream/90 p-3.5 shadow-sm">
+        <div className="flex items-center gap-2 mb-1.5">
+          <CalendarCheck className="h-3.5 w-3.5 text-sage-dark" />
+          <span className="text-xs font-semibold text-charcoal">Your Sessions</span>
+        </div>
+        <p className="text-[11px] leading-relaxed text-soft-gray">
+          No previous sessions yet. Once booked and confirmed, your upcoming meetings, rescheduling options, and video links will appear here.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="rounded-xl border border-beige/80 bg-cream/90 p-3.5 shadow-sm">
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-2">
+            <CalendarCheck className="h-3.5 w-3.5 text-sage-dark" />
+            <span className="text-xs font-semibold text-charcoal">Your Sessions ({bookings.length})</span>
+          </div>
+          <span className="text-[10px] text-soft-gray">History & Options</span>
+        </div>
+
+        <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+          {bookings.map((b) => {
+            const badge = bookingStatusBadges[b.status] || bookingStatusBadges.pending;
+            const canModify = b.status !== 'cancelled' && b.status !== 'completed';
+
+            return (
+              <div
+                key={b.id}
+                className="rounded-xl border border-beige bg-white p-2.5 transition hover:border-sage/40"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-serif text-xs font-semibold text-charcoal leading-snug">
+                    {b.appointment_type_title}
+                  </span>
+                  <span className={cn('shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-medium', badge.className)}>
+                    {badge.label}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center gap-2.5 text-[10px] text-warm-gray">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-2.5 w-2.5 text-soft-gray" />
+                    {b.appointment_date}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-2.5 w-2.5 text-soft-gray" />
+                    {b.appointment_time}
+                  </span>
+                </div>
+
+                {b.google_meet_url && b.status === 'confirmed' && (
+                  <a
+                    href={b.google_meet_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex items-center gap-1 rounded-lg bg-sage/10 px-2 py-1 text-[10px] font-medium text-sage-dark hover:bg-sage/20 transition"
+                  >
+                    <Video className="h-2.5 w-2.5" />
+                    Join Google Meet
+                  </a>
+                )}
+
+                {canModify && (
+                  <div className="mt-2.5 flex items-center justify-end gap-1.5 border-t border-beige/60 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setRescheduleBooking(b)}
+                      className="rounded-lg bg-cream px-2 py-1 text-[10px] font-medium text-charcoal hover:bg-beige/60 hover:text-sage-dark transition"
+                    >
+                      Reschedule
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCancelBooking(b)}
+                      className="rounded-lg bg-cream px-2 py-1 text-[10px] font-medium text-rose-700 hover:bg-rose-50 transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {rescheduleBooking && (
+        <ClientRescheduleModal
+          booking={rescheduleBooking}
+          isOpen={Boolean(rescheduleBooking)}
+          onClose={() => setRescheduleBooking(null)}
+          onRescheduled={async () => {
+            await onRefresh();
+            setRescheduleBooking(null);
+          }}
+        />
+      )}
+
+      {cancelBooking && (
+        <ClientCancelModal
+          booking={cancelBooking}
+          isOpen={Boolean(cancelBooking)}
+          onClose={() => setCancelBooking(null)}
+          onCancelled={async () => {
+            await onRefresh();
+            setCancelBooking(null);
+          }}
+        />
+      )}
+    </>
   );
 }
 

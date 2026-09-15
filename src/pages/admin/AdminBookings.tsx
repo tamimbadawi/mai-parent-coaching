@@ -132,6 +132,28 @@ const AdminBookings = (): JSX.Element => {
     }
   };
 
+  const handleApproveBooking = async (bookingId: string): Promise<void> => {
+    setUpdatingId(bookingId);
+    try {
+      const { data, error: invokeErr } = await supabase.functions.invoke('admin-booking-manager', {
+        body: {
+          action: 'approve',
+          bookingId,
+        },
+      });
+
+      if (invokeErr || data?.error) {
+        alert(`Approval error: ${invokeErr?.message || data?.error}`);
+      } else {
+        await fetchBookings();
+      }
+    } catch (err) {
+      console.error('Approve booking error:', err);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const handleCancelBooking = async (booking: Booking): Promise<void> => {
     const reason = window.prompt(
       `Cancel booking for ${booking.parent_name} on ${booking.appointment_date}?\nOptional reason:`,
@@ -415,6 +437,10 @@ const AdminBookings = (): JSX.Element => {
               bookings={filteredBookings}
               onReschedule={(b) => setRescheduleBooking(b)}
               onEdit={(b) => setEditBooking(b)}
+              onApprove={async (b) => {
+                await handleApproveBooking(b.id);
+              }}
+              approvingId={updatingId}
             />
           ) : filteredBookings.length === 0 ? (
             <EmptyPanel
@@ -502,6 +528,17 @@ const AdminBookings = (): JSX.Element => {
 
                         {/* Quick Action Triggers */}
                         <div className="flex flex-wrap items-center gap-2 pt-2">
+                          {booking.status === 'pending' && (
+                            <button
+                              type="button"
+                              disabled={isUpdating}
+                              onClick={() => void handleApproveBooking(booking.id)}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-sage px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sage-dark disabled:opacity-50"
+                            >
+                              {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarCheck className="h-3.5 w-3.5" />}
+                              <span>Approve Booking</span>
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => setRescheduleBooking(booking)}

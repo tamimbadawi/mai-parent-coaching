@@ -18,6 +18,8 @@ interface AdminBookingsCalendarViewProps {
   bookings: Booking[];
   onReschedule: (booking: Booking) => void;
   onEdit: (booking: Booking) => void;
+  onApprove?: (booking: Booking) => Promise<void> | void;
+  approvingId?: string | null;
 }
 
 const statusBadgeColors: Record<Booking['status'], string> = {
@@ -32,6 +34,8 @@ export const AdminBookingsCalendarView = ({
   bookings,
   onReschedule,
   onEdit,
+  onApprove,
+  approvingId,
 }: AdminBookingsCalendarViewProps): JSX.Element => {
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDayKey, setSelectedDayKey] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -67,6 +71,7 @@ export const AdminBookingsCalendarView = ({
             type="button"
             onClick={() => setCurrentMonth((m) => subMonths(m, 1))}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-charcoal transition hover:bg-beige/50"
+            aria-label="Previous month"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -77,6 +82,7 @@ export const AdminBookingsCalendarView = ({
             type="button"
             onClick={() => setCurrentMonth((m) => addMonths(m, 1))}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-charcoal transition hover:bg-beige/50"
+            aria-label="Next month"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -94,6 +100,7 @@ export const AdminBookingsCalendarView = ({
             const inMonth = isSameMonth(day, currentMonth);
             const dayBookings = bookingsByDate.get(dateKey) || [];
             const isSelected = selectedDayKey === dateKey;
+            const hasPending = dayBookings.some((b) => b.status === 'pending');
 
             return (
               <button
@@ -109,15 +116,20 @@ export const AdminBookingsCalendarView = ({
                 }`}
               >
                 <div className="flex w-full items-center justify-between">
-                  <span
-                    className={`text-xs font-semibold ${
-                      isToday(day)
-                        ? 'flex h-5 w-5 items-center justify-center rounded-full bg-sage text-white'
-                        : 'text-charcoal'
-                    }`}
-                  >
-                    {format(day, 'd')}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span
+                      className={`text-xs font-semibold ${
+                        isToday(day)
+                          ? 'flex h-5 w-5 items-center justify-center rounded-full bg-sage text-white'
+                          : 'text-charcoal'
+                      }`}
+                    >
+                      {format(day, 'd')}
+                    </span>
+                    {hasPending && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 ring-2 ring-amber-200" title="Has pending session" />
+                    )}
+                  </div>
                   {dayBookings.length > 0 && (
                     <span className="rounded-full bg-sage/20 px-1.5 py-0.2 text-[9px] font-bold text-sage-dark">
                       {dayBookings.length}
@@ -162,74 +174,101 @@ export const AdminBookingsCalendarView = ({
           </p>
         </div>
 
-        <div className="flex-1 space-y-3 overflow-y-auto">
+        <div className="flex-1 space-y-3 overflow-y-auto max-h-[460px]">
           {selectedDayBookings.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Calendar className="mb-2 h-8 w-8 text-soft-gray/40" />
               <p className="text-xs font-medium text-soft-gray">No sessions on this date</p>
             </div>
           ) : (
-            selectedDayBookings.map((b) => (
-              <div
-                key={b.id}
-                className="rounded-xl border border-beige bg-cream/70 p-3.5 transition hover:border-sage/40 hover:bg-cream"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <span className="inline-block rounded-full bg-sage/20 px-2 py-0.5 text-[10px] font-semibold text-sage-dark">
-                      {b.appointment_time} ({b.time_zone})
+            selectedDayBookings.map((b) => {
+              const isPending = b.status === 'pending';
+              const isApproving = approvingId === b.id;
+
+              return (
+                <div
+                  key={b.id}
+                  className={`rounded-xl border p-3.5 transition ${
+                    isPending
+                      ? 'border-amber-300 bg-amber-50/50 hover:bg-amber-50'
+                      : 'border-beige bg-cream/70 hover:border-sage/40 hover:bg-cream'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="inline-block rounded-full bg-sage/20 px-2 py-0.5 text-[10px] font-semibold text-sage-dark">
+                        {b.appointment_time} ({b.time_zone})
+                      </span>
+                      <h5 className="mt-1 font-semibold text-charcoal">{b.parent_name}</h5>
+                      <p className="text-xs text-warm-gray">{b.appointment_type_title}</p>
+                      {b.email && <p className="text-[11px] text-soft-gray">{b.email}</p>}
+                    </div>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${
+                        b.status === 'confirmed'
+                          ? 'bg-sage text-white'
+                          : b.status === 'pending'
+                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                          : b.status === 'completed'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-rose-100 text-rose-700'
+                      }`}
+                    >
+                      {b.status.replace(/_/g, ' ')}
                     </span>
-                    <h5 className="mt-1 font-semibold text-charcoal">{b.parent_name}</h5>
-                    <p className="text-xs text-warm-gray">{b.appointment_type_title}</p>
                   </div>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${
-                      b.status === 'confirmed'
-                        ? 'bg-sage text-white'
-                        : b.status === 'pending'
-                        ? 'bg-amber-100 text-amber-800'
-                        : b.status === 'completed'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-rose-100 text-rose-700'
-                    }`}
-                  >
-                    {b.status.replace(/_/g, ' ')}
-                  </span>
-                </div>
 
-                {b.google_meet_url && (
-                  <a
-                    href={b.google_meet_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-dusty-blue/15 px-2.5 py-1 text-xs font-medium text-dusty-blue-dark transition hover:bg-dusty-blue/25"
-                  >
-                    <Video className="h-3 w-3" />
-                    <span>Join Google Meet</span>
-                  </a>
-                )}
+                  {b.notes && (
+                    <p className="mt-2 text-xs italic text-warm-gray line-clamp-2">
+                      &ldquo;{b.notes}&rdquo;
+                    </p>
+                  )}
 
-                <div className="mt-3 flex items-center gap-2 border-t border-beige/60 pt-2.5">
-                  <button
-                    type="button"
-                    onClick={() => onReschedule(b)}
-                    className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-medium text-charcoal shadow-sm transition hover:bg-beige/40"
-                  >
-                    Reschedule
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onEdit(b)}
-                    className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-medium text-charcoal shadow-sm transition hover:bg-beige/40"
-                  >
-                    Edit Info
-                  </button>
+                  {b.google_meet_url && (
+                    <a
+                      href={b.google_meet_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-dusty-blue/15 px-2.5 py-1 text-xs font-medium text-dusty-blue-dark transition hover:bg-dusty-blue/25"
+                    >
+                      <Video className="h-3 w-3" />
+                      <span>Join Google Meet</span>
+                    </a>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-beige/60 pt-2.5">
+                    {isPending && onApprove && (
+                      <button
+                        type="button"
+                        disabled={isApproving}
+                        onClick={() => onApprove(b)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-sage px-3 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:bg-sage-dark disabled:opacity-50"
+                      >
+                        {isApproving ? 'Approving...' : '✓ Approve'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onReschedule(b)}
+                      className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-medium text-charcoal shadow-sm transition hover:bg-beige/40"
+                    >
+                      Reschedule
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onEdit(b)}
+                      className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-medium text-charcoal shadow-sm transition hover:bg-beige/40"
+                    >
+                      Edit Info
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
     </div>
   );
 };
+
