@@ -38,6 +38,7 @@ import {
   Loader2,
   CalendarCheck,
   Video,
+  Globe,
 } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type { UserProfile, Booking as BookingType } from '../types';
@@ -151,6 +152,14 @@ export default function Booking() {
   const selectedAppointment = appointmentTypes.find((a) => a.id === selectedType);
   const today = startOfDay(new Date());
 
+  const userTimeZone = useMemo(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Cairo';
+    } catch {
+      return 'Africa/Cairo';
+    }
+  }, []);
+
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(calendarMonth);
     const monthEnd = endOfMonth(calendarMonth);
@@ -183,7 +192,7 @@ export default function Booking() {
           body: {
             date: selectedDate,
             appointmentTypeId: selectedType || 'initial',
-            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Cairo',
+            timeZone: userTimeZone,
           },
         });
 
@@ -273,7 +282,7 @@ export default function Booking() {
           parent_name: formData.name.trim(),
           email: formData.email.trim(),
           notes: formData.notes.trim() || null,
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Cairo',
+          timeZone: userTimeZone,
         },
       });
 
@@ -537,7 +546,16 @@ export default function Booking() {
             </div>
 
             <div className="shrink-0">
-              <SectionHeader icon={<Clock className="h-3 w-3 text-terracotta" />} label="Available Times" />
+              <div className="flex items-center justify-between gap-2">
+                <SectionHeader icon={<Clock className="h-3 w-3 text-terracotta" />} label="Available Times" />
+                <span
+                  className="inline-flex items-center gap-1 rounded-full border border-sage/20 bg-sage/10 px-2 py-0.5 text-[10px] font-medium text-sage-dark shadow-xs"
+                  title={`Times are automatically converted to your local timezone (${userTimeZone})`}
+                >
+                  <Globe className="h-2.5 w-2.5 shrink-0" />
+                  <span className="truncate max-w-[130px] sm:max-w-[160px]">{userTimeZone.replace(/_/g, ' ')}</span>
+                </span>
+              </div>
               <div className="mt-2 rounded-xl border border-beige bg-cream p-3">
                 {!selectedDate ? (
                   <p className="py-2.5 text-center text-xs text-soft-gray">
@@ -652,6 +670,7 @@ export default function Booking() {
                       }
                     />
                     <SummaryRow label="Time" value={selectedTime ?? '—'} />
+                    <SummaryRow label="Timezone" value={userTimeZone.replace(/_/g, ' ')} />
                     {selectedAppointment && (
                       <div className="flex justify-between gap-2 border-t border-beige/80 pt-1.5">
                         <span className="text-soft-gray">Total</span>

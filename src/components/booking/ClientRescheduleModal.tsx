@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, isBefore, isWeekend, startOfDay } from 'date-fns';
-import { Calendar, Clock, Loader2, AlertCircle, X, ArrowRight } from 'lucide-react';
+import { Calendar, Clock, Loader2, AlertCircle, X, ArrowRight, Globe } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Booking } from '../../types';
 import { appointmentTypes } from '../../data/content';
@@ -174,7 +174,16 @@ export const ClientRescheduleModal = ({
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-charcoal">Available Open Times</label>
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <label className="block text-xs font-semibold text-charcoal">Available Open Times</label>
+              <span
+                className="inline-flex items-center gap-1 rounded-full border border-sage/20 bg-sage/10 px-2 py-0.5 text-[10px] font-medium text-sage-dark shadow-xs"
+                title={`Times are automatically shown in your local timezone (${timeZone})`}
+              >
+                <Globe className="h-2.5 w-2.5 shrink-0" />
+                <span className="truncate max-w-[130px]">{timeZone.replace(/_/g, ' ')}</span>
+              </span>
+            </div>
             {loadingSlots ? (
               <div className="flex items-center justify-center gap-2 rounded-xl border border-beige bg-cream/50 py-4 text-xs text-soft-gray">
                 <Loader2 className="h-4 w-4 animate-spin text-sage-dark" />
