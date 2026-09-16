@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, MessageCircle } from 'lucide-react';
-import AnimatedSection from '../AnimatedSection';
+import AnimatedSection from '../ui/AnimatedSection';
 
 export default function FinalBookingCTA() {
   return (

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 // Contact page
 import { Mail, Phone, MapPin, Send, Instagram, Youtube, Facebook, AlertTriangle } from 'lucide-react';
-import AnimatedSection from '../components/AnimatedSection';
+import AnimatedSection from '../components/ui/AnimatedSection';
 
 export default function Contact() {
   const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });

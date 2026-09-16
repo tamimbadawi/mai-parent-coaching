@@ -1,4 +1,4 @@
-import { getBunnyEmbedUrl } from '../lib/bunny';
+import { getBunnyEmbedUrl } from '../../lib/bunny';
 
 interface BunnyStreamPlayerProps {
   videoId: string;

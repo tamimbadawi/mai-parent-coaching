@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Clock, Tag, Heart, Share2 } from 'lucide-react';
-import AnimatedSection from '../components/AnimatedSection';
-import { blogPosts } from '../data/content';
+import AnimatedSection from '../../components/ui/AnimatedSection';
+import { blogPosts } from '../../data/content';
 
 export default function BlogPost() {
   const { id } = useParams<{ id: string }>();

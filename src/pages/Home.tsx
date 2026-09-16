@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Heart, Brain, Sun, Users, Baby, Sparkles, MessageCircle } from 'lucide-react';
-import AnimatedSection from '../components/AnimatedSection';
-import TestimonialCarousel from '../components/TestimonialCarousel';
-import CTASection from '../components/CTASection';
+import AnimatedSection from '../components/ui/AnimatedSection';
+import TestimonialCarousel from '../components/ui/TestimonialCarousel';
+import CTASection from '../components/ui/CTASection';
 import { services, blogPosts } from '../data/content';
 
 const expertise = [
@@ -28,21 +28,21 @@ export default function Home() {
         <div className="absolute top-20 right-0 w-1/2 h-1/2 bg-sage/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-1/3 h-1/3 bg-dusty-blue/5 rounded-full blur-3xl" />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 w-full">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-10 lg:pt-24 lg:pb-14 w-full">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, ease: [0.25, 0.1, 0.25, 1] }}
             >
-              <span className="inline-block text-sage-dark text-sm font-medium tracking-wider uppercase mb-4">
+              <span className="inline-block text-sage-dark text-sm font-medium tracking-wider uppercase mb-3">
                 Child Psychologist & Parent Coach
               </span>
-              <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-charcoal leading-tight mb-6">
+              <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-charcoal leading-tight mb-5">
                 Helping Parents Raise{' '}
                 <span className="text-sage-dark">Emotionally Healthy</span> Children While Healing Themselves
               </h1>
-              <p className="text-warm-gray text-lg md:text-xl leading-relaxed mb-8 max-w-xl">
+              <p className="text-warm-gray text-lg md:text-xl leading-relaxed mb-6 max-w-xl">
                 Evidence-based parenting support, burnout recovery, nervous system healing, and practical coaching for modern families.
               </p>
             </motion.div>
@@ -57,13 +57,13 @@ export default function Home() {
                 <img
                   src="https://images.pexels.com/photos/3661356/pexels-photo-3661356.jpeg?auto=compress&cs=tinysrgb&w=1200"
                   alt="Parent and child in a warm, connected moment"
-                  className="w-full h-[400px] lg:h-[600px] object-cover"
+                  className="w-full h-[360px] lg:h-[480px] xl:h-[520px] object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-charcoal/20 to-transparent" />
               </div>
-              <div className="absolute -bottom-6 -left-6 bg-ivory rounded-2xl p-4 lg:p-6 shadow-lg border border-beige max-w-[200px] lg:max-w-xs">
-                <div className="flex items-center gap-2 lg:gap-3 mb-2">
-                  <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-sage/20 flex items-center justify-center">
+              <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 lg:bottom-5 lg:-left-5 bg-ivory/95 backdrop-blur-sm rounded-2xl p-3.5 lg:p-5 shadow-xl border border-beige/80 max-w-[200px] lg:max-w-xs">
+                <div className="flex items-center gap-2 lg:gap-3">
+                  <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-sage/20 flex items-center justify-center shrink-0">
                     <Heart className="w-4 h-4 lg:w-5 lg:h-5 text-sage" />
                   </div>
                   <div>
@@ -94,13 +94,13 @@ export default function Home() {
             {expertise.map((item, i) => {
               const Icon = item.icon;
               return (
-                <AnimatedSection key={item.title} delay={i * 0.1}>
-                  <div className="bg-cream rounded-2xl p-8 hover:shadow-lg transition-all duration-500 group border border-transparent hover:border-beige">
-                    <div className="w-12 h-12 rounded-xl bg-sage/10 flex items-center justify-center mb-5 group-hover:bg-sage/20 transition-colors">
+                <AnimatedSection key={item.title} delay={i * 0.1} className="h-full">
+                  <div className="bg-cream rounded-2xl p-8 hover:shadow-lg transition-all duration-500 group border border-transparent hover:border-beige h-full flex flex-col">
+                    <div className="w-12 h-12 rounded-xl bg-sage/10 flex items-center justify-center mb-5 group-hover:bg-sage/20 transition-colors shrink-0">
                       <Icon className="w-6 h-6 text-sage-dark" />
                     </div>
                     <h3 className="font-serif text-xl text-charcoal mb-2">{item.title}</h3>
-                    <p className="text-warm-gray leading-relaxed">{item.description}</p>
+                    <p className="text-warm-gray leading-relaxed flex-grow">{item.description}</p>
                   </div>
                 </AnimatedSection>
               );
@@ -126,9 +126,9 @@ export default function Home() {
             {services.slice(0, 3).map((service, i) => {
               const Icon = iconMap[service.icon] || Heart;
               return (
-                <AnimatedSection key={service.id} delay={i * 0.1}>
+                <AnimatedSection key={service.id} delay={i * 0.1} className="h-full">
                   <div className="bg-ivory rounded-2xl p-8 h-full flex flex-col hover:shadow-xl transition-all duration-500 border border-beige/50 hover:border-beige">
-                    <div className="w-12 h-12 rounded-xl bg-terracotta/10 flex items-center justify-center mb-5">
+                    <div className="w-12 h-12 rounded-xl bg-terracotta/10 flex items-center justify-center mb-5 shrink-0">
                       <Icon className="w-6 h-6 text-terracotta-dark" />
                     </div>
                     <h3 className="font-serif text-xl text-charcoal mb-3">{service.title}</h3>
@@ -143,7 +143,7 @@ export default function Home() {
                     </div>
                     <Link
                       to="/services"
-                      className="text-terracotta-dark font-medium text-sm inline-flex items-center gap-1 hover:gap-2 transition-all"
+                      className="text-terracotta-dark font-medium text-sm inline-flex items-center gap-1 hover:gap-2 transition-all mt-auto"
                     >
                       Learn more <ArrowRight className="w-4 h-4" />
                     </Link>
@@ -179,10 +179,10 @@ export default function Home() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {blogPosts.slice(0, 3).map((post, i) => (
-              <AnimatedSection key={post.id} delay={i * 0.1}>
-                <Link to={`/blog/${post.id}`} className="group block">
-                  <div className="bg-cream rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-500 border border-beige/50 hover:border-beige">
-                    <div className="relative h-48 overflow-hidden">
+              <AnimatedSection key={post.id} delay={i * 0.1} className="h-full">
+                <Link to={`/blog/${post.id}`} className="group block h-full">
+                  <div className="bg-cream rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-500 border border-beige/50 hover:border-beige h-full flex flex-col">
+                    <div className="relative h-48 overflow-hidden shrink-0">
                       <img
                         src={post.image}
                         alt={post.title}
@@ -192,11 +192,11 @@ export default function Home() {
                         {post.category}
                       </div>
                     </div>
-                    <div className="p-6">
+                    <div className="p-6 flex-1 flex flex-col">
                       <h3 className="font-serif text-lg text-charcoal mb-2 group-hover:text-sage-dark transition-colors line-clamp-2">
                         {post.title}
                       </h3>
-                      <p className="text-warm-gray text-sm leading-relaxed line-clamp-2">{post.excerpt}</p>
+                      <p className="text-warm-gray text-sm leading-relaxed line-clamp-2 flex-grow">{post.excerpt}</p>
                       <div className="flex items-center gap-4 mt-4 text-xs text-soft-gray">
                         <span>{post.readTime} read</span>
                         <span>{new Date(post.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>

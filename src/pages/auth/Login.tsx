@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Sparkles } from 'lucide-react';
-import AnimatedSection from '../../components/AnimatedSection';
+import AnimatedSection from '../../components/ui/AnimatedSection';
 import { useAuth } from '../../context/AuthContext';
 
 /* ── Typing quotes ────────────────────────────────────────────────────────── */

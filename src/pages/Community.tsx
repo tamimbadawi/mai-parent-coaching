@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircle, ThumbsUp, Users, Video, Trophy, Lock, ArrowRight } from 'lucide-react';
-import AnimatedSection from '../components/AnimatedSection';
+import AnimatedSection from '../components/ui/AnimatedSection';
 import { communityPosts } from '../data/content';
 
 export default function Community() {

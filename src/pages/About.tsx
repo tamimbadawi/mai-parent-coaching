@@ -1,6 +1,6 @@
 import { Award, BookOpen, Heart, GraduationCap, Users, Brain } from 'lucide-react';
-import AnimatedSection from '../components/AnimatedSection';
-import CTASection from '../components/CTASection';
+import AnimatedSection from '../components/ui/AnimatedSection';
+import CTASection from '../components/ui/CTASection';
 
 const credentials = [
   { icon: GraduationCap, label: 'Doctorate in Child Psychology' },

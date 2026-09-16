@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Sparkles } from 'lucide-react';
-import AnimatedSection from '../../components/AnimatedSection';
+import AnimatedSection from '../../components/ui/AnimatedSection';
 import { useAuth } from '../../context/AuthContext';
-import PhoneInput from '../../components/PhoneInput';
+import PhoneInput from '../../components/ui/PhoneInput';
 
 /* ── Typing quotes ────────────────────────────────────────────────────────── */
 const QUOTES = [

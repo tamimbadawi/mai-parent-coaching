@@ -10,15 +10,10 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "deploy": "node scripts/deploy.js",
-    "deploy:quick": "node scripts/deploy.js --quick"
+    "deploy:quick": "node scripts/deploy.js --quick",
+    "test:supabase": "node scripts/test-supabase-connection.js"
   },
   "dependencies": {
-    "@capacitor/android": "8.5.2",
-    "@capacitor/app": "^8.1.1",
-    "@capacitor/cli": "8.5.2",
-    "@capacitor/core": "8.5.2",
-    "@capacitor/ios": "8.5.2",
-    "@capacitor/status-bar": "^8.0.3",
     "@stripe/react-stripe-js": "^6.6.0",
     "@stripe/stripe-js": "^9.8.0",
     "@supabase/server": "^1.2.0",

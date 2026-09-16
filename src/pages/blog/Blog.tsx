@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Clock, ArrowRight, Tag } from 'lucide-react';
-import AnimatedSection from '../components/AnimatedSection';
-import { blogPosts } from '../data/content';
+import AnimatedSection from '../../components/ui/AnimatedSection';
+import { blogPosts } from '../../data/content';
 
 export default function Blog() {
   const [searchQuery, setSearchQuery] = useState('');

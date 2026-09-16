@@ -33,9 +33,9 @@ Before starting any task, read `/project-plan/00-INDEX.md` and the relevant subf
 - `src/main.tsx`: Renders App
 - `src/App.tsx`: Routes and layout shell
 - `src/context/AuthContext.tsx`: Supabase auth, profile, approval status, enrollments
-- `src/components/ProtectedRoute.tsx`: Protected routing and role-based redirects
+- `src/components/auth/ProtectedRoute.tsx`: Protected routing and role-based redirects
+- `src/components/media/BunnyStreamPlayer.tsx`: Bunny video player component
 - `src/data/content.ts`: Current static content source
-- `src/theme.tsx`: Theme system
 - `src/lib/supabase.ts`: Browser Supabase client
 - `src/lib/bunny.ts`: Bunny-related helpers
 - `src/types/index.ts`: Shared TypeScript interfaces

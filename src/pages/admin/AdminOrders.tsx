@@ -1,7 +1,7 @@
 import { Package, ShoppingBag, Tag } from 'lucide-react';
 import { shopProducts } from '../../data/content';
 import AdminLayout from './AdminLayout';
-import { Panel, StatCard } from './admin-ui';
+import { Panel, StatCard } from './components/AdminUI';
 
 // Orders management: Connect a shop_orders table in Supabase to show real order data.
 // Currently displays the product catalogue with a placeholder orders panel.

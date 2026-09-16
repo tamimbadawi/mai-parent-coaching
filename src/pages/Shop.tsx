@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, BookOpen, Palette, PenTool, Headphones, Package, ArrowRight, Check } from 'lucide-react';
-import AnimatedSection from '../components/AnimatedSection';
+import AnimatedSection from '../components/ui/AnimatedSection';
 import { shopProducts } from '../data/content';
 // Shop page
 

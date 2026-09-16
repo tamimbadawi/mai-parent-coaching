@@ -5,7 +5,7 @@ import { courses as staticCourses } from '../../data/content';
 import AdminLayout from './AdminLayout';
 import type { Course } from '../../types';
 import { bunnyStreamConfig } from '../../lib/bunny';
-import { Panel, ProgressBar, StatCard } from './admin-ui';
+import { Panel, ProgressBar, StatCard } from './components/AdminUI';
 
 interface CourseWithStats extends Course {
   enrollmentCount: number;

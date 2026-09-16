@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { AlertTriangle, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
-import PhoneInput, { formatPhone, parsePhone } from '../../components/PhoneInput';
+import PhoneInput, { formatPhone, parsePhone } from '../../components/ui/PhoneInput';
 
 const ProfileSettings = (): JSX.Element => {
   const { profile, updateProfile } = useAuth();

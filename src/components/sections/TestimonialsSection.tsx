@@ -1,5 +1,5 @@
-import AnimatedSection from '../AnimatedSection';
-import TestimonialCarousel from '../TestimonialCarousel';
+import AnimatedSection from '../ui/AnimatedSection';
+import TestimonialCarousel from '../ui/TestimonialCarousel';
 import { testimonials } from '../../data/content';
 
 export default function TestimonialsSection() {

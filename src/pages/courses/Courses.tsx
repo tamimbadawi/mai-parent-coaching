@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Clock, BookOpen, BarChart3, ArrowRight, Play, FileText, CheckCircle } from 'lucide-react';
-import AnimatedSection from '../components/AnimatedSection';
-import CTASection from '../components/CTASection';
-import { courses } from '../data/content';
-import type { Course } from '../types';
+import AnimatedSection from '../../components/ui/AnimatedSection';
+import CTASection from '../../components/ui/CTASection';
+import { courses } from '../../data/content';
+import type { Course } from '../../types';
 
 const levelColors: Record<string, string> = {
   Beginner: 'bg-sage/10 text-sage-dark',

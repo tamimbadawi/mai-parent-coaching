@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Crown, Edit3, Hourglass, PlusCircle, ShieldCheck, Trash2, UserRound, X, XCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
-import PhoneInput, { formatPhone, parsePhone } from '../../components/PhoneInput';
+import PhoneInput, { formatPhone, parsePhone } from '../../components/ui/PhoneInput';
 import type { UserProfile } from '../../types';
-import { EmptyPanel, InsightChip, Panel, StatCard } from './admin-ui';
+import { EmptyPanel, InsightChip, Panel, StatCard } from './components/AdminUI';
 
 
 interface UserDraft {

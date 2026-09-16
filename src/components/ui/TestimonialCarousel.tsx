@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Star, Quote } from 'lucide-react';
-import { testimonials } from '../data/content';
-import { cn } from '../lib/utils';
+import { testimonials } from '../../data/content';
+import { cn } from '../../lib/utils';
 
 export default function TestimonialCarousel() {
   const [current, setCurrent] = useState(0);

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, Clock, GraduationCap } from 'lucide-react';
-import AnimatedSection from '../AnimatedSection';
+import AnimatedSection from '../ui/AnimatedSection';
 import { courses } from '../../data/content';
 
 export default function FeaturedCoursesSection() {

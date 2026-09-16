@@ -1,9 +1,9 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, BookOpen, BarChart3, CheckCircle, Play, FileText, Lock, ArrowRight, Star } from 'lucide-react';
-import AnimatedSection from '../components/AnimatedSection';
-import BunnyStreamPlayer from '../components/BunnyStreamPlayer';
-import { useAuth } from '../context/AuthContext';
-import { courses } from '../data/content';
+import AnimatedSection from '../../components/ui/AnimatedSection';
+import BunnyStreamPlayer from '../../components/media/BunnyStreamPlayer';
+import { useAuth } from '../../context/AuthContext';
+import { courses } from '../../data/content';
 
 const levelColors: Record<string, string> = {
   Beginner: 'bg-sage/10 text-sage-dark',

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Download, FileText, ListChecks, BookOpen, ClipboardList, X, Mail, ArrowRight } from 'lucide-react';
-import AnimatedSection from '../components/AnimatedSection';
+import AnimatedSection from '../components/ui/AnimatedSection';
 import { freeResources } from '../data/content';
 import type { FreeResource } from '../types';
 

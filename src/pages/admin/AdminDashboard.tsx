@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
-import { InsightChip, Panel, ProgressBar, QuickAction, StatCard } from './admin-ui';
+import { InsightChip, Panel, ProgressBar, QuickAction, StatCard } from './components/AdminUI';
 import { AdminBookingsCalendarView } from './components/AdminBookingsCalendarView';
 import { BookingRescheduleModal } from './components/BookingRescheduleModal';
 import { BookingEditModal } from './components/BookingEditModal';

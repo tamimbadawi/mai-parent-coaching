@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, Inbox, MailCheck, TimerReset } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
-import { EmptyPanel, Panel, StatCard } from './admin-ui';
+import { EmptyPanel, Panel, StatCard } from './components/AdminUI';
 
 interface ContactMessage {
   id: string;

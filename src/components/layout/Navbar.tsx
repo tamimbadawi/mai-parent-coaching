@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Heart, LogIn, Sparkles, UserRound } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { cn } from '../lib/utils';
+import { useAuth } from '../../context/AuthContext';
+import { cn } from '../../lib/utils';
 
 const navLinks = [
   { label: 'Home', href: '/' },
@@ -16,11 +16,14 @@ const navLinks = [
 ];
 
 export default function Navbar() {
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.scrollY > 20;
+  });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [navbarHeight, setNavbarHeight] = useState(80);
+  const [navbarHeight, setNavbarHeight] = useState(68);
   const location = useLocation();
   const navigate = useNavigate();
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
@@ -38,23 +41,17 @@ export default function Navbar() {
     const handleScroll = () => {
       const scrolled = window.scrollY > 20;
       setIsScrolled(scrolled);
-      // Update navbar height whenever scroll state changes
-      if (navRef.current) {
-        setNavbarHeight(navRef.current.offsetHeight);
-      }
     };
     
-    handleScroll(); // Initial call
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   useEffect(() => {
-    // Update navbar height on mount and when menu opens
     if (navRef.current) {
       setNavbarHeight(navRef.current.offsetHeight);
     }
-  }, [isMobileMenuOpen, isScrolled]);
+  }, [isMobileMenuOpen]);
 
   useEffect(() => {
     // Prevent body scroll when mobile menu is open
@@ -90,10 +87,10 @@ export default function Navbar() {
     <nav
       ref={navRef}
       className={cn(
-        'fixed top-0 left-0 right-0 transition-all duration-500 z-50 pt-safe',
+        'fixed top-0 left-0 right-0 z-50 pt-safe transition-[background-color,box-shadow,border-color,backdrop-filter] duration-300 py-3.5 sm:py-4',
         isScrolled
-          ? 'bg-ivory/95 backdrop-blur-md shadow-sm py-3'
-          : 'bg-transparent py-5'
+          ? 'bg-ivory/95 backdrop-blur-md shadow-xs border-b border-beige/60'
+          : 'bg-transparent'
       )}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

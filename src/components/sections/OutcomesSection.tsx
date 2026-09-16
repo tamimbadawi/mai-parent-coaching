@@ -1,4 +1,4 @@
-import AnimatedSection from '../AnimatedSection';
+import AnimatedSection from '../ui/AnimatedSection';
 
 const outcomes = [
   { before: 'Reactive & overwhelmed', after: 'Grounded in hard moments' },

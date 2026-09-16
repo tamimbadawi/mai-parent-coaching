@@ -26,7 +26,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
 import type { Booking } from '../../types';
-import { EmptyPanel, Panel, StatCard } from './admin-ui';
+import { EmptyPanel, Panel, StatCard } from './components/AdminUI';
 import { BookingRescheduleModal } from './components/BookingRescheduleModal';
 import { BookingEditModal } from './components/BookingEditModal';
 import { AdminManualBookingModal } from './components/AdminManualBookingModal';

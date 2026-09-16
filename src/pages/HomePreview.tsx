@@ -10,7 +10,7 @@ import TestimonialsSection from '../components/sections/TestimonialsSection';
 import AboutMaiTeaser from '../components/sections/AboutMaiTeaser';
 import FAQTeaser from '../components/sections/FAQTeaser';
 import FinalBookingCTA from '../components/sections/FinalBookingCTA';
-import CTASection from '../components/CTASection';
+import CTASection from '../components/ui/CTASection';
 
 /**
  * Static redesign preview — does not replace src/pages/Home.tsx.

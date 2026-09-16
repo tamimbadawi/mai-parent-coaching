@@ -3,7 +3,7 @@ import { PlusCircle, Pencil, Trash2, X, Check, FileText, CalendarRange, PenSquar
 import { blogPosts as staticBlogPosts } from '../../data/content';
 import AdminLayout from './AdminLayout';
 import type { BlogPost } from '../../types';
-import { Panel, StatCard } from './admin-ui';
+import { Panel, StatCard } from './components/AdminUI';
 
 // Blog management uses the static content.ts list as the source of truth.
 // To connect to a live database, replace state with Supabase queries on a blog_posts table.

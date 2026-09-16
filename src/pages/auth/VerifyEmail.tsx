@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Mail, Sparkles } from 'lucide-react';
-import AnimatedSection from '../../components/AnimatedSection';
+import AnimatedSection from '../../components/ui/AnimatedSection';
 import { supabase } from '../../lib/supabase';
 
 const VerifyEmail = (): JSX.Element => {

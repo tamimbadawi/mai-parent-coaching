@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import AnimatedSection from '../components/AnimatedSection';
+import AnimatedSection from '../components/ui/AnimatedSection';
 import { faqs } from '../data/content';
 import { cn } from '../lib/utils';
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Sparkles } from 'lucide-react';
-import AnimatedSection from '../../components/AnimatedSection';
+import AnimatedSection from '../../components/ui/AnimatedSection';
 import { supabase } from '../../lib/supabase';
 
 const ForgotPassword = (): JSX.Element => {

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Heart, Brain, Sun, Users, Baby, ArrowRight, Check } from 'lucide-react';
-import AnimatedSection from '../components/AnimatedSection';
-import CTASection from '../components/CTASection';
+import AnimatedSection from '../components/ui/AnimatedSection';
+import CTASection from '../components/ui/CTASection';
 import { services } from '../data/content';
 
 const iconMap: Record<string, React.ElementType> = {

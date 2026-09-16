@@ -1,4 +1,4 @@
-import AnimatedSection from '../AnimatedSection';
+import AnimatedSection from '../ui/AnimatedSection';
 
 const pains = [
   {

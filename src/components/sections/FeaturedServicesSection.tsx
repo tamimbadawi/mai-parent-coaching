@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, Baby, Heart, Sun } from 'lucide-react';
-import AnimatedSection from '../AnimatedSection';
+import AnimatedSection from '../ui/AnimatedSection';
 import { services } from '../../data/content';
 
 const iconMap = { Heart, Baby, Sun };

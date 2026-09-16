@@ -1,26 +1,26 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import ProtectedRoute from './components/ProtectedRoute';
+import Navbar from './components/layout/Navbar';
+import Footer from './components/layout/Footer';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import Home from './pages/Home';
 import HomePreview from './pages/HomePreview';
 import About from './pages/About';
 import Services from './pages/Services';
-import Courses from './pages/Courses';
-import CourseDetail from './pages/CourseDetail';
+import Courses from './pages/courses/Courses';
+import CourseDetail from './pages/courses/CourseDetail';
 import Booking from './pages/Booking';
 import Resources from './pages/Resources';
-import Blog from './pages/Blog';
-import BlogPost from './pages/BlogPost';
+import Blog from './pages/blog/Blog';
+import BlogPost from './pages/blog/BlogPost';
 import Community from './pages/Community';
 import FAQ from './pages/FAQ';
 import Contact from './pages/Contact';
 import Shop from './pages/Shop';
-import Privacy from './pages/Privacy';
-import Terms from './pages/Terms';
-import Cookies from './pages/Cookies';
+import Privacy from './pages/legal/Privacy';
+import Terms from './pages/legal/Terms';
+import Cookies from './pages/legal/Cookies';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
@@ -39,8 +39,6 @@ import AdminBlog from './pages/admin/AdminBlog';
 import AdminBookings from './pages/admin/AdminBookings';
 import AdminOrders from './pages/admin/AdminOrders';
 
-import { useCapacitorApp } from './hooks/useCapacitorApp';
-
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -50,7 +48,6 @@ function ScrollToTop() {
 }
 
 function AppShell() {
-  useCapacitorApp();
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
 

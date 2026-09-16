@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Sparkles } from 'lucide-react';
-import AnimatedSection from '../../components/AnimatedSection';
+import AnimatedSection from '../../components/ui/AnimatedSection';
 import { supabase } from '../../lib/supabase';
 
 const ResetPassword = (): JSX.Element => {
