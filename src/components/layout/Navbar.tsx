@@ -168,20 +168,24 @@ export default function Navbar() {
           </div>
 
           {/* Mobile Right Controls: Book Now & Hamburger Menu */}
-          <div className="flex lg:hidden items-center gap-2 sm:gap-3 z-[70]">
+          <div className="flex lg:hidden items-center gap-2 sm:gap-3 shrink-0 z-[70]">
             <Link
               to="/booking"
-              className="bg-sage text-white px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs font-medium hover:bg-sage-dark transition-all duration-300 whitespace-nowrap shadow-xs"
+              className="bg-sage text-white px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs font-medium hover:bg-sage-dark transition-colors whitespace-nowrap shrink-0 shadow-xs"
             >
               Book Now
             </Link>
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-1.5 sm:p-2 text-charcoal hover:text-sage-dark transition-colors"
+              className="w-10 h-10 flex items-center justify-center rounded-lg text-charcoal hover:text-sage-dark transition-colors shrink-0"
               aria-label="Toggle menu"
             >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6 shrink-0" size={24} />
+              ) : (
+                <Menu className="w-6 h-6 shrink-0" size={24} />
+              )}
             </button>
           </div>
         </div>
