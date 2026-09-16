@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { ArrowRight, Heart, Brain, Sun, Users, Baby, Sparkles, MessageCircle } from 'lucide-react';
 import AnimatedSection from '../components/ui/AnimatedSection';
 import TestimonialCarousel from '../components/ui/TestimonialCarousel';
@@ -21,58 +20,40 @@ const iconMap: Record<string, React.ElementType> = {
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pt-24">
       {/* Hero */}
-      <section className="relative min-h-screen flex items-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-cream via-ivory to-beige/30" />
-        <div className="absolute top-20 right-0 w-1/2 h-1/2 bg-sage/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-1/3 h-1/3 bg-dusty-blue/5 rounded-full blur-3xl" />
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-10 lg:pt-24 lg:pb-14 w-full">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, ease: [0.25, 0.1, 0.25, 1] }}
-            >
-              <span className="inline-block text-sage-dark text-sm font-medium tracking-wider uppercase mb-3">
+      <section className="relative py-20 bg-cream">
+        <div className="absolute top-0 right-0 w-1/3 h-full bg-sage/5 rounded-l-full" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <AnimatedSection>
+              <span className="text-sage-dark text-sm font-medium tracking-wider uppercase">
                 Child Psychologist & Parent Coach
               </span>
-              <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-charcoal leading-tight mb-5">
+              <h1 className="font-serif text-4xl md:text-5xl text-charcoal mt-3 mb-6">
                 Helping Parents Raise{' '}
                 <span className="text-sage-dark">Emotionally Healthy</span> Children While Healing Themselves
               </h1>
-              <p className="text-warm-gray text-lg md:text-xl leading-relaxed mb-6 max-w-xl">
+              <p className="text-warm-gray text-lg leading-relaxed mb-6">
                 Evidence-based parenting support, burnout recovery, nervous system healing, and practical coaching for modern families.
               </p>
-            </motion.div>
+            </AnimatedSection>
 
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1.2, delay: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-              className="relative"
-            >
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl">
-                <img
-                  src="https://images.pexels.com/photos/3661356/pexels-photo-3661356.jpeg?auto=compress&cs=tinysrgb&w=1200"
-                  alt="Parent and child in a warm, connected moment"
-                  className="w-full h-[360px] lg:h-[480px] xl:h-[520px] object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-charcoal/20 to-transparent" />
-              </div>
-              <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 lg:bottom-5 lg:-left-5 bg-ivory/95 backdrop-blur-sm rounded-2xl p-3.5 lg:p-5 shadow-xl border border-beige/80 max-w-[200px] lg:max-w-xs">
-                <div className="flex items-center gap-2 lg:gap-3">
-                  <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-sage/20 flex items-center justify-center shrink-0">
-                    <Heart className="w-4 h-4 lg:w-5 lg:h-5 text-sage" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-charcoal text-xs lg:text-sm">500+ Families</p>
-                    <p className="text-[10px] lg:text-xs text-warm-gray">Supported with care</p>
-                  </div>
+            <AnimatedSection delay={0.2} direction="left">
+              <div className="relative">
+                <div className="rounded-3xl overflow-hidden shadow-xl">
+                  <img
+                    src="https://images.pexels.com/photos/3661356/pexels-photo-3661356.jpeg?auto=compress&cs=tinysrgb&w=1200"
+                    alt="Parent and child in a warm, connected moment"
+                    className="w-full h-[500px] object-cover"
+                  />
+                </div>
+                <div className="absolute -bottom-6 -right-6 bg-ivory rounded-2xl p-6 shadow-lg border border-beige">
+                  <p className="font-serif text-2xl text-charcoal">500+</p>
+                  <p className="text-sm text-warm-gray">Families Supported</p>
                 </div>
               </div>
-            </motion.div>
+            </AnimatedSection>
           </div>
         </div>
       </section>

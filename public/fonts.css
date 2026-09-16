@@ -1,0 +1,48 @@
+/* Loaded from the document head so local brand fonts are available before React mounts. */
+@font-face {
+  font-family: 'Atma';
+  src: url('/fonts/Atma-300.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Atma';
+  src: url('/fonts/Atma-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Atma';
+  src: url('/fonts/Atma-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Atma';
+  src: url('/fonts/Atma-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Atma';
+  src: url('/fonts/Atma-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'BM Hanna Air';
+  src: url('/fonts/BMHANNAAir.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}

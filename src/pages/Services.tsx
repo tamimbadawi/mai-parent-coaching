@@ -29,27 +29,27 @@ export default function Services() {
       {/* Services Grid */}
       <section className="py-20 bg-ivory">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-8">
+          <div className="grid lg:grid-cols-2 gap-8 items-stretch">
             {services.map((service, i) => {
               const Icon = iconMap[service.icon] || Heart;
               return (
-                <AnimatedSection key={service.id} delay={i * 0.1}>
-                  <div className="bg-cream rounded-2xl p-8 md:p-10 border border-beige/50 hover:border-beige hover:shadow-xl transition-all duration-500 group">
-                    <div className="flex items-start gap-6">
+                <AnimatedSection key={service.id} delay={i * 0.1} className="h-full">
+                  <div className="bg-cream rounded-2xl p-8 md:p-10 border border-beige/50 hover:border-beige hover:shadow-xl transition-all duration-500 group h-full flex flex-col">
+                    <div className="flex items-start gap-6 flex-1 flex-col sm:flex-row">
                       <div className="w-14 h-14 rounded-2xl bg-sage/10 flex items-center justify-center shrink-0 group-hover:bg-sage/20 transition-colors">
                         <Icon className="w-7 h-7 text-sage-dark" />
                       </div>
-                      <div className="flex-grow">
-                        <div className="flex items-center justify-between mb-3">
+                      <div className="flex-grow flex flex-col h-full w-full">
+                        <div className="flex items-center justify-between mb-3 gap-4">
                           <h3 className="font-serif text-2xl text-charcoal">{service.title}</h3>
                           {service.price && (
-                            <span className="text-sage-dark font-medium bg-sage/10 px-4 py-1.5 rounded-full text-sm">
+                            <span className="text-sage-dark font-medium bg-sage/10 px-4 py-1.5 rounded-full text-sm shrink-0">
                               {service.price}
                             </span>
                           )}
                         </div>
                         <p className="text-warm-gray leading-relaxed mb-6">{service.description}</p>
-                        <div className="space-y-3 mb-6">
+                        <div className="space-y-3 mb-6 flex-grow">
                           {service.features.map((feature) => (
                             <div key={feature} className="flex items-center gap-3 text-sm text-warm-gray">
                               <Check className="w-4 h-4 text-sage shrink-0" />
@@ -57,7 +57,7 @@ export default function Services() {
                             </div>
                           ))}
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 mt-auto pt-2">
                           <Link
                             to="/booking"
                             className="bg-sage text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-sage-dark transition-all duration-300 inline-flex items-center gap-2"
@@ -88,7 +88,7 @@ export default function Services() {
             </h2>
           </AnimatedSection>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-8 items-stretch">
             {[
               {
                 step: '01',
@@ -106,11 +106,11 @@ export default function Services() {
                 description: 'Regular sessions, check-ins, and resources to keep you moving forward with confidence.',
               },
             ].map((item, i) => (
-              <AnimatedSection key={item.step} delay={i * 0.15}>
-                <div className="text-center">
+              <AnimatedSection key={item.step} delay={i * 0.15} className="h-full">
+                <div className="text-center h-full flex flex-col">
                   <span className="font-serif text-5xl text-beige">{item.step}</span>
                   <h3 className="font-serif text-xl text-charcoal mt-4 mb-3">{item.title}</h3>
-                  <p className="text-warm-gray leading-relaxed">{item.description}</p>
+                  <p className="text-warm-gray leading-relaxed flex-grow">{item.description}</p>
                 </div>
               </AnimatedSection>
             ))}

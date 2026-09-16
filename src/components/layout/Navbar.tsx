@@ -16,10 +16,6 @@ const navLinks = [
 ];
 
 export default function Navbar() {
-  const [isScrolled, setIsScrolled] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.scrollY > 20;
-  });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -28,7 +24,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const navRef = useRef<HTMLElement | null>(null);
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
 
   const handleSignOut = async (): Promise<void> => {
     setIsProfileMenuOpen(false);
@@ -36,16 +32,6 @@ export default function Navbar() {
     await signOut();
     navigate('/');
   };
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrolled = window.scrollY > 20;
-      setIsScrolled(scrolled);
-    };
-    
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     if (navRef.current) {
@@ -86,35 +72,22 @@ export default function Navbar() {
     <>
     <nav
       ref={navRef}
-      className={cn(
-        'fixed top-0 left-0 right-0 z-50 pt-safe transition-[background-color,box-shadow,border-color,backdrop-filter] duration-300 py-3.5 sm:py-4',
-        isScrolled
-          ? 'bg-ivory/95 backdrop-blur-md shadow-xs border-b border-beige/60'
-          : 'bg-transparent'
-      )}
+      className="fixed top-0 left-0 right-0 z-50 border-b border-beige/60 bg-ivory py-3.5 shadow-xs sm:py-4 pt-safe"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between lg:grid lg:grid-cols-[1fr_auto_1fr]">
+          <div className="flex items-center">
             <Link to="/" className="flex items-center gap-2 group">
-              <div className="w-9 h-9 rounded-full bg-sage flex items-center justify-center group-hover:bg-sage-dark transition-colors">
+              <div className="w-9 h-9 rounded-full bg-sage flex items-center justify-center group-hover:bg-sage-dark transition-colors shrink-0">
                 <Heart className="w-4 h-4 text-white" />
               </div>
-              <span className="font-serif text-xl text-charcoal tracking-tight">
+              <span className="font-serif text-xl text-charcoal tracking-tight whitespace-nowrap">
                 Mai <span className="text-sage-dark">Elbadawy</span>
               </span>
             </Link>
-            
-            {/* Mobile Book a Session Button */}
-            <Link
-              to="/booking"
-              className="lg:hidden bg-sage text-white px-4 py-2 rounded-full text-xs font-medium hover:bg-sage-dark transition-all duration-300 whitespace-nowrap"
-            >
-              Book Now
-            </Link>
           </div>
 
-          <div className="hidden lg:flex items-center gap-8">
+          <div className="hidden lg:flex items-center gap-8 justify-self-center">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -134,8 +107,14 @@ export default function Navbar() {
             ))}
           </div>
 
-          <div className="hidden lg:flex items-center gap-3">
-            {!user ? (
+          <div className="hidden lg:flex items-center gap-3 justify-self-end">
+            {loading ? (
+              <div
+                className="h-10 w-10 rounded-full bg-cream"
+                aria-label="Checking account status"
+                role="status"
+              />
+            ) : !user ? (
               <button
                 type="button"
                 onClick={() => setIsLoginOpen(true)}
@@ -188,13 +167,23 @@ export default function Navbar() {
             ) : null}
           </div>
 
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 text-charcoal z-[70]"
-            aria-label="Toggle menu"
-          >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          {/* Mobile Right Controls: Book Now & Hamburger Menu */}
+          <div className="flex lg:hidden items-center gap-2 sm:gap-3 z-[70]">
+            <Link
+              to="/booking"
+              className="bg-sage text-white px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs font-medium hover:bg-sage-dark transition-all duration-300 whitespace-nowrap shadow-xs"
+            >
+              Book Now
+            </Link>
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-1.5 sm:p-2 text-charcoal hover:text-sage-dark transition-colors"
+              aria-label="Toggle menu"
+            >
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
       </div>
     </nav>
