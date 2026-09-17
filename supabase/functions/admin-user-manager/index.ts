@@ -117,11 +117,16 @@ Deno.serve(async (request) => {
     const payload = (await request.json()) as Payload;
 
     if (payload.action === 'createUser') {
+      const cleanPhone = (payload.phone ?? '').replace(/\D/g, '');
+      if (!payload.phone || cleanPhone.length < 7) {
+        return json({ step: 'validate_phone', error: 'A valid working phone number is required (minimum 7 digits).' }, 400);
+      }
+
       const { data, error } = await adminClient.auth.admin.createUser({
         email: payload.email,
         password: payload.password,
         email_confirm: payload.approvalStatus === 'approved',
-        user_metadata: { full_name: payload.fullName },
+        user_metadata: { full_name: payload.fullName, phone: payload.phone },
       });
 
       if (error || !data.user) {

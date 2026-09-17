@@ -118,6 +118,21 @@ export interface Booking {
   google_meet_url: string | null;
 }
 
+export interface CoachAvailabilityRule {
+  id: string;
+  rule_type: 'recurring' | 'date_override' | 'date_closed';
+  day_of_week: number | null; // 0=Sunday, 1=Monday, ..., 6=Saturday
+  specific_date: string | null; // 'YYYY-MM-DD'
+  start_time: string | null; // 'HH:MM'
+  end_time: string | null; // 'HH:MM'
+  appointment_type_id: string; // 'all' or specific appointment type id
+  label: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
+}
+
 export interface BookingBlackout {
   id: string;
   start_date: string;

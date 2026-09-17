@@ -3,11 +3,12 @@ import { createCalendarEvent, getCalendarFreeBusy } from '../_shared/google-cale
 import {
   APPOINTMENT_CONFIG,
   candidateSlotsForClientDate,
+  buildOpenIntervalsForCoachDate,
+  type DbAvailabilityRule,
   intervalsOverlap,
   isValidDateKey,
   isValidTime,
   isValidTimeZone,
-  parseWorkingHours,
   zonedDateTimeToUtc,
 } from '../_shared/booking-scheduling.ts';
 
@@ -59,7 +60,20 @@ Deno.serve(async (request) => {
     const clientTimeZone = (payload as Record<string, any>).time_zone || payload.timeZone || 'Africa/Cairo';
     const coachTimeZone = Deno.env.get('BOOKING_TIMEZONE') || 'Africa/Cairo';
     if (!isValidTimeZone(clientTimeZone) || !isValidTimeZone(coachTimeZone)) return json({ error: 'Invalid booking timezone.' }, 400);
-    const workingHours = parseWorkingHours(Deno.env.get('BOOKING_WORKING_HOURS'));
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+
+    // Fetch active coach availability rules
+    const { data: rulesData, error: rulesError } = await supabaseAdmin
+      .from('coach_availability_rules')
+      .select('*')
+      .eq('is_active', true);
+    if (rulesError) throw new Error(`Could not load availability rules: ${rulesError.message}`);
+    const rules = (rulesData || []) as DbAvailabilityRule[];
+
+    const openIntervalsProvider = (coachDate: string) =>
+      buildOpenIntervalsForCoachDate(coachDate, coachTimeZone, rules, payload.appointment_type_id);
+
     const startsAt = zonedDateTimeToUtc(payload.appointment_date, normalizedTime, clientTimeZone);
     const endsAt = new Date(startsAt.getTime() + appointment.durationMinutes * 60_000);
     const reservedUntil = new Date(endsAt.getTime() + appointment.bufferMinutes * 60_000);
@@ -71,11 +85,10 @@ Deno.serve(async (request) => {
       coachTimeZone,
       durationMinutes: appointment.durationMinutes,
       bufferMinutes: appointment.bufferMinutes,
-      workingHours,
+      openIntervalsProvider,
     }).some((slot) => slot.startsAt.getTime() === startsAt.getTime());
-    if (!validSlot) return json({ error: 'The selected time is outside booking hours.' }, 400);
+    if (!validSlot) return json({ error: 'The selected time is outside open booking hours.' }, 400);
 
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
     let userId: string | null = null;
     const authorization = request.headers.get('Authorization');
     if (authorization?.startsWith('Bearer ')) {
@@ -93,12 +106,10 @@ Deno.serve(async (request) => {
     if (conflictError) throw new Error(`Could not validate reservations: ${conflictError.message}`);
     if (conflicts?.length) return json({ error: 'This appointment overlaps another reservation. Please select another time.' }, 409);
 
-    let googleCalendarEnabled = false;
     if (Deno.env.get('GOOGLE_CLIENT_ID') && Deno.env.get('GOOGLE_CLIENT_SECRET') && Deno.env.get('GOOGLE_REFRESH_TOKEN')) {
       let busyBlocks;
       try {
         busyBlocks = await getCalendarFreeBusy(startsAt.toISOString(), reservedUntil.toISOString(), coachTimeZone);
-        googleCalendarEnabled = true;
       } catch (error) {
         console.error('Google Calendar validation failed:', error);
         return json({ error: 'Live calendar validation is temporarily unavailable. No booking was created.' }, 503);

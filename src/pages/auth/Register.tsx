@@ -178,7 +178,8 @@ const Register = (): JSX.Element => {
     const next: Record<string, string> = {};
     if (fullName.trim().length < 2) next.fullName = 'Enter your full name.';
     if (!/\S+@\S+\.\S+/.test(email)) next.email = 'Enter a valid email.';
-    if (!phone.trim()) next.phone = 'Enter your phone number.';
+    const cleanDigits = phone.replace(/\D/g, '');
+    if (!phone.trim() || cleanDigits.length < 7) next.phone = 'Enter a valid working phone number (min. 7 digits).';
     if (!country) next.country = 'Select your country.';
     if (!password) next.password = 'Enter a password.';
     if (confirmPassword !== password) next.confirmPassword = 'Passwords do not match.';

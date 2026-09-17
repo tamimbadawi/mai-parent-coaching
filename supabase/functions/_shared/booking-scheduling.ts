@@ -19,14 +19,18 @@ export interface WorkingInterval {
 
 export type WorkingHours = Partial<Record<number, WorkingInterval[]>>;
 
-export const DEFAULT_WORKING_HOURS: WorkingHours = {
-  0: [{ start: '09:00', end: '18:00' }],
-  1: [{ start: '09:00', end: '18:00' }],
-  2: [{ start: '09:00', end: '18:00' }],
-  3: [{ start: '09:00', end: '18:00' }],
-  4: [{ start: '09:00', end: '18:00' }],
-  5: [{ start: '09:00', end: '18:00' }],
-};
+export interface DbAvailabilityRule {
+  id?: string;
+  rule_type: 'recurring' | 'date_override' | 'date_closed';
+  day_of_week: number | null;
+  specific_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  appointment_type_id?: string;
+  is_active: boolean;
+}
+
+export const DEFAULT_WORKING_HOURS: WorkingHours = {};
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^([01]?\d|2[0-3]):([0-5]\d)$/;
@@ -134,6 +138,55 @@ export function parseWorkingHours(raw: string | undefined): WorkingHours {
   }
 }
 
+export function buildOpenIntervalsForCoachDate(
+  coachDate: string,
+  coachTimeZone: string,
+  rules: DbAvailabilityRule[],
+  appointmentTypeId = 'all'
+): WorkingInterval[] {
+  // Check if date is explicitly marked closed
+  const isDateClosed = rules.some(
+    (r) => r.is_active && r.rule_type === 'date_closed' && r.specific_date === coachDate
+  );
+  if (isDateClosed) return [];
+
+  // Helper to check if rule matches appointment type
+  const matchesType = (r: DbAvailabilityRule) =>
+    !r.appointment_type_id ||
+    r.appointment_type_id === 'all' ||
+    appointmentTypeId === 'all' ||
+    r.appointment_type_id === appointmentTypeId;
+
+  // Check if there are date-specific open overrides for this exact date
+  const dateOverrides = rules.filter(
+    (r) =>
+      r.is_active &&
+      r.rule_type === 'date_override' &&
+      r.specific_date === coachDate &&
+      r.start_time &&
+      r.end_time &&
+      matchesType(r)
+  );
+  if (dateOverrides.length > 0) {
+    return dateOverrides.map((r) => ({ start: r.start_time!, end: r.end_time! }));
+  }
+
+  // Otherwise, use active weekly recurring rules for this weekday
+  const weekday = weekdayForDate(coachDate, coachTimeZone);
+  const recurringRules = rules.filter(
+    (r) =>
+      r.is_active &&
+      r.rule_type === 'recurring' &&
+      r.day_of_week === weekday &&
+      r.start_time &&
+      r.end_time &&
+      matchesType(r)
+  );
+
+  // If no recurring rules exist for this weekday, return empty (CLOSED BY DEFAULT)
+  return recurringRules.map((r) => ({ start: r.start_time!, end: r.end_time! }));
+}
+
 export function intervalsOverlap(startA: Date, endA: Date, startB: Date, endB: Date): boolean {
   return startA < endB && endA > startB;
 }
@@ -151,10 +204,10 @@ export function candidateSlotsForClientDate(options: {
   coachTimeZone: string;
   durationMinutes: number;
   bufferMinutes: number;
-  workingHours: WorkingHours;
+  openIntervalsProvider: (coachDate: string) => WorkingInterval[];
   intervalMinutes?: number;
 }): CandidateSlot[] {
-  const { clientDate, clientTimeZone, coachTimeZone, durationMinutes, bufferMinutes, workingHours } = options;
+  const { clientDate, clientTimeZone, coachTimeZone, durationMinutes, bufferMinutes, openIntervalsProvider } = options;
   const intervalMinutes = options.intervalMinutes ?? 30;
   const clientDayStart = zonedDateTimeToUtc(clientDate, '00:00', clientTimeZone);
   const nextDate = new Date(Date.UTC(...clientDate.split('-').map(Number).map((value, index) => index === 1 ? value - 1 : value) as [number, number, number]));
@@ -170,8 +223,8 @@ export function candidateSlotsForClientDate(options: {
 
   const slots: CandidateSlot[] = [];
   for (const coachDate of coachDates) {
-    const weekday = weekdayForDate(coachDate, coachTimeZone);
-    for (const interval of workingHours[weekday] ?? []) {
+    const intervals = openIntervalsProvider(coachDate);
+    for (const interval of intervals) {
       const intervalStart = zonedDateTimeToUtc(coachDate, interval.start, coachTimeZone);
       const intervalEnd = zonedDateTimeToUtc(coachDate, interval.end, coachTimeZone);
       for (let startsAt = intervalStart; startsAt.getTime() < intervalEnd.getTime(); startsAt = new Date(startsAt.getTime() + intervalMinutes * 60_000)) {

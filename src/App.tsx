@@ -29,6 +29,7 @@ import VerifyEmail from './pages/auth/VerifyEmail';
 import AuthCallback from './pages/auth/AuthCallback';
 import PendingApproval from './pages/auth/PendingApproval';
 import Dashboard from './pages/dashboard/Dashboard';
+import MySessions from './pages/dashboard/MySessions';
 import MyCourses from './pages/dashboard/MyCourses';
 import ProfileSettings from './pages/dashboard/ProfileSettings';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -50,6 +51,7 @@ function ScrollToTop() {
 function AppShell() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isDashboardRoute = location.pathname.startsWith('/dashboard');
 
   return (
     <div className="min-h-screen bg-ivory flex flex-col">
@@ -82,6 +84,7 @@ function AppShell() {
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/auth/pending-approval" element={<PendingApproval />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/dashboard/sessions" element={<ProtectedRoute><MySessions /></ProtectedRoute>} />
           <Route path="/dashboard/courses" element={<ProtectedRoute><MyCourses /></ProtectedRoute>} />
           <Route path="/dashboard/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
@@ -93,7 +96,7 @@ function AppShell() {
           <Route path="/admin/orders" element={<ProtectedRoute requiredRole="admin"><AdminOrders /></ProtectedRoute>} />
         </Routes>
       </main>
-      {isAdminRoute ? null : <Footer />}
+      {isAdminRoute || isDashboardRoute ? null : <Footer />}
     </div>
   );
 }

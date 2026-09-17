@@ -3,10 +3,12 @@ import { getCalendarFreeBusy, type FreeBusyBlock } from '../_shared/google-calen
 import {
   APPOINTMENT_CONFIG,
   candidateSlotsForClientDate,
+  buildOpenIntervalsForCoachDate,
+  type DbAvailabilityRule,
+  type WorkingInterval,
   intervalsOverlap,
   isValidDateKey,
   isValidTimeZone,
-  parseWorkingHours,
 } from '../_shared/booking-scheduling.ts';
 
 const corsHeaders = {
@@ -41,7 +43,7 @@ function slotsForDate(options: {
   coachTimeZone: string;
   durationMinutes: number;
   bufferMinutes: number;
-  workingHours: ReturnType<typeof parseWorkingHours>;
+  openIntervalsProvider: (coachDate: string) => WorkingInterval[];
   busyIntervals: BusyInterval[];
   now: Date;
 }): string[] {
@@ -51,7 +53,7 @@ function slotsForDate(options: {
     coachTimeZone: options.coachTimeZone,
     durationMinutes: options.durationMinutes,
     bufferMinutes: options.bufferMinutes,
-    workingHours: options.workingHours,
+    openIntervalsProvider: options.openIntervalsProvider,
   });
   const oneHourFromNow = new Date(options.now.getTime() + 60 * 60_000);
   return slots
@@ -88,7 +90,6 @@ Deno.serve(async (request) => {
     const coachTimeZone = Deno.env.get('BOOKING_TIMEZONE') || 'Africa/Cairo';
     if (!isValidTimeZone(clientTimeZone)) return json({ error: 'Invalid IANA timezone.' }, 400);
     if (!isValidTimeZone(coachTimeZone)) return json({ error: 'Server booking timezone is invalid.' }, 500);
-    const workingHours = parseWorkingHours(Deno.env.get('BOOKING_WORKING_HOURS'));
 
     let startDate = query.startDate;
     let endDate = query.endDate;
@@ -110,6 +111,19 @@ Deno.serve(async (request) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     if (!supabaseUrl || !serviceRoleKey) return json({ error: 'Booking database configuration is missing.' }, 503);
     const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+
+    // 1. Fetch active coach availability rules (ALLOW-LIST MODEL: closed by default)
+    const { data: rulesData, error: rulesError } = await supabase
+      .from('coach_availability_rules')
+      .select('*')
+      .eq('is_active', true);
+    if (rulesError) throw new Error(`Could not load availability rules: ${rulesError.message}`);
+    const rules = (rulesData || []) as DbAvailabilityRule[];
+
+    const openIntervalsProvider = (coachDate: string) =>
+      buildOpenIntervalsForCoachDate(coachDate, coachTimeZone, rules, appointmentTypeId);
+
+    // 2. Fetch existing bookings
     const { data: bookings, error: bookingsError } = await supabase
       .from('bookings')
       .select('starts_at, reserved_until')
@@ -122,22 +136,7 @@ Deno.serve(async (request) => {
       reservedUntil: new Date(booking.reserved_until),
     }));
 
-    // Check blackout / vacation dates
-    const { data: blackouts } = await supabase
-      .from('booking_blackouts')
-      .select('start_date, end_date')
-      .lte('start_date', endDate)
-      .gte('end_date', startDate);
-
-    if (blackouts) {
-      for (const blackout of blackouts) {
-        busyIntervals.push({
-          startsAt: new Date(`${blackout.start_date}T00:00:00Z`),
-          reservedUntil: new Date(`${blackout.end_date}T23:59:59Z`),
-        });
-      }
-    }
-
+    // 3. Query Google Calendar freebusy if connected
     let googleCalendarConnected = false;
     if (Deno.env.get('GOOGLE_CLIENT_ID') && Deno.env.get('GOOGLE_CLIENT_SECRET') && Deno.env.get('GOOGLE_REFRESH_TOKEN')) {
       let googleBusy: FreeBusyBlock[];
@@ -158,10 +157,11 @@ Deno.serve(async (request) => {
       coachTimeZone,
       durationMinutes: appointment.durationMinutes,
       bufferMinutes: appointment.bufferMinutes,
-      workingHours,
+      openIntervalsProvider,
       busyIntervals,
       now,
     });
+
     if (query.date) {
       const availableSlots = calculate(query.date);
       return json({

@@ -3,57 +3,127 @@ import { Link } from 'react-router-dom';
 import {
   Users,
   MessageSquare,
-  BookOpen,
-  TrendingUp,
-  CalendarClock,
-  ShieldAlert,
-  Newspaper,
-  Wallet,
-  Calendar,
-  ArrowUpRight,
-  Sparkles,
   Clock,
+  Plus,
+  ArrowUpRight,
+  CheckCircle2,
+  Edit2,
+  RotateCw,
+  Loader2,
+  Calendar,
+  AlertCircle,
+  UserCheck,
 } from 'lucide-react';
+import { format } from 'date-fns';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
-import { InsightChip, Panel, ProgressBar, QuickAction, StatCard } from './components/AdminUI';
+import { Panel } from './components/AdminUI';
 import { AdminBookingsCalendarView } from './components/AdminBookingsCalendarView';
 import { BookingRescheduleModal } from './components/BookingRescheduleModal';
 import { BookingEditModal } from './components/BookingEditModal';
+import { AdminManualBookingModal } from './components/AdminManualBookingModal';
 import type { Booking } from '../../types';
 
 interface Stats {
   totalUsers: number;
   totalMessages: number;
   totalEnrollments: number;
-  activeEnrollments: number;
+  pendingUsers: number;
 }
 
-const fallbackStats: Stats = {
-  totalUsers: 124,
-  totalMessages: 18,
-  totalEnrollments: 67,
-  activeEnrollments: 52,
+const statusBadgeStyles: Record<Booking['status'], { label: string; className: string }> = {
+  pending: {
+    label: 'Pending Review',
+    className: 'bg-amber-50 text-amber-800 border-amber-200/80',
+  },
+  confirmed: {
+    label: 'Confirmed',
+    className: 'bg-sage/15 text-sage-dark border-sage/30',
+  },
+  completed: {
+    label: 'Completed',
+    className: 'bg-emerald-50 text-emerald-800 border-emerald-200/80',
+  },
+  cancelled: {
+    label: 'Cancelled',
+    className: 'bg-rose-50 text-rose-700 border-rose-200/80',
+  },
+  pending_calendar_sync: {
+    label: 'Syncing',
+    className: 'bg-stone-100 text-stone-700 border-stone-200',
+  },
 };
 
-const fallbackMessages = [
-  { id: 'sample-1', name: 'Hana Soliman', subject: 'Interested in private coaching for school transitions', created_at: new Date().toISOString() },
-  { id: 'sample-2', name: 'Lina Farid', subject: 'Question about burnout recovery course access', created_at: new Date(Date.now() - 86400000).toISOString() },
-  { id: 'sample-3', name: 'Mariam Nader', subject: 'Booking support for a one-on-one session', created_at: new Date(Date.now() - 172800000).toISOString() },
-];
-
 const AdminDashboard = (): JSX.Element => {
-  const [stats, setStats] = useState<Stats>(fallbackStats);
+  const [stats, setStats] = useState<Stats>({
+    totalUsers: 0,
+    totalMessages: 0,
+    totalEnrollments: 0,
+    pendingUsers: 0,
+  });
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [recentMessages, setRecentMessages] = useState<
-    { id: string; name: string; subject: string; created_at: string }[]
-  >(fallbackMessages);
+    { id: string; name: string; email: string; subject: string; created_at: string }[]
+  >([]);
 
   // Modals state
+  const [manualBookingOpen, setManualBookingOpen] = useState(false);
   const [rescheduleBooking, setRescheduleBooking] = useState<Booking | null>(null);
   const [editBooking, setEditBooking] = useState<Booking | null>(null);
+
+  const fetchDashboardData = async (): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [usersRes, pendingUsersRes, messagesRes, enrollmentsRes, recentMsgsRes, bookingsRes] =
+        await Promise.all([
+          supabase.from('profiles').select('id', { count: 'exact', head: true }),
+          supabase
+            .from('profiles')
+            .select('id', { count: 'exact', head: true })
+            .eq('approval_status', 'pending'),
+          supabase.from('contact_messages').select('id', { count: 'exact', head: true }),
+          supabase.from('course_enrollments').select('id', { count: 'exact', head: true }),
+          supabase
+            .from('contact_messages')
+            .select('id, name, email, subject, created_at')
+            .order('created_at', { ascending: false })
+            .limit(4),
+          supabase
+            .from('bookings')
+            .select('*')
+            .order('appointment_date', { ascending: true })
+            .order('appointment_time', { ascending: true }),
+        ]);
+
+      setStats({
+        totalUsers: usersRes.count ?? 0,
+        pendingUsers: pendingUsersRes.count ?? 0,
+        totalMessages: messagesRes.count ?? 0,
+        totalEnrollments: enrollmentsRes.count ?? 0,
+      });
+
+      if (recentMsgsRes.data) {
+        setRecentMessages(recentMsgsRes.data);
+      }
+
+      if (bookingsRes.data) {
+        setBookings(bookingsRes.data as Booking[]);
+      }
+    } catch (err: unknown) {
+      console.warn('Error fetching dashboard data:', err);
+      setError('Unable to load some data. Please check your network or refresh.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect((): void => {
+    void fetchDashboardData();
+  }, []);
 
   const handleApproveBooking = async (booking: Booking): Promise<void> => {
     setApprovingId(booking.id);
@@ -68,7 +138,7 @@ const AdminDashboard = (): JSX.Element => {
       if (invokeErr || data?.error) {
         alert(`Approval error: ${invokeErr?.message || data?.error}`);
       } else {
-        await fetchStats();
+        await fetchDashboardData();
       }
     } catch (err) {
       console.error('Approve booking error:', err);
@@ -77,169 +147,332 @@ const AdminDashboard = (): JSX.Element => {
     }
   };
 
-  const fetchStats = async (): Promise<void> => {
-    setLoading(true);
-    try {
-      const [usersRes, messagesRes, enrollmentsRes, activeRes, recentMsgsRes, bookingsRes] = await Promise.all([
-        supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('contact_messages').select('id', { count: 'exact', head: true }),
-        supabase.from('course_enrollments').select('id', { count: 'exact', head: true }),
-        supabase
-          .from('course_enrollments')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'active'),
-        supabase
-          .from('contact_messages')
-          .select('id, name, subject, created_at')
-          .order('created_at', { ascending: false })
-          .limit(5),
-        supabase
-          .from('bookings')
-          .select('*')
-          .order('appointment_date', { ascending: true })
-          .order('appointment_time', { ascending: true }),
-      ]);
+  // Compute today's date in local YYYY-MM-DD
+  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const formattedToday = useMemo(
+    () => format(new Date(), 'EEEE, MMMM d, yyyy'),
+    []
+  );
 
-      setStats({
-        totalUsers: usersRes.count ?? fallbackStats.totalUsers,
-        totalMessages: messagesRes.count ?? fallbackStats.totalMessages,
-        totalEnrollments: enrollmentsRes.count ?? fallbackStats.totalEnrollments,
-        activeEnrollments: activeRes.count ?? fallbackStats.activeEnrollments,
-      });
-      setRecentMessages(recentMsgsRes.data?.length ? recentMsgsRes.data : fallbackMessages);
-      if (bookingsRes.data) {
-        setBookings(bookingsRes.data as Booking[]);
-      }
-    } catch (err) {
-      console.warn('Error fetching admin dashboard stats:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect((): void => {
-    void fetchStats();
-  }, []);
+  const todaySessions = useMemo(() => {
+    return bookings.filter(
+      (b) => b.appointment_date === todayStr && b.status !== 'cancelled'
+    );
+  }, [bookings, todayStr]);
 
   const bookingStats = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
     const pending = bookings.filter((b) => b.status === 'pending').length;
     const confirmed = bookings.filter((b) => b.status === 'confirmed').length;
-    const todayCount = bookings.filter((b) => b.appointment_date === todayStr && b.status !== 'cancelled').length;
     return {
       total: bookings.length,
       pending,
       confirmed,
-      todayCount,
+      todayCount: todaySessions.length,
     };
-  }, [bookings]);
+  }, [bookings, todaySessions.length]);
 
-  const quickMetrics = useMemo(
-    () => [
-      { label: 'Response target', value: recentMessages.length > 0 ? '< 4 hours' : 'No queue' },
-      { label: 'Upcoming Consultations', value: `${bookingStats.confirmed} confirmed` },
-      { label: 'Pending Bookings', value: `${bookingStats.pending} review needed` },
-      { label: 'Enrollment health', value: stats.totalEnrollments === 0 ? 'Launching' : `${Math.round((stats.activeEnrollments / Math.max(stats.totalEnrollments, 1)) * 100)}% active` },
-    ],
-    [recentMessages.length, bookingStats.confirmed, bookingStats.pending, stats.activeEnrollments, stats.totalEnrollments]
-  );
-
-  const operations = [
-    { label: 'Inbox handled', value: 78, tone: 'sage' as const },
-    { label: 'Programs filled', value: 64, tone: 'sky' as const },
-    { label: 'Consultations confirmed', value: bookingStats.total ? Math.round((bookingStats.confirmed / bookingStats.total) * 100) : 100, tone: 'sage' as const },
-  ];
+  const totalPendingApprovals = bookingStats.pending + stats.pendingUsers;
 
   return (
-    <AdminLayout title="Dashboard Overview">
+    <AdminLayout
+      title="Overview"
+      subtitle="Calm control and daily flow for your parent coaching practice."
+      action={
+        <button
+          type="button"
+          onClick={() => setManualBookingOpen(true)}
+          className="inline-flex items-center gap-2 rounded-xl bg-sage px-4 py-2.5 text-xs font-medium text-white shadow-xs transition-colors hover:bg-sage-dark active:scale-[0.98]"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Add booking</span>
+        </button>
+      }
+    >
       <div className="space-y-8">
-        <section className="rounded-[34px] border border-beige/80 bg-[linear-gradient(135deg,#2f3d34_0%,#46584c_100%)] p-7 text-white shadow-[0_24px_60px_rgba(50,40,34,0.15)]">
-          <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr] xl:items-end">
+        {/* ── 1. CALM TOP HERO SECTION ─────────────────────────────────── */}
+        <div className="rounded-2xl border border-beige/80 bg-white p-6 sm:p-7 shadow-xs">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-stone-300">Overview</p>
-              <h2 className="mt-3 max-w-2xl font-serif text-4xl leading-tight">
-                A grounded view of users, bookings, conversations, enrollments, and operating rhythm.
+              <p className="text-[11px] font-medium uppercase tracking-wider text-warm-gray">
+                {formattedToday}
+              </p>
+              <h2 className="mt-1 font-serif text-2xl sm:text-3xl text-charcoal font-normal">
+                Your practice, at a glance
               </h2>
-              <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {quickMetrics.map((metric) => (
-                  <InsightChip key={metric.label} label={metric.label} value={metric.value} />
-                ))}
-              </div>
-            </div>
-            <div className="grid gap-3 rounded-[28px] border border-white/10 bg-white/5 p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-white">Operations pulse</p>
-                <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-stone-300">{loading ? 'Syncing' : 'Stable'}</span>
-              </div>
-              {operations.map((item) => (
-                <div key={item.label}>
-                  <div className="mb-2 flex items-center justify-between text-sm">
-                    <span className="text-stone-300">{item.label}</span>
-                    <span className="font-medium text-white">{item.value}%</span>
-                  </div>
-                  <ProgressBar value={item.value} tone={item.tone} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard icon={Users} label="Total Users" value={stats.totalUsers} detail="Signed-in members present in the platform." tone="sage" />
-          <StatCard
-            icon={Calendar}
-            label="Appointments"
-            value={bookingStats.total}
-            detail={`${bookingStats.confirmed} confirmed, ${bookingStats.pending} pending review.`}
-            tone="sky"
-          />
-          <StatCard
-            icon={MessageSquare}
-            label="Contact Messages"
-            value={stats.totalMessages}
-            detail="Inbound leads and support requests waiting in inbox."
-            tone="amber"
-          />
-          <StatCard
-            icon={BookOpen}
-            label="Total Enrollments"
-            value={stats.totalEnrollments}
-            detail="All course purchases and access grants across programs."
-            tone="rose"
-          />
-        </div>
-
-        {/* ── LIVE APPOINTMENT CALENDAR MANAGEMENT ────────────────────────── */}
-        <section className="rounded-[32px] border border-beige bg-white p-6 shadow-sm sm:p-7">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-beige/70 pb-5">
-            <div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sage/15 text-sage-dark">
-                  <Calendar className="h-4 w-4" />
-                </div>
-                <h2 className="font-serif text-2xl font-bold text-charcoal">
-                  Appointment Schedule & Calendar
-                </h2>
-              </div>
-              <p className="mt-1 text-xs text-warm-gray">
-                Interactive schedule for 1-on-1 consultations, packages, and course meetings.
+              <p className="mt-1 text-xs sm:text-sm text-warm-gray leading-relaxed">
+                The few things that need your attention today.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 rounded-full border border-beige bg-cream px-3 py-1.5 text-xs text-charcoal">
-                <span className="h-2 w-2 rounded-full bg-sage" />
-                <span>{bookingStats.confirmed} Confirmed</span>
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setManualBookingOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-sage px-4 py-2.5 text-xs font-medium text-white shadow-xs transition-colors hover:bg-sage-dark"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add booking</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 2. THREE RESTRAINED SUMMARY CARDS ───────────────────────── */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          {/* Card 1: Today's Sessions */}
+          <div className="rounded-2xl border border-beige/80 bg-white p-5 shadow-xs transition-colors hover:border-beige">
+            <div className="flex items-center justify-between">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sage/15 text-sage-dark">
+                <Clock className="h-4 w-4" />
               </div>
-              {bookingStats.pending > 0 && (
-                <div className="flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800">
-                  <span className="h-2 w-2 rounded-full bg-amber-400" />
-                  <span>{bookingStats.pending} Pending Review</span>
+              <span className="text-[10px] font-medium uppercase tracking-wider text-warm-gray">
+                Schedule
+              </span>
+            </div>
+            <p className="mt-4 font-serif text-3xl sm:text-4xl text-charcoal font-normal">
+              {loading ? '-' : todaySessions.length}
+            </p>
+            <p className="mt-1.5 text-xs text-warm-gray leading-relaxed">
+              {loading
+                ? 'Loading schedule...'
+                : todaySessions.length === 0
+                ? 'No sessions scheduled for today'
+                : todaySessions.length === 1
+                ? '1 session scheduled for today'
+                : `${todaySessions.length} sessions scheduled for today`}
+            </p>
+          </div>
+
+          {/* Card 2: New Enquiries */}
+          <Link
+            to="/admin/messages"
+            className="group rounded-2xl border border-beige/80 bg-white p-5 shadow-xs transition-colors hover:border-beige block"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-700">
+                <MessageSquare className="h-4 w-4" />
+              </div>
+              <span className="text-[10px] font-medium uppercase tracking-wider text-warm-gray group-hover:text-sage-dark transition-colors">
+                Enquiries
+              </span>
+            </div>
+            <p className="mt-4 font-serif text-3xl sm:text-4xl text-charcoal font-normal">
+              {loading ? '-' : stats.totalMessages}
+            </p>
+            <p className="mt-1.5 text-xs text-warm-gray leading-relaxed">
+              {loading
+                ? 'Checking inbox...'
+                : stats.totalMessages === 0
+                ? 'No inquiries pending in inbox'
+                : `${stats.totalMessages} contact messages received`}
+            </p>
+          </Link>
+
+          {/* Card 3: Pending Approvals */}
+          <Link
+            to="/admin/bookings"
+            className="group rounded-2xl border border-beige/80 bg-white p-5 shadow-xs transition-colors hover:border-beige block"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+                <UserCheck className="h-4 w-4" />
+              </div>
+              <span className="text-[10px] font-medium uppercase tracking-wider text-warm-gray group-hover:text-sage-dark transition-colors">
+                Approvals
+              </span>
+            </div>
+            <p className="mt-4 font-serif text-3xl sm:text-4xl text-charcoal font-normal">
+              {loading ? '-' : totalPendingApprovals}
+            </p>
+            <p className="mt-1.5 text-xs text-warm-gray leading-relaxed">
+              {loading
+                ? 'Calculating...'
+                : totalPendingApprovals === 0
+                ? 'All bookings and registrations approved'
+                : `${bookingStats.pending} bookings · ${stats.pendingUsers} registrations waiting`}
+            </p>
+          </Link>
+        </div>
+
+        {/* ── 3. PRIMARY "TODAY'S SESSIONS" LIST ───────────────────────── */}
+        <section className="rounded-2xl border border-beige/80 bg-white p-6 shadow-xs sm:p-7">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-beige/60 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-sage" />
+                <h3 className="font-serif text-xl text-charcoal font-normal">
+                  Today's Sessions
+                </h3>
+              </div>
+              <p className="mt-0.5 text-xs text-warm-gray">
+                {formattedToday}
+              </p>
+            </div>
+
+            <Link
+              to="/admin/bookings"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-warm-gray hover:text-sage-dark transition-colors"
+            >
+              <span>View all bookings</span>
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          {/* Sessions Content List */}
+          <div className="mt-5">
+            {loading ? (
+              <div className="flex items-center justify-center py-12 text-warm-gray gap-2.5">
+                <Loader2 className="h-4 w-4 animate-spin text-sage" />
+                <span className="text-xs">Loading today's schedule...</span>
+              </div>
+            ) : error ? (
+              <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            ) : todaySessions.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-beige bg-[#faf8f4]/50 p-8 text-center">
+                <p className="font-serif text-lg text-charcoal font-normal">
+                  No sessions scheduled for today
+                </p>
+                <p className="mx-auto mt-1 max-w-md text-xs text-warm-gray leading-relaxed">
+                  You have clear space today to focus on parent coaching materials, follow-ups, and course development.
+                </p>
+                <div className="mt-4 flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setManualBookingOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-beige bg-white px-3 py-1.5 text-xs font-medium text-charcoal hover:bg-cream transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5 text-sage-dark" />
+                    <span>Schedule a session</span>
+                  </button>
+                  <Link
+                    to="/admin/bookings"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-sage/10 px-3 py-1.5 text-xs font-medium text-sage-dark hover:bg-sage/20 transition-colors"
+                  >
+                    <span>Open bookings calendar</span>
+                  </Link>
                 </div>
+              </div>
+            ) : (
+              <div className="divide-y divide-beige/50">
+                {todaySessions.map((session) => {
+                  const statusStyle =
+                    statusBadgeStyles[session.status] || statusBadgeStyles.pending;
+                  const isApproving = approvingId === session.id;
+
+                  return (
+                    <div
+                      key={session.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4 first:pt-0 last:pb-0 hover:bg-[#faf8f4]/40 px-2 rounded-xl transition-colors"
+                    >
+                      {/* Left info */}
+                      <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#faf8f4] border border-beige/70 text-charcoal">
+                          <Clock className="h-4 w-4 text-sage-dark" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium text-charcoal truncate">
+                              {session.parent_name}
+                            </p>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium border ${statusStyle.className}`}
+                            >
+                              {statusStyle.label}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-xs text-warm-gray truncate">
+                            {session.appointment_type_title}
+                            {session.child_name && (
+                              <span className="text-stone-400"> · Child: {session.child_name}</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right info & Actions */}
+                      <div className="flex items-center gap-3 sm:gap-4 shrink-0 justify-between sm:justify-end">
+                        <div className="text-left sm:text-right">
+                          <p className="text-xs font-medium text-charcoal">
+                            {session.appointment_time}
+                          </p>
+                          <p className="text-[10px] text-warm-gray">
+                            {session.country || 'Online Session'}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          {session.status === 'pending' && (
+                            <button
+                              type="button"
+                              disabled={isApproving}
+                              onClick={() => handleApproveBooking(session)}
+                              className="inline-flex items-center gap-1 rounded-lg bg-sage/15 px-2.5 py-1 text-[11px] font-medium text-sage-dark hover:bg-sage/25 transition-colors disabled:opacity-50"
+                              title="Approve booking and generate Meet link"
+                            >
+                              {isApproving ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="h-3 w-3" />
+                              )}
+                              <span>Approve</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setRescheduleBooking(session)}
+                            className="rounded-lg border border-beige bg-white p-1.5 text-warm-gray hover:text-charcoal hover:bg-cream transition-colors"
+                            title="Reschedule session"
+                          >
+                            <RotateCw className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditBooking(session)}
+                            className="rounded-lg border border-beige bg-white p-1.5 text-warm-gray hover:text-charcoal hover:bg-cream transition-colors"
+                            title="Edit details"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ── 4. APPOINTMENT CALENDAR VIEW ─────────────────────────────── */}
+        <section className="rounded-2xl border border-beige/80 bg-white p-6 shadow-xs sm:p-7">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-beige/60 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-sage-dark" />
+                <h3 className="font-serif text-xl text-charcoal font-normal">
+                  Appointment Schedule & Calendar
+                </h3>
+              </div>
+              <p className="mt-0.5 text-xs text-warm-gray">
+                Interactive view for 1-on-1 consultations and parent coaching sessions.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-cream px-2.5 py-1 text-[11px] text-charcoal border border-beige/60">
+                {bookingStats.confirmed} Confirmed
+              </span>
+              {bookingStats.pending > 0 && (
+                <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-800 border border-amber-200">
+                  {bookingStats.pending} Pending Review
+                </span>
               )}
               <Link
                 to="/admin/bookings"
-                className="inline-flex items-center gap-1.5 rounded-full bg-sage px-4 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-sage-dark"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-sage px-3 py-1.5 text-xs font-medium text-white hover:bg-sage-dark transition-colors shadow-xs"
               >
                 <span>Full Manager</span>
                 <ArrowUpRight className="h-3.5 w-3.5" />
@@ -247,104 +480,123 @@ const AdminDashboard = (): JSX.Element => {
             </div>
           </div>
 
-          <AdminBookingsCalendarView
-            bookings={bookings}
-            onReschedule={(b) => setRescheduleBooking(b)}
-            onEdit={(b) => setEditBooking(b)}
-            onApprove={handleApproveBooking}
-            approvingId={approvingId}
-          />
+          <div className="mt-6">
+            <AdminBookingsCalendarView
+              bookings={bookings}
+              onReschedule={(b) => setRescheduleBooking(b)}
+              onEdit={(b) => setEditBooking(b)}
+              onApprove={handleApproveBooking}
+              approvingId={approvingId}
+            />
+          </div>
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-          <Panel title="Conversation queue" eyebrow="Inbox">
+        {/* ── 5. SECONDARY INBOX & QUICK ACTIONS ──────────────────────── */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Conversation Queue */}
+          <Panel
+            title="Recent Inquiries"
+            eyebrow="Inbox"
+            action={
+              <Link
+                to="/admin/messages"
+                className="inline-flex items-center gap-1 text-xs font-medium text-warm-gray hover:text-sage-dark transition-colors"
+              >
+                <span>All messages</span>
+                <ArrowUpRight className="h-3 w-3" />
+              </Link>
+            }
+          >
             {recentMessages.length === 0 ? (
-              <p className="text-sm text-warm-gray">No messages yet.</p>
+              <p className="text-xs text-warm-gray py-4 text-center">No messages yet.</p>
             ) : (
-              <div className="space-y-3">
-                {recentMessages.map((msg, index) => (
-                  <div key={msg.id} className="flex flex-wrap items-center justify-between gap-4 rounded-[24px] border border-beige bg-cream px-4 py-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-white px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-warm-gray">#{index + 1}</span>
-                        <p className="text-sm font-medium text-charcoal">{msg.name}</p>
-                      </div>
-                      <p className="mt-2 text-sm text-warm-gray">{msg.subject}</p>
+              <div className="space-y-2.5">
+                {recentMessages.map((msg) => (
+                  <Link
+                    key={msg.id}
+                    to="/admin/messages"
+                    className="flex items-start justify-between gap-3 rounded-xl border border-beige/70 bg-[#faf8f4]/50 p-3.5 transition-colors hover:bg-white hover:border-beige block group"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-charcoal group-hover:text-sage-dark transition-colors truncate">
+                        {msg.name}
+                      </p>
+                      <p className="mt-0.5 text-xs text-warm-gray truncate">
+                        {msg.subject}
+                      </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-warm-gray">Received</p>
-                      <p className="mt-1 text-sm text-charcoal">{new Date(msg.created_at).toLocaleDateString()}</p>
-                    </div>
-                  </div>
+                    <span className="shrink-0 text-[10px] text-warm-gray">
+                      {format(new Date(msg.created_at), 'MMM d')}
+                    </span>
+                  </Link>
                 ))}
               </div>
             )}
           </Panel>
 
-          <Panel title="Control center actions" eyebrow="Suggested next steps">
-            <div className="grid gap-3">
-              <QuickAction label="Review pending bookings" description="Check incoming appointment requests, approve valid sessions, and dispatch Meet links." />
-              <QuickAction label="Triage today's inquiries" description="Open messages, answer high-intent leads, and move urgent requests first." />
-              <QuickAction label="Review enrollment changes" description="Scan recent status changes to catch refunds, stalled students, or access issues." />
-            </div>
-          </Panel>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Panel title="Team calendar" eyebrow="This week">
-            <div className="space-y-4">
-              {[
-                { icon: CalendarClock, title: 'Private coaching block', detail: 'Monday · 10:00 to 13:00' },
-                { icon: Newspaper, title: 'Blog editorial review', detail: 'Wednesday · Draft sign-off' },
-                { icon: Wallet, title: 'Offer and order audit', detail: 'Friday · Revenue checkpoint' },
-              ].map((item) => (
-                <div key={item.title} className="flex items-start gap-3 rounded-[22px] border border-beige bg-cream px-4 py-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-sage-dark">
-                    <item.icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-charcoal">{item.title}</p>
-                    <p className="mt-1 text-sm text-warm-gray">{item.detail}</p>
-                  </div>
+          {/* Quick Practice Shortcuts */}
+          <Panel title="Practice Shortcuts" eyebrow="Quick Actions">
+            <div className="space-y-2.5">
+              <Link
+                to="/admin/bookings"
+                className="flex items-start justify-between rounded-xl border border-beige/70 bg-[#faf8f4]/50 p-3.5 transition hover:bg-white hover:border-beige group"
+              >
+                <div>
+                  <p className="text-xs font-medium text-charcoal group-hover:text-sage-dark transition-colors">
+                    Review Pending Bookings
+                  </p>
+                  <p className="mt-0.5 text-xs text-warm-gray">
+                    Approve upcoming requests, configure open hours, or reschedule sessions.
+                  </p>
                 </div>
-              ))}
-            </div>
-          </Panel>
+                <ArrowUpRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warm-gray group-hover:text-sage-dark transition" />
+              </Link>
 
-          <Panel title="Risk watch" eyebrow="Keep visible">
-            <div className="space-y-4">
-              {[
-                'Email auth throttling is tight. Admin-created users avoid confirmation delays.',
-                'Order management is catalogue-only right now. Add a live orders table when payments go live.',
-                'Course performance is healthy, but lesson completion tracking should be reviewed weekly.',
-              ].map((item) => (
-                <div key={item} className="flex gap-3 rounded-[22px] border border-beige bg-cream px-4 py-4">
-                  <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
-                  <p className="text-sm leading-6 text-charcoal">{item}</p>
+              <Link
+                to="/admin/users"
+                className="flex items-start justify-between rounded-xl border border-beige/70 bg-[#faf8f4]/50 p-3.5 transition hover:bg-white hover:border-beige group"
+              >
+                <div>
+                  <p className="text-xs font-medium text-charcoal group-hover:text-sage-dark transition-colors">
+                    Manage Client Accounts
+                  </p>
+                  <p className="mt-0.5 text-xs text-warm-gray">
+                    Approve new parent registrations and manage course enrollments.
+                  </p>
                 </div>
-              ))}
-            </div>
-          </Panel>
+                <ArrowUpRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warm-gray group-hover:text-sage-dark transition" />
+              </Link>
 
-          <Panel title="Growth mix" eyebrow="Snapshot">
-            <div className="space-y-4">
-              {[
-                { label: 'Lead to reply', value: 84, tone: 'sage' as const },
-                { label: 'Reply to booking', value: 52, tone: 'sky' as const },
-                { label: 'Booking to enrollment', value: 36, tone: 'amber' as const },
-              ].map((item) => (
-                <div key={item.label}>
-                  <div className="mb-2 flex items-center justify-between text-sm text-charcoal">
-                    <span>{item.label}</span>
-                    <span>{item.value}%</span>
-                  </div>
-                  <ProgressBar value={item.value} tone={item.tone} />
+              <Link
+                to="/admin/messages"
+                className="flex items-start justify-between rounded-xl border border-beige/70 bg-[#faf8f4]/50 p-3.5 transition hover:bg-white hover:border-beige group"
+              >
+                <div>
+                  <p className="text-xs font-medium text-charcoal group-hover:text-sage-dark transition-colors">
+                    Triage Inbound Inquiries
+                  </p>
+                  <p className="mt-0.5 text-xs text-warm-gray">
+                    Respond to contact form submissions and parental coaching questions.
+                  </p>
                 </div>
-              ))}
+                <ArrowUpRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warm-gray group-hover:text-sage-dark transition" />
+              </Link>
             </div>
           </Panel>
         </div>
       </div>
+
+      {/* ── MODALS ─────────────────────────────────────────────────── */}
+      {manualBookingOpen && (
+        <AdminManualBookingModal
+          isOpen={manualBookingOpen}
+          onClose={() => setManualBookingOpen(false)}
+          onCreated={async () => {
+            await fetchDashboardData();
+            setManualBookingOpen(false);
+          }}
+        />
+      )}
 
       {rescheduleBooking && (
         <BookingRescheduleModal
@@ -352,7 +604,7 @@ const AdminDashboard = (): JSX.Element => {
           isOpen={Boolean(rescheduleBooking)}
           onClose={() => setRescheduleBooking(null)}
           onRescheduled={async () => {
-            await fetchStats();
+            await fetchDashboardData();
             setRescheduleBooking(null);
           }}
         />
@@ -364,7 +616,7 @@ const AdminDashboard = (): JSX.Element => {
           isOpen={Boolean(editBooking)}
           onClose={() => setEditBooking(null)}
           onUpdated={async () => {
-            await fetchStats();
+            await fetchDashboardData();
             setEditBooking(null);
           }}
         />
@@ -374,4 +626,3 @@ const AdminDashboard = (): JSX.Element => {
 };
 
 export default AdminDashboard;
-

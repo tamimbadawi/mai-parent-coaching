@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   CalendarCheck,
+  CalendarClock,
   Clock,
   Mail,
   Phone,
@@ -30,7 +31,7 @@ import { EmptyPanel, Panel, StatCard } from './components/AdminUI';
 import { BookingRescheduleModal } from './components/BookingRescheduleModal';
 import { BookingEditModal } from './components/BookingEditModal';
 import { AdminManualBookingModal } from './components/AdminManualBookingModal';
-import { AdminBlackoutsModal } from './components/AdminBlackoutsModal';
+import { AdminAvailabilityModal } from './components/AdminAvailabilityModal';
 import { AdminBookingsCalendarView } from './components/AdminBookingsCalendarView';
 
 const statusConfig: Record<
@@ -81,7 +82,7 @@ const AdminBookings = (): JSX.Element => {
   const [rescheduleBooking, setRescheduleBooking] = useState<Booking | null>(null);
   const [editBooking, setEditBooking] = useState<Booking | null>(null);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
-  const [isBlackoutsModalOpen, setIsBlackoutsModalOpen] = useState(false);
+  const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
 
   const fetchBookings = async (): Promise<void> => {
     setLoading(true);
@@ -315,11 +316,11 @@ const AdminBookings = (): JSX.Element => {
               </button>
               <button
                 type="button"
-                onClick={() => setIsBlackoutsModalOpen(true)}
+                onClick={() => setIsAvailabilityModalOpen(true)}
                 className="inline-flex items-center gap-1.5 rounded-2xl border border-beige bg-white px-3.5 py-2 text-xs font-medium text-charcoal shadow-sm transition hover:bg-cream"
               >
-                <CalendarOff className="h-3.5 w-3.5 text-terracotta" />
-                <span>Blackout Dates</span>
+                <CalendarClock className="h-3.5 w-3.5 text-sage-dark" />
+                <span>Manage Availability</span>
               </button>
               <button
                 type="button"
@@ -659,9 +660,10 @@ const AdminBookings = (): JSX.Element => {
         onCreated={() => void fetchBookings()}
       />
 
-      <AdminBlackoutsModal
-        isOpen={isBlackoutsModalOpen}
-        onClose={() => setIsBlackoutsModalOpen(false)}
+      <AdminAvailabilityModal
+        isOpen={isAvailabilityModalOpen}
+        onClose={() => setIsAvailabilityModalOpen(false)}
+        onUpdated={() => void fetchBookings()}
       />
     </AdminLayout>
   );

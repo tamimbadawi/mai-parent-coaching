@@ -8,34 +8,35 @@ import {
   CalendarDays,
   ShoppingBag,
   LogOut,
-  ShieldCheck,
   Bell,
-  Search,
-  ArrowRight,
-  Home,
+  ArrowUpRight,
   Menu,
   X,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 
-const navItems = [
-  { to: '/admin', label: 'Overview', icon: LayoutDashboard },
-  { to: '/admin/users', label: 'Users', icon: Users },
-  { to: '/admin/messages', label: 'Messages', icon: MessageSquare },
-  { to: '/admin/courses', label: 'Courses', icon: BookOpen },
-  { to: '/admin/blog', label: 'Blog', icon: FileText },
-  { to: '/admin/bookings', label: 'Bookings', icon: CalendarDays },
-  { to: '/admin/orders', label: 'Orders', icon: ShoppingBag },
-];
+interface NavItem {
+  to: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+interface NavGroup {
+  group: string;
+  items: NavItem[];
+}
 
 interface AdminLayoutProps {
   children: React.ReactNode;
   title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
 }
 
-const AdminLayout = ({ children, title }: AdminLayoutProps): JSX.Element => {
+const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): JSX.Element => {
   const { pathname } = useLocation();
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
@@ -60,164 +61,172 @@ const AdminLayout = ({ children, title }: AdminLayoutProps): JSX.Element => {
     navigate('/auth/login');
   };
 
+  const navGroups: NavGroup[] = [
+    {
+      group: 'Practice',
+      items: [
+        { to: '/admin', label: 'Overview', icon: LayoutDashboard },
+        { to: '/admin/bookings', label: 'Bookings', icon: CalendarDays },
+        { to: '/admin/users', label: 'Clients & Users', icon: Users },
+        { to: '/admin/messages', label: 'Messages', icon: MessageSquare },
+      ],
+    },
+    {
+      group: 'Content',
+      items: [
+        { to: '/admin/courses', label: 'Courses', icon: BookOpen },
+        { to: '/admin/blog', label: 'Blog & Resources', icon: FileText },
+        { to: '/admin/orders', label: 'Shop & Orders', icon: ShoppingBag },
+      ],
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(221,231,214,0.8),_transparent_32%),linear-gradient(180deg,#fbf8f2_0%,#f6f0e6_100%)] px-4 py-6 sm:px-6 lg:px-8 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+    <div className="min-h-screen bg-[#faf8f4] text-charcoal flex flex-col lg:flex-row antialiased lg:p-3 lg:gap-3">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-charcoal/40 lg:hidden"
+          className="fixed inset-0 z-40 bg-charcoal/50 backdrop-blur-xs lg:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
         />
       )}
 
-      <div className="mx-auto flex max-w-[1500px] flex-col gap-6 lg:flex-row">
-        {/* Mobile top bar */}
-        <div className="flex items-center justify-between rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-3 shadow-sm lg:hidden">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-charcoal text-white">
-              <ShieldCheck className="h-4 w-4" />
-            </div>
-            <span className="font-serif text-lg text-charcoal">Admin</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSidebarOpen((v) => !v)}
-            className="rounded-xl border border-beige bg-white p-2 text-charcoal"
-            aria-label="Toggle admin sidebar"
-          >
-            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+      {/* Mobile top header bar */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-beige/60 bg-[#1f1c1d] px-4 py-3.5 text-white lg:hidden">
+        <Link to="/admin" className="flex items-center gap-2">
+          <span className="font-serif text-xl tracking-tight text-white">
+            Mai <span className="text-sage font-normal">Elbadawy</span>
+          </span>
+          <span className="rounded-md bg-white/10 px-2 py-0.5 text-xs uppercase tracking-wider text-stone-300">
+            Admin
+          </span>
+        </Link>
+        <button
+          type="button"
+          onClick={() => setSidebarOpen((v) => !v)}
+          className="rounded-xl p-2 text-stone-300 hover:bg-white/10 hover:text-white transition-colors"
+          aria-label="Toggle navigation"
+        >
+          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      </header>
+
+      {/* Left Charcoal Sidebar (Rounded container, larger fonts, internal scroll) */}
+      <aside
+        className={`
+          fixed top-0 left-0 z-50 h-screen w-[235px] flex flex-col justify-between bg-[#1f1c1d] text-stone-300 transition-transform duration-200 ease-in-out
+          lg:static lg:z-auto lg:h-[calc(100vh-1.5rem)] lg:translate-x-0 lg:sticky lg:top-3 shrink-0 rounded-2xl lg:rounded-3xl border border-stone-800/90 shadow-lg select-none overflow-hidden
+          ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:shadow-md'}
+        `}
+      >
+        {/* Zone 1: Pinned Brand Header */}
+        <div className="shrink-0 px-5 pt-6 pb-5 border-b border-stone-800/80">
+          <Link to="/admin" className="block group">
+            <span className="font-serif text-2xl tracking-tight text-white block leading-snug">
+              Mai <span className="text-sage font-normal">Elbadawy</span>
+            </span>
+            <p className="mt-1 text-xs tracking-wider uppercase text-stone-400 font-sans font-medium">
+              Parent Coaching
+            </p>
+          </Link>
         </div>
 
-        {/* Sidebar */}
-        <aside className={`
-          fixed top-0 left-0 z-50 h-full w-[280px] overflow-y-auto bg-white shadow-2xl transition-transform duration-300 lg:shadow-none
-          lg:static lg:z-auto lg:h-auto lg:w-[308px] lg:overflow-visible lg:translate-x-0 lg:bg-transparent
-          flex shrink-0 flex-col gap-4 lg:sticky lg:top-6 lg:self-start
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}>
-          <div className="p-4 lg:p-0 flex flex-col gap-4">
-            <div className="rounded-[32px] border border-stone-200/80 bg-white/90 p-5 shadow-[0_18px_45px_rgba(119,101,84,0.12)] backdrop-blur">
-            <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-charcoal text-white shadow-sm">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-charcoal">
-                  {profile?.full_name?.split(' ')[0] ?? 'Admin'}
-                </p>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-warm-gray">Control Center</p>
-                <p className="mt-3 max-w-[22ch] font-serif text-2xl leading-tight text-charcoal">
-                  Quiet structure for a busy back office.
-                </p>
-              </div>
-            </div>
-            <p className="mt-4 text-sm leading-6 text-warm-gray">
-              Oversee operations, review activity, and keep every customer-facing touchpoint consistent.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <span className="rounded-full bg-sage/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-sage-dark">
-                Admin
-              </span>
-              <span className="rounded-full bg-cream px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-warm-gray">
-                Workspace
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            <nav className="rounded-[32px] border border-stone-200/80 bg-[#2f2a2a] p-4 shadow-[0_18px_45px_rgba(50,40,34,0.16)]">
-              <p className="px-3 pb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">
-                Navigation
+        {/* Zone 2: Scrollable Navigation Menu (Larger fonts, comfortable tap targets) */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-3.5 py-5 space-y-6">
+          {navGroups.map((group) => (
+            <div key={group.group} className="space-y-1.5">
+              <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-[0.18em] text-stone-400">
+                {group.group}
               </p>
-              <div className="space-y-1.5 text-sm">
-                {navItems.map(({ to, label, icon: Icon }) => {
+              <div className="space-y-1">
+                {group.items.map(({ to, label, icon: Icon }) => {
                   const isActive = pathname === to;
                   return (
                     <Link
                       key={to}
                       to={to}
                       onClick={() => setSidebarOpen(false)}
-                      className={`group flex items-center justify-between rounded-2xl px-4 py-3 transition-all ${
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
                         isActive
-                          ? 'bg-[#8fcfcb] text-charcoal shadow-[0_10px_24px_rgba(143,207,203,0.28)]'
-                          : 'text-stone-200 hover:bg-white/8 hover:text-white'
+                          ? 'bg-sage/20 text-sage font-medium shadow-xs border border-sage/30'
+                          : 'text-stone-300 hover:bg-white/8 hover:text-white'
                       }`}
                     >
-                      <span className="flex items-center gap-3">
-                        <Icon className="h-4 w-4 shrink-0" />
-                        <span className={isActive ? 'font-medium' : ''}>{label}</span>
-                      </span>
-                      <ArrowRight className={`h-4 w-4 shrink-0 transition-transform ${isActive ? 'translate-x-0' : 'opacity-0 group-hover:translate-x-0.5 group-hover:opacity-100'}`} />
+                      <Icon className={`h-4.5 w-4.5 shrink-0 ${isActive ? 'text-sage' : 'text-stone-400'}`} />
+                      <span className="truncate">{label}</span>
                     </Link>
                   );
                 })}
-
-                <button
-                  onClick={handleSignOut}
-                  className="mt-4 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-stone-300 transition hover:bg-white/8 hover:text-white"
-                >
-                  <LogOut className="h-4 w-4 shrink-0" />
-                  Sign out
-                </button>
               </div>
-            </nav>
+            </div>
+          ))}
+        </div>
 
-            <div className="rounded-[32px] border border-[#d8cfc2] bg-[linear-gradient(180deg,#f3ebde_0%,#efe5d7_100%)] p-5 shadow-[0_16px_38px_rgba(119,101,84,0.10)]">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-warm-gray">Today</p>
-                <span className="rounded-full bg-white/80 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-charcoal">Focus</span>
-              </div>
-              <p className="mt-3 font-serif text-xl leading-tight text-charcoal">
-                Three checks to keep the day under control.
+        {/* Zone 3: Pinned Bottom Controls (Always visible, larger fonts) */}
+        <div className="shrink-0 p-3.5 border-t border-stone-800/80 bg-[#191718]/90 space-y-2 text-sm">
+          <Link
+            to="/"
+            className="flex items-center justify-between rounded-xl px-3 py-2 text-stone-300 hover:bg-white/8 hover:text-white transition-colors"
+          >
+            <span className="flex items-center gap-2.5 font-medium">
+              <ExternalLink className="h-4 w-4 text-stone-400" />
+              <span>Live Website</span>
+            </span>
+            <ArrowUpRight className="h-3.5 w-3.5 text-stone-500" />
+          </Link>
+
+          <div className="flex items-center justify-between rounded-xl px-3 py-2 bg-white/5 border border-white/5">
+            <div className="min-w-0 pr-2">
+              <p className="truncate text-sm font-medium text-stone-100">
+                {profile?.full_name?.split(' ')[0] ?? 'Mai'}
               </p>
-              <div className="mt-4 space-y-3">
-                {[
-                  'Reply to new leads before they cool off.',
-                  'Review access changes, refunds, and learner friction.',
-                  'Align current offers with content and booking availability.',
-                ].map((item, index) => (
-                  <div key={item} className="flex items-start gap-3 rounded-2xl border border-white/70 bg-white/60 px-3 py-3">
-                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-charcoal text-[11px] font-semibold text-white">
-                    {index + 1}
-                  </span>
-                    <p className="text-sm leading-6 text-charcoal">{item}</p>
-                  </div>
-                ))}
-              </div>
+              <p className="text-xs text-stone-400 capitalize">{profile?.role ?? 'Admin'}</p>
             </div>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="p-1.5 text-stone-400 hover:text-rose-400 hover:bg-white/10 transition-colors rounded-lg"
+              title="Sign out"
+              aria-label="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
-          </div>{/* end p-4 lg:p-0 */}
-        </aside>
+        </div>
+      </aside>
 
-        {/* Main content */}
-        <main className="min-w-0 flex-1">
-          <div className="rounded-[32px] border border-beige/80 bg-white/80 p-5 shadow-sm shadow-stone-200/60 backdrop-blur sm:p-6">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-warm-gray">Admin Workspace</p>
-                <h1 className="mt-1 font-serif text-4xl text-charcoal">{title}</h1>
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Link to="/" className="flex items-center gap-2 rounded-2xl border border-beige bg-white px-4 py-3 text-sm font-medium text-charcoal hover:bg-cream transition-colors">
-                  <Home className="h-4 w-4 text-sage-dark" />
-                  Back to Website
-                </Link>
-                <div className="flex items-center gap-3 rounded-2xl border border-beige bg-cream px-4 py-3 text-sm text-warm-gray">
-                  <Search className="h-4 w-4" />
-                  Search people, content, or activity
+      {/* Main Workspace Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Workspace Top Bar */}
+        <header className="sticky top-0 z-20 border border-beige/80 rounded-2xl lg:rounded-3xl bg-white/85 backdrop-blur-md px-5 py-4 sm:px-8 sm:py-5 shadow-xs">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between max-w-[1440px] mx-auto w-full">
+            <div>
+              <h1 className="font-serif text-2xl sm:text-3xl text-charcoal tracking-tight font-normal">
+                {title}
+              </h1>
+              {subtitle && (
+                <p className="mt-0.5 text-xs sm:text-sm text-warm-gray leading-relaxed">
+                  {subtitle}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              {action}
+              {notificationCount > 0 && (
+                <div className="flex items-center gap-1.5 rounded-full border border-beige bg-cream px-3.5 py-1.5 text-xs font-medium text-warm-gray">
+                  <Bell className="h-3.5 w-3.5 text-sage-dark" />
+                  <span>{notificationCount} alerts</span>
                 </div>
-                <button type="button" className="flex items-center gap-2 rounded-2xl border border-beige bg-white px-4 py-3 text-sm font-medium text-charcoal">
-                  <Bell className="h-4 w-4 text-sage-dark" />
-                  {notificationCount} alerts
-                </button>
-              </div>
+              )}
             </div>
           </div>
-          <div className="mt-6"> 
+        </header>
+
+        {/* Page Content Body */}
+        <main className="flex-1 pt-5 pb-8 px-1 sm:px-4 max-w-[1440px] w-full mx-auto">
           {children}
-          </div>
         </main>
       </div>
     </div>

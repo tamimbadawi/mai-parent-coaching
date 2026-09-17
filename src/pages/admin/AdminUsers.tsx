@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Crown, Edit3, Hourglass, PlusCircle, ShieldCheck, Trash2, UserRound, X, XCircle } from 'lucide-react';
+import { CheckCircle2, Crown, Edit3, Hourglass, Phone, PlusCircle, ShieldCheck, Trash2, UserRound, X, XCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
 import PhoneInput, { formatPhone, parsePhone } from '../../components/ui/PhoneInput';
@@ -185,6 +185,12 @@ const AdminUsers = (): JSX.Element => {
       return;
     }
 
+    const cleanPhoneDigits = draft.localPhone.replace(/\D/g, '');
+    if (!draft.localPhone.trim() || cleanPhoneDigits.length < 7) {
+      setError('A working phone number is required (minimum 7 digits).');
+      return;
+    }
+
     if (!editingUser && !draft.password.trim()) {
       setError('A password is required when creating a user.');
       return;
@@ -351,7 +357,7 @@ const AdminUsers = (): JSX.Element => {
                   </div>
                   <div>
                     <PhoneInput
-                      label="Phone"
+                      label="Working phone number *"
                       value={formatPhone(draft.dialCode, draft.localPhone) ?? ''}
                       onChange={(val) => {
                         const { dialCode, local } = parsePhone(val || null);
@@ -408,7 +414,17 @@ const AdminUsers = (): JSX.Element => {
                             {user.approval_status}
                           </span>
                         </div>
-                        <p className="mt-1 text-sm text-warm-gray">{user.email}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-warm-gray">
+                          <span>{user.email}</span>
+                          {user.phone ? (
+                            <span className="flex items-center gap-1 text-xs font-medium text-charcoal bg-white/70 px-2 py-0.5 rounded-lg border border-beige/60">
+                              <Phone className="h-3 w-3 text-sage-dark" />
+                              {user.phone}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-rose-500 font-medium">No phone on file</span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-3">
                         <InsightChip label="Joined" value={new Date(user.created_at).toLocaleDateString()} />
