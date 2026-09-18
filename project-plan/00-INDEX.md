@@ -18,6 +18,7 @@ This directory is the single source of truth for **project status, architectural
 | **Payments** | [`/payments`](file:///d:/Cursor/Mai_Website/project-plan/payments) | **Planned** | Gateway chosen (PayTabs); pending clean backend build after booking persistence. |
 | **Mobile App** | [`/mobile-app`](file:///d:/Cursor/Mai_Website/project-plan/mobile-app) | **Postponed** | Capacitor wrapper configured and verified; parked on dedicated branch. |
 | **Infrastructure** | [`/infrastructure`](file:///d:/Cursor/Mai_Website/project-plan/infrastructure) | **Live** | Keep-alive workflow live and confirmed working. |
+| **WhatsApp Automation** | [`/whatsapp`](file:///d:/Cursor/Mai_Website/project-plan/whatsapp) | **In Progress (Stage 1)** | Self-hosted `whatsapp-web.js` microservice on Oracle Always Free VM. |
 
 ---
 
@@ -27,6 +28,11 @@ This directory is the single source of truth for **project status, architectural
   - [Status](file:///d:/Cursor/Mai_Website/project-plan/booking/status.md)
   - [Decisions](file:///d:/Cursor/Mai_Website/project-plan/booking/decisions.md)
   - [Next Steps](file:///d:/Cursor/Mai_Website/project-plan/booking/next-steps.md)
+- [WhatsApp Automation Plan](file:///d:/Cursor/Mai_Website/project-plan/whatsapp):
+  - [Status](file:///d:/Cursor/Mai_Website/project-plan/whatsapp/status.md)
+  - [Decisions](file:///d:/Cursor/Mai_Website/project-plan/whatsapp/decisions.md)
+  - [Next Steps](file:///d:/Cursor/Mai_Website/project-plan/whatsapp/next-steps.md)
+  - [Oracle VM Setup Guide](file:///d:/Cursor/Mai_Website/project-plan/whatsapp/oracle-vm-setup.md)
 - [Payments Plan](file:///d:/Cursor/Mai_Website/project-plan/payments):
   - [Status](file:///d:/Cursor/Mai_Website/project-plan/payments/status.md)
   - [Decisions](file:///d:/Cursor/Mai_Website/project-plan/payments/decisions.md)

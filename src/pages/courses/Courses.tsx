@@ -164,7 +164,7 @@ function CourseCard({ course }: { course: Course }) {
             <BookOpen className="w-3 h-3" /> {course.lessons} lessons
           </span>
         </div>
-        <h3 className="font-serif text-xl text-charcoal mb-2 group-hover:text-sage-dark transition-colors">
+        <h3 className="font-course text-xl text-charcoal mb-2 group-hover:text-sage-dark transition-colors">
           {course.title}
         </h3>
         <p className="text-warm-gray text-sm leading-relaxed mb-4 flex-grow">{course.description}</p>

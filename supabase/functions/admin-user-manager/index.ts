@@ -139,8 +139,8 @@ Deno.serve(async (request) => {
         full_name: payload.fullName ?? null,
         phone: payload.phone ?? null,
         role: payload.role ?? 'student',
-        approval_status: payload.approvalStatus ?? 'pending',
-        approved_at: payload.approvalStatus === 'approved' ? new Date().toISOString() : null,
+        approval_status: payload.approvalStatus ?? 'approved',
+        approved_at: (payload.approvalStatus ?? 'approved') === 'approved' ? new Date().toISOString() : null,
         updated_at: new Date().toISOString(),
       };
 

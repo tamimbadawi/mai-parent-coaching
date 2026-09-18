@@ -48,6 +48,7 @@ import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
 import { ClientRescheduleModal } from '../components/booking/ClientRescheduleModal';
 import { ClientCancelModal } from '../components/booking/ClientCancelModal';
+import { BookingStepper } from '../components/booking/BookingStepper';
 
 const TIMES = [
   '9:00', '9:30', '10:00', '10:30', '11:00', '11:30',
@@ -365,30 +366,12 @@ export default function Booking() {
             <h1 className="font-serif text-lg leading-none text-charcoal">Book a Session</h1>
             <p className="mt-0.5 hidden text-xs text-soft-gray sm:block">Fill in your preferences below</p>
           </div>
-          <div className="flex items-center gap-2">
-            {[
-              { label: 'Session', done: !!selectedType, icon: <Sparkles className="h-2.5 w-2.5" /> },
-              { label: 'Date', done: !!selectedDate, icon: <CalendarDays className="h-2.5 w-2.5" /> },
-              { label: 'Time', done: !!selectedTime, icon: <Clock className="h-2.5 w-2.5" /> },
-              {
-                label: 'Details',
-                done: !!(formData.name && formData.email),
-                icon: <User className="h-2.5 w-2.5" />,
-              },
-            ].map(({ label, done, icon }) => (
-              <div key={label} className="flex items-center gap-1.5">
-                <div
-                  className={cn(
-                    'flex h-5 w-5 items-center justify-center rounded-full transition-all duration-300',
-                    done ? 'scale-105 bg-sage text-white shadow-sm' : 'bg-beige text-soft-gray',
-                  )}
-                >
-                  {done ? <Check className="h-2.5 w-2.5" /> : icon}
-                </div>
-                <span className="hidden text-[10px] text-soft-gray sm:inline">{label}</span>
-              </div>
-            ))}
-          </div>
+          <BookingStepper
+            hasSelectedType={!!selectedType}
+            hasSelectedDate={!!selectedDate}
+            hasSelectedTime={!!selectedTime}
+            hasDetails={!!(formData.name.trim() && formData.email.trim())}
+          />
         </div>
       </div>
 

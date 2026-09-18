@@ -122,8 +122,7 @@ Supabase is the real backend. Treat database, auth, and RLS changes as security-
 ## 5. Auth, Approval & Admin Flow
 
 - Unauthenticated users redirect to `/auth/login`.
-- New users default to `approval_status: pending`.
-- Non-approved students redirect to `/auth/pending-approval`.
+- New users default to `approval_status: approved` (immediate access upon signup/verification).
 - Admin users accessing `/dashboard` redirect to `/admin`. Non-admin users accessing `/admin` are redirected away.
 - `AuthContext` owns session, user, profile, enrollments, auth methods (`signUp`, `signIn`, `signInWithGoogle`, `signInWithMagicLink`, `signOut`, `updateProfile`, `isEnrolled`, `refreshEnrollments`).
 - Admin user management must use `admin-user-manager` Edge Function (never service role key in frontend).
@@ -262,7 +261,7 @@ All forms must include:
 ## 13. Student Dashboard
 
 - Routes: `/dashboard`, `/dashboard/courses`, `/dashboard/profile`.
-- Must require authenticated and approved student status (`approval_status === "approved"`). Pending users are routed to `/auth/pending-approval`.
+- Requires authenticated student status.
 - Only loads and displays current user's profile, enrollments, and video progress.
 - Profile settings update `profiles` table and trigger `AuthContext` refresh.
 

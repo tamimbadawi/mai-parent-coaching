@@ -24,17 +24,18 @@ const AuthCallback = (): JSX.Element => {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, approval_status')
+        .select('role, approval_status, phone, country')
         .eq('id', data.session.user.id)
-        .maybeSingle<{ role: 'student' | 'admin'; approval_status: 'pending' | 'approved' | 'rejected' }>();
+        .maybeSingle<{ role: 'student' | 'admin'; approval_status: 'pending' | 'approved' | 'rejected'; phone: string | null; country: string | null }>();
 
       if (profile?.role === 'admin') {
         void navigate('/admin', { replace: true });
         return;
       }
 
-      if (profile?.approval_status !== 'approved') {
-        void navigate('/auth/pending-approval', { replace: true });
+      const cleanDigits = (profile?.phone || '').replace(/\D/g, '');
+      if (!profile?.phone || cleanDigits.length < 7) {
+        void navigate('/auth/complete-profile', { replace: true });
         return;
       }
 

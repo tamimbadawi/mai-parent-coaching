@@ -25,9 +25,12 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps): JSX.El
     return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
   }
 
-  if (profile && profile.role !== 'admin' && profile.approval_status !== 'approved') {
-    console.log('ProtectedRoute - User not approved, redirecting to pending-approval');
-    return <Navigate to="/auth/pending-approval" replace state={{ from: location.pathname }} />;
+  if (profile && profile.role !== 'admin') {
+    const cleanDigits = (profile.phone || '').replace(/\D/g, '');
+    if (!profile.phone || cleanDigits.length < 7) {
+      console.log('ProtectedRoute - Phone missing, redirecting to complete-profile');
+      return <Navigate to="/auth/complete-profile" replace state={{ from: location.pathname }} />;
+    }
   }
 
   if (requiredRole === 'admin' && profile?.role !== 'admin') {

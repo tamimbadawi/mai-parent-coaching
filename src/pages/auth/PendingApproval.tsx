@@ -1,9 +1,26 @@
-import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Hourglass, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const PendingApproval = (): JSX.Element => {
-  const { profile, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { profile, signOut, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && profile) {
+      if (profile.role === 'admin') {
+        void navigate('/admin', { replace: true });
+        return;
+      }
+      const cleanDigits = (profile.phone || '').replace(/\D/g, '');
+      if (!profile.phone || cleanDigits.length < 7) {
+        void navigate('/auth/complete-profile', { replace: true });
+        return;
+      }
+      void navigate('/dashboard', { replace: true });
+    }
+  }, [loading, profile, navigate]);
 
   return (
     <div className="min-h-screen bg-ivory pt-24">

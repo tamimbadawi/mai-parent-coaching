@@ -34,9 +34,10 @@
     --color-warm-gray: 122 115 117;
     --color-soft-gray: 172 168 170;
     /* Fonts */
-    --font-sans: 'Atma', 'BM Hanna Air', system-ui, -apple-system, sans-serif;
-    --font-serif: 'Atma', 'BM Hanna Air', Georgia, serif;
-    --font-arabic: 'Atma', system-ui, sans-serif;
+    --font-sans: 'Binate', 'Atma', system-ui, -apple-system, sans-serif;
+    --font-serif: 'Atma', 'Binate', cursive, sans-serif;
+    --font-course: 'BM Hanna Air', 'BMHANNAAir', sans-serif;
+    --font-arabic: 'Tufuli Arabic', 'Atma', 'Tajawal', system-ui, sans-serif;
     --radius-xl: 1rem;
     --radius-2xl: 1.5rem;
     --radius-3xl: 2rem;

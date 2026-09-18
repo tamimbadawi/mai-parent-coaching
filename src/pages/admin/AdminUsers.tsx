@@ -24,7 +24,7 @@ const emptyDraft: UserDraft = {
   localPhone: '',
   password: '',
   role: 'student',
-  approvalStatus: 'pending',
+  approvalStatus: 'approved',
 };
 
 const AdminUsers = (): JSX.Element => {

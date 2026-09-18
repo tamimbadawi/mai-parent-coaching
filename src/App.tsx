@@ -4,6 +4,8 @@ import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import { DesignProvider } from './context/DesignContext';
+import DesignToggle from './components/common/DesignToggle';
 import Home from './pages/Home';
 import HomePreview from './pages/HomePreview';
 import About from './pages/About';
@@ -28,6 +30,7 @@ import ResetPassword from './pages/auth/ResetPassword';
 import VerifyEmail from './pages/auth/VerifyEmail';
 import AuthCallback from './pages/auth/AuthCallback';
 import PendingApproval from './pages/auth/PendingApproval';
+import CompleteProfile from './pages/auth/CompleteProfile';
 import Dashboard from './pages/dashboard/Dashboard';
 import MySessions from './pages/dashboard/MySessions';
 import MyCourses from './pages/dashboard/MyCourses';
@@ -82,6 +85,7 @@ function AppShell() {
           <Route path="/auth/reset-password" element={<ResetPassword />} />
           <Route path="/auth/verify-email" element={<VerifyEmail />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/auth/complete-profile" element={<CompleteProfile />} />
           <Route path="/auth/pending-approval" element={<PendingApproval />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/dashboard/sessions" element={<ProtectedRoute><MySessions /></ProtectedRoute>} />
@@ -97,17 +101,20 @@ function AppShell() {
         </Routes>
       </main>
       {isAdminRoute || isDashboardRoute ? null : <Footer />}
+      <DesignToggle />
     </div>
   );
 }
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AppShell />
-      </BrowserRouter>
-    </AuthProvider>
+    <DesignProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppShell />
+        </BrowserRouter>
+      </AuthProvider>
+    </DesignProvider>
   );
 }
 

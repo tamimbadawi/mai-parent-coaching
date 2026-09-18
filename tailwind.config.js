@@ -30,6 +30,8 @@ export default {
       fontFamily: {
         serif: ['var(--font-serif)'],
         sans: ['var(--font-sans)'],
+        course: ['var(--font-course)'],
+        arabic: ['var(--font-arabic)'],
       },
       borderRadius: {
         xl: 'var(--radius-xl)',

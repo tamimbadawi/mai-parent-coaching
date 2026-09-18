@@ -56,7 +56,7 @@ export default function CourseDetail() {
                 <Clock className="w-3 h-3" /> {course.duration}
               </span>
             </div>
-            <h1 className="font-serif text-3xl md:text-4xl text-white">{course.title}</h1>
+            <h1 className="font-course text-3xl md:text-4xl text-white">{course.title}</h1>
           </div>
         </div>
       </div>
@@ -92,7 +92,7 @@ export default function CourseDetail() {
                     course.modules.map((mod) => (
                       <div key={mod.id} className="bg-cream rounded-2xl p-6 border border-beige/50">
                         <div className="flex items-center justify-between mb-4">
-                          <h3 className="font-medium text-charcoal">{mod.title}</h3>
+                          <h3 className="font-course text-lg text-charcoal">{mod.title}</h3>
                           <span className="text-soft-gray text-sm">{mod.duration}</span>
                         </div>
                         <div className="space-y-3">
