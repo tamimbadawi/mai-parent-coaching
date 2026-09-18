@@ -360,10 +360,13 @@ export default function Booking() {
 
   return (
     <div className="flex min-h-screen flex-col bg-ivory pt-safe pb-safe" style={{ paddingTop: 'calc(64px + env(safe-area-inset-top, 0px))' }}>
-      <div className="shrink-0 border-b border-beige/70 bg-ivory/80 px-4 py-3 backdrop-blur-sm sm:px-6">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between">
-          <div>
-            <h1 className="font-serif text-lg leading-none text-charcoal">Book a Session</h1>
+      <div
+        className="sticky top-[64px] z-40 shrink-0 border-b border-beige/80 bg-ivory/95 px-3 py-2 sm:px-6 sm:py-2.5 backdrop-blur-md shadow-[0_2px_8px_rgba(0,0,0,0.03)]"
+        style={{ top: 'calc(64px + env(safe-area-inset-top, 0px))' }}
+      >
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-2">
+          <div className="shrink-0">
+            <h1 className="font-serif text-sm sm:text-base md:text-lg leading-none text-charcoal">Book a Session</h1>
             <p className="mt-0.5 hidden text-xs text-soft-gray sm:block">Fill in your preferences below</p>
           </div>
           <BookingStepper
