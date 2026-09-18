@@ -271,21 +271,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
 
   const signOut = useCallback(async (): Promise<void> => {
     bumpAuthEpoch();
-    setUser(null);
-    setProfile(null);
-    setEnrollments([]);
 
-    try {
-      await supabase.auth.signOut({ scope: 'global' });
-    } catch {
-      try {
-        await supabase.auth.signOut({ scope: 'local' });
-      } catch {
-        // ignore
-      }
-    }
-
-    // 1. Wipe all localStorage items matching supabase or auth
+    // 1. Wipe all localStorage items matching supabase or auth FIRST
     try {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -323,6 +310,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
           document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
         }
       });
+    } catch {
+      // ignore
+    }
+
+    // 4. Update React state
+    setUser(null);
+    setProfile(null);
+    setEnrollments([]);
+
+    // 5. Notify Supabase client locally then globally
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch {
+      // ignore
+    }
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
     } catch {
       // ignore
     }

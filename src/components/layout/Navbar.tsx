@@ -128,7 +128,10 @@ export default function Navbar() {
                   {profile?.full_name ? profile.full_name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase() : user.email?.[0].toUpperCase()}
                 </button>
                 {isProfileMenuOpen ? (
-                  <div className="absolute right-0 mt-3 w-56 rounded-2xl border border-beige bg-ivory p-3 shadow-xl z-50">
+                  <div
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="absolute right-0 mt-3 w-56 rounded-2xl border border-beige bg-ivory p-3 shadow-xl z-50"
+                  >
                     <div className="px-2 py-1">
                       <p className="text-sm font-medium text-charcoal">{profile?.full_name ?? 'Member'}</p>
                       <p className="text-xs text-warm-gray truncate">{user.email}</p>
@@ -147,7 +150,14 @@ export default function Navbar() {
                       </>
                     )}
                     <div className="my-2 h-px bg-beige" />
-                    <button type="button" onClick={() => void handleSignOut()} className="block w-full rounded-xl px-2 py-2 text-left text-sm text-terracotta hover:bg-cream">Sign Out</button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={() => void handleSignOut()}
+                      className="block w-full rounded-xl px-2 py-2 text-left text-sm text-terracotta hover:bg-cream"
+                    >
+                      Sign Out
+                    </button>
                   </div>
                 ) : null}
               </div>
