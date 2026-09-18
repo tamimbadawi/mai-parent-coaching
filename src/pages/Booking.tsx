@@ -233,7 +233,7 @@ export default function Booking() {
     try {
       let query = supabase.from('bookings').select('*');
       if (user?.id) {
-        query = query.or(`user_id.eq.${user.id},email.eq.${user.email?.toLowerCase() || ''}`);
+        query = query.eq('user_id', user.id);
       } else if (formData.email.trim()) {
         query = query.eq('email', formData.email.trim().toLowerCase());
       }

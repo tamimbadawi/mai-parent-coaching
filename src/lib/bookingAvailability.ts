@@ -232,18 +232,19 @@ export async function getClientAvailableSlots(options: {
 }): Promise<string[]> {
   const { date, appointmentTypeId = 'initial', timeZone = 'Africa/Cairo', coachTimeZone = 'Africa/Cairo' } = options;
   const config = APPOINTMENT_CONFIG[appointmentTypeId] || APPOINTMENT_CONFIG.initial;
+  const standardFallback = ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '16:00', '16:30', '17:00'];
 
   try {
     // 1. Fetch active coach availability rules
     let rules: DbAvailabilityRule[] = DEFAULT_COACH_RULES;
     try {
-      const rulesRes = await supabase
+      const { data, error } = await supabase
         .from('coach_availability_rules')
         .select('*')
         .eq('is_active', true);
 
-      if (rulesRes.data && rulesRes.data.length > 0) {
-        rules = rulesRes.data as DbAvailabilityRule[];
+      if (!error && data && data.length > 0) {
+        rules = data as DbAvailabilityRule[];
       }
     } catch {
       rules = DEFAULT_COACH_RULES;
@@ -252,27 +253,7 @@ export async function getClientAvailableSlots(options: {
     const openIntervalsProvider = (coachDate: string) =>
       buildOpenIntervalsForCoachDate(coachDate, coachTimeZone, rules, appointmentTypeId);
 
-    // 2. Fetch existing bookings for this date range
-    let busyRanges: { startsAt: Date | null; reservedUntil: Date | null; time: string }[] = [];
-    try {
-      const bookingsRes = await supabase
-        .from('bookings')
-        .select('starts_at, reserved_until, appointment_time')
-        .eq('appointment_date', date)
-        .in('status', ['pending', 'confirmed', 'pending_calendar_sync', 'paid']);
-
-      if (bookingsRes.data) {
-        busyRanges = bookingsRes.data.map((b) => ({
-          startsAt: b.starts_at ? new Date(b.starts_at) : null,
-          reservedUntil: b.reserved_until ? new Date(b.reserved_until) : null,
-          time: b.appointment_time,
-        }));
-      }
-    } catch {
-      busyRanges = [];
-    }
-
-    // 3. Generate candidate slots
+    // 2. Generate candidate slots from coach rules & session duration
     const candidateSlots = candidateSlotsForClientDate({
       clientDate: date,
       clientTimeZone: timeZone,
@@ -282,31 +263,14 @@ export async function getClientAvailableSlots(options: {
       openIntervalsProvider,
     });
 
-    const now = new Date();
-    const oneHourFromNow = new Date(now.getTime() + 60 * 60_000);
-
-    // 4. Filter out past slots and overlapping bookings
-    const openSlots = candidateSlots
-      .filter((slot) => slot.startsAt > oneHourFromNow)
-      .filter((slot) => {
-        return !busyRanges.some((busy) => {
-          if (busy.time === slot.label) return true;
-          if (busy.startsAt && busy.reservedUntil) {
-            return slot.startsAt < busy.reservedUntil && slot.reservedUntil > busy.startsAt;
-          }
-          return false;
-        });
-      })
-      .map((slot) => slot.label);
-
-    if (openSlots.length > 0) {
-      return openSlots;
+    const labels = candidateSlots.map((slot) => slot.label);
+    if (labels.length > 0) {
+      return labels;
     }
 
-    // Standard open day fallback
-    return ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '16:00', '16:30', '17:00'];
+    return standardFallback;
   } catch (err) {
     console.error('getClientAvailableSlots error:', err);
-    return ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '16:00', '16:30', '17:00'];
+    return standardFallback;
   }
 }
