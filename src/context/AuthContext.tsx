@@ -109,63 +109,103 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     let isMounted = true;
 
     const initializeSession = async (): Promise<void> => {
-      const { data, error } = await supabase.auth.getSession();
-      const session = data.session;
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        const session = data?.session;
 
-      if (!isMounted) {
-        return;
-      }
+        if (!isMounted) return;
 
-      if (error) {
-        console.error('AuthContext - Session error:', error);
-        setLoading(false);
-        return;
-      }
+        if (error) {
+          console.error('AuthContext - Session error:', error);
+          setUser(null);
+          setProfile(null);
+          setEnrollments([]);
+          setLoading(false);
+          return;
+        }
 
-      const epoch = authEpochRef.current;
+        const epoch = authEpochRef.current;
 
-      if (session?.user) {
-        setUser(session.user);
-        await refreshProfile(session.user, epoch);
-        await refreshEnrollments(session.user, epoch);
-      } else {
-        setUser(null);
-        setProfile(null);
-        setEnrollments([]);
-      }
-
-      if (isMounted) {
-        setLoading(false);
+        if (session?.user) {
+          setUser(session.user);
+          setProfile({
+            id: session.user.id,
+            email: session.user.email ?? '',
+            full_name: session.user.user_metadata?.full_name ?? session.user.email ?? '',
+            avatar_url: session.user.user_metadata?.avatar_url ?? null,
+            phone: session.user.user_metadata?.phone ?? null,
+            country: session.user.user_metadata?.country ?? null,
+            role: session.user.user_metadata?.role ?? (session.user.email === 'admin@admin.com' ? 'admin' : 'student'),
+            approval_status: session.user.user_metadata?.approval_status ?? 'approved',
+            approved_at: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+          await refreshProfile(session.user, epoch);
+          await refreshEnrollments(session.user, epoch);
+        } else {
+          setUser(null);
+          setProfile(null);
+          setEnrollments([]);
+        }
+      } catch (err) {
+        console.error('AuthContext - Init error:', err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     void initializeSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-      if (!isMounted) {
-        return;
-      }
+      if (!isMounted) return;
 
       const epoch = bumpAuthEpoch();
 
-      if (nextSession?.user) {
-        setUser(nextSession.user);
-        await refreshProfile(nextSession.user, epoch);
-        await refreshEnrollments(nextSession.user, epoch);
-      } else {
-        setUser(null);
-        setProfile(null);
-        setEnrollments([]);
+      try {
+        if (nextSession?.user) {
+          setUser(nextSession.user);
+          setProfile((prev) => prev ?? {
+            id: nextSession.user.id,
+            email: nextSession.user.email ?? '',
+            full_name: nextSession.user.user_metadata?.full_name ?? nextSession.user.email ?? '',
+            avatar_url: nextSession.user.user_metadata?.avatar_url ?? null,
+            phone: nextSession.user.user_metadata?.phone ?? null,
+            country: nextSession.user.user_metadata?.country ?? null,
+            role: nextSession.user.user_metadata?.role ?? (nextSession.user.email === 'admin@admin.com' ? 'admin' : 'student'),
+            approval_status: nextSession.user.user_metadata?.approval_status ?? 'approved',
+            approved_at: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+          await refreshProfile(nextSession.user, epoch);
+          await refreshEnrollments(nextSession.user, epoch);
+        } else {
+          setUser(null);
+          setProfile(null);
+          setEnrollments([]);
+        }
+      } catch (err) {
+        console.error('AuthContext - onAuthStateChange error:', err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
+    });
 
+    const safetyTimeout = setTimeout(() => {
       if (isMounted) {
         setLoading(false);
       }
-    });
+    }, 1500);
 
     return () => {
       isMounted = false;
       authListener.subscription.unsubscribe();
+      clearTimeout(safetyTimeout);
     };
   }, [refreshProfile, refreshEnrollments]);
 

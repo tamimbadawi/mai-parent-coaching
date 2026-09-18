@@ -108,43 +108,30 @@ export default function Navbar() {
           </div>
 
           <div className="hidden lg:flex items-center gap-3 justify-self-end">
-            {loading ? (
-              <div
-                className="h-10 w-10 rounded-full bg-cream"
-                aria-label="Checking account status"
-                role="status"
-              />
-            ) : !user ? (
+            {!user ? (
               <button
                 type="button"
                 onClick={() => setIsLoginOpen(true)}
-                className="inline-flex items-center gap-2 rounded-full border border-beige bg-ivory px-4 py-2.5 text-sm font-medium text-charcoal transition-all duration-300 hover:bg-cream"
+                className="inline-flex items-center gap-2 rounded-full border border-beige bg-ivory px-4 py-2 text-sm font-medium text-charcoal transition-all duration-300 hover:bg-cream"
               >
                 <LogIn className="h-4 w-4" />
                 Sign In
               </button>
-            ) : null}
-            <Link
-              to="/booking"
-              className="bg-sage text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-sage-dark transition-all duration-300 hover:shadow-lg"
-            >
-              Book a Session
-            </Link>
-            {user ? (
+            ) : (
               <div className="relative" ref={profileMenuRef}>
                 <button
                   type="button"
                   onClick={() => setIsProfileMenuOpen((value) => !value)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-sage text-sm font-semibold text-white"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-sage text-sm font-semibold text-white transition hover:bg-sage-dark shadow-sm"
                   aria-label="Open profile menu"
                 >
                   {profile?.full_name ? profile.full_name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase() : user.email?.[0].toUpperCase()}
                 </button>
                 {isProfileMenuOpen ? (
-                  <div className="absolute right-0 mt-3 w-56 rounded-2xl border border-beige bg-ivory p-3 shadow-xl">
+                  <div className="absolute right-0 mt-3 w-56 rounded-2xl border border-beige bg-ivory p-3 shadow-xl z-50">
                     <div className="px-2 py-1">
                       <p className="text-sm font-medium text-charcoal">{profile?.full_name ?? 'Member'}</p>
-                      <p className="text-xs text-warm-gray">{user.email}</p>
+                      <p className="text-xs text-warm-gray truncate">{user.email}</p>
                     </div>
                     <div className="my-2 h-px bg-beige" />
                     {profile?.role === 'admin' ? (
@@ -164,7 +151,13 @@ export default function Navbar() {
                   </div>
                 ) : null}
               </div>
-            ) : null}
+            )}
+            <Link
+              to="/booking"
+              className="bg-sage text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-sage-dark transition-all duration-300 hover:shadow-lg"
+            >
+              Book a Session
+            </Link>
           </div>
 
           {/* Mobile Right Controls: Book Now & Hamburger Menu */}
