@@ -136,7 +136,13 @@ function resolveBookingEmail(profile: UserProfile | null, user: SupabaseUser | n
 export default function Booking() {
   const { user, profile, loading: authLoading } = useAuth();
   const [selectedType, setSelectedType] = useState<string | null>('initial');
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(() => {
+    const d = new Date();
+    if (d.getHours() >= 14) {
+      d.setDate(d.getDate() + 1);
+    }
+    return format(d, 'yyyy-MM-dd');
+  });
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
   const [loadingSlots, setLoadingSlots] = useState(false);
