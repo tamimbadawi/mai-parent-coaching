@@ -21,8 +21,21 @@ const CompleteProfile = (): JSX.Element => {
   useEffect(() => {
     if (!loading && !user) {
       void navigate('/auth/login', { replace: true });
+      return;
     }
-  }, [loading, user, navigate]);
+
+    if (!loading && user && profile) {
+      const cleanDigits = (profile.phone || '').replace(/\D/g, '');
+      if (profile.phone && cleanDigits.length >= 7 && profile.country) {
+        if (profile.role === 'admin') {
+          void navigate('/admin', { replace: true });
+        } else {
+          void navigate('/dashboard', { replace: true });
+        }
+        return;
+      }
+    }
+  }, [loading, user, profile, navigate]);
 
   useEffect(() => {
     if (profile?.phone && !phone) {

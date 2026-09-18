@@ -19,17 +19,21 @@ as $$
 declare
   inserted_profile_id uuid;
 begin
-  insert into public.profiles (id, email, full_name, role, approval_status, approved_at)
+  insert into public.profiles (id, email, full_name, phone, country, role, approval_status, approved_at)
   values (
     new.id,
     new.email,
     coalesce(new.raw_user_meta_data->>'full_name', null),
+    coalesce(new.raw_user_meta_data->>'phone', null),
+    coalesce(new.raw_user_meta_data->>'country', null),
     'student',
     'approved',
     now()
   )
   on conflict (id) do update
     set full_name = coalesce(excluded.full_name, profiles.full_name),
+        phone = coalesce(excluded.phone, profiles.phone),
+        country = coalesce(excluded.country, profiles.country),
         updated_at = now()
   returning id into inserted_profile_id;
 

@@ -43,8 +43,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       email: currentUser.email ?? '',
       full_name: currentUser.user_metadata?.full_name ?? currentUser.email ?? '',
       avatar_url: currentUser.user_metadata?.avatar_url ?? null,
-      phone: null,
-      country: null,
+      phone: currentUser.user_metadata?.phone ?? null,
+      country: currentUser.user_metadata?.country ?? null,
       role: currentUser.user_metadata?.role ?? (currentUser.email === 'admin@admin.com' ? 'admin' : 'student'),
       approval_status: currentUser.user_metadata?.approval_status ?? 'approved',
       approved_at: null,
@@ -55,9 +55,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     if (epoch !== authEpochRef.current) {
       return;
     }
-
-    setProfile(fallbackProfile);
-    setLoading(false);
 
     try {
       const { data, error } = await supabase
@@ -72,11 +69,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
 
       if (!error && data) {
         setProfile(data);
-      } else if (error) {
-        console.error('AuthContext - Profile fetch error, keeping fallback:', error);
+      } else {
+        if (error) {
+          console.error('AuthContext - Profile fetch error, using fallback:', error);
+        }
+        setProfile(fallbackProfile);
       }
     } catch (err) {
-      console.error('AuthContext - Profile fetch exception, keeping fallback:', err);
+      console.error('AuthContext - Profile fetch exception, using fallback:', err);
+      setProfile(fallbackProfile);
     }
   }, []);
 
@@ -133,12 +134,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
         setEnrollments([]);
       }
 
-      setLoading(false);
+      if (isMounted) {
+        setLoading(false);
+      }
     };
 
     void initializeSession();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
       if (!isMounted) {
         return;
       }
@@ -147,15 +150,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
 
       if (nextSession?.user) {
         setUser(nextSession.user);
-        void refreshProfile(nextSession.user, epoch);
-        void refreshEnrollments(nextSession.user, epoch);
+        await refreshProfile(nextSession.user, epoch);
+        await refreshEnrollments(nextSession.user, epoch);
       } else {
         setUser(null);
         setProfile(null);
         setEnrollments([]);
       }
 
-      setLoading(false);
+      if (isMounted) {
+        setLoading(false);
+      }
     });
 
     return () => {
@@ -169,7 +174,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data: {
+          full_name: fullName,
+          phone: phone || null,
+          country: country || null,
+        },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
@@ -178,7 +187,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       return { error };
     }
 
-    // Upsert phone and country into the profiles table if provided
+    // Upsert phone and country into the profiles table if provided and user exists
     if (data.user && (phone || country)) {
       const updates: Record<string, string> = {};
       if (phone) updates.phone = phone;
@@ -246,6 +255,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
 
     if (error) {
       return { error: error as Error };
+    }
+
+    // Also sync user_metadata in Supabase Auth
+    const metaUpdates: Record<string, unknown> = {};
+    if (updates.full_name !== undefined) metaUpdates.full_name = updates.full_name;
+    if (updates.phone !== undefined) metaUpdates.phone = updates.phone;
+    if (updates.country !== undefined) metaUpdates.country = updates.country;
+
+    if (Object.keys(metaUpdates).length > 0) {
+      await supabase.auth.updateUser({ data: metaUpdates }).catch((err) => {
+        console.warn('AuthContext - Metadata sync notice:', err);
+      });
     }
 
     await refreshProfile(user, authEpochRef.current);
