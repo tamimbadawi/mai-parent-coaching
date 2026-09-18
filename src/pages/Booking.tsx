@@ -49,11 +49,7 @@ import { cn } from '../lib/utils';
 import { ClientRescheduleModal } from '../components/booking/ClientRescheduleModal';
 import { ClientCancelModal } from '../components/booking/ClientCancelModal';
 import { BookingStepper } from '../components/booking/BookingStepper';
-
-const TIMES = [
-  '9:00', '9:30', '10:00', '10:30', '11:00', '11:30',
-  '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
-];
+import { getClientAvailableSlots } from '../lib/bookingAvailability';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -172,10 +168,10 @@ export default function Booking() {
   const handleSelectDate = (key: string) => {
     setSelectedDate(key);
     setSelectedTime(null);
-    setAvailableTimes(TIMES);
+    setAvailableTimes([]);
   };
 
-  const [availableTimes, setAvailableTimes] = useState<string[]>(TIMES);
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [userPreviousBookings, setUserPreviousBookings] = useState<BookingType[]>([]);
   const [loadingUserBookings, setLoadingUserBookings] = useState(false);
 
@@ -190,53 +186,22 @@ export default function Booking() {
     async function loadLiveAvailability() {
       setLoadingSlots(true);
       try {
-        // 1. Fetch existing bookings for this date as instant fallback
-        const bookingsPromise = supabase
-          .from('bookings')
-          .select('appointment_time')
-          .eq('appointment_date', selectedDate)
-          .in('status', ['confirmed', 'pending_calendar_sync', 'pending', 'paid']);
-
-        // 2. Invoke Edge Function with a 2.5s timeout
-        const edgePromise = supabase.functions.invoke('get-availability', {
-          body: {
-            date: selectedDate,
-            appointmentTypeId: selectedType || 'initial',
-            timeZone: userTimeZone,
-          },
+        const slots = await getClientAvailableSlots({
+          date: selectedDate,
+          appointmentTypeId: selectedType || 'initial',
+          timeZone: userTimeZone,
         });
-
-        const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) =>
-          setTimeout(() => resolve({ data: null, error: new Error('Availability timeout') }), 2500)
-        );
-
-        const [edgeResult, bookingsResult] = await Promise.all([
-          Promise.race([edgePromise, timeoutPromise]),
-          bookingsPromise,
-        ]);
 
         if (!isMounted) return;
 
-        const bookedTimes = new Set((bookingsResult.data || []).map((b: { appointment_time: string }) => b.appointment_time));
-        const defaultAvailable = TIMES.filter((t) => !bookedTimes.has(t));
-
-        if (edgeResult.data && Array.isArray(edgeResult.data.availableSlots) && edgeResult.data.availableSlots.length > 0) {
-          const openSlots: string[] = edgeResult.data.availableSlots;
-          setAvailableTimes(openSlots);
-          if (selectedTime && !openSlots.includes(selectedTime)) {
-            setSelectedTime(null);
-          }
-        } else {
-          // Use standard open slots filtered by confirmed bookings
-          setAvailableTimes(defaultAvailable);
-          if (selectedTime && !defaultAvailable.includes(selectedTime)) {
-            setSelectedTime(null);
-          }
+        setAvailableTimes(slots);
+        if (selectedTime && !slots.includes(selectedTime)) {
+          setSelectedTime(null);
         }
       } catch (err) {
-        console.warn('Error fetching live availability, using fallback slots:', err);
+        console.error('Error fetching live availability:', err);
         if (isMounted) {
-          setAvailableTimes(TIMES);
+          setAvailableTimes([]);
         }
       } finally {
         if (isMounted) {
@@ -575,34 +540,35 @@ export default function Booking() {
                   <p className="py-2.5 text-center text-xs text-soft-gray">
                     Select a date above to view available open times.
                   </p>
+                ) : loadingSlots ? (
+                  <div className="flex items-center justify-center gap-2 py-4 text-xs font-medium text-sage-dark">
+                    <Loader2 className="h-4 w-4 animate-spin text-sage" />
+                    <span>Loading open times...</span>
+                  </div>
+                ) : availableTimes.length === 0 ? (
+                  <p className="py-2.5 text-center text-xs text-warm-gray">
+                    No available appointments on this date. Please choose another date or session type.
+                  </p>
                 ) : (
-                  <div className="space-y-2">
-                    {loadingSlots && (
-                      <div className="flex items-center justify-end gap-1.5 text-[10px] text-sage-dark">
-                        <Loader2 className="h-3 w-3 animate-spin text-sage" />
-                        <span>Syncing live availability...</span>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
-                      {(availableTimes.length > 0 ? availableTimes : TIMES).map((time) => {
-                        const sel = selectedTime === time;
-                        return (
-                          <button
-                            key={time}
-                            type="button"
-                            onClick={() => setSelectedTime(time)}
-                            className={cn(
-                              'flex items-center justify-center rounded-lg border py-1.5 text-xs font-semibold transition-all duration-150',
-                              sel
-                                ? 'border-sage bg-sage text-white shadow-sm ring-1 ring-sage/30'
-                                : 'border-beige/80 bg-white text-charcoal hover:border-sage/40 hover:bg-sage/5',
-                            )}
-                          >
-                            {time}
-                          </button>
-                        );
-                      })}
-                    </div>
+                  <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+                    {availableTimes.map((time) => {
+                      const sel = selectedTime === time;
+                      return (
+                        <button
+                          key={time}
+                          type="button"
+                          onClick={() => setSelectedTime(time)}
+                          className={cn(
+                            'flex items-center justify-center rounded-lg border py-1.5 text-xs font-semibold transition-all duration-150',
+                            sel
+                              ? 'border-sage bg-sage text-white shadow-sm ring-1 ring-sage/30'
+                              : 'border-beige/80 bg-white text-charcoal hover:border-sage/40 hover:bg-sage/5',
+                          )}
+                        >
+                          {time}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
