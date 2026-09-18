@@ -30,7 +30,7 @@ export default function Navbar() {
     setIsProfileMenuOpen(false);
     setIsMobileMenuOpen(false);
     await signOut();
-    navigate('/');
+    window.location.href = '/';
   };
 
   useEffect(() => {

@@ -58,7 +58,7 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
 
   const handleSignOut = async (): Promise<void> => {
     await signOut();
-    navigate('/auth/login');
+    window.location.href = '/auth/login';
   };
 
   const navGroups: NavGroup[] = [

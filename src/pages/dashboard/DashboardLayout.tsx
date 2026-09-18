@@ -127,7 +127,7 @@ export const DashboardLayout = ({
 
   const handleSignOut = async (): Promise<void> => {
     await signOut();
-    navigate('/auth/login');
+    window.location.href = '/auth/login';
   };
 
   // Determine active item based on pathname or tab
