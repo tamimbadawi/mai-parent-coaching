@@ -4,10 +4,13 @@ import { Sparkles, CalendarDays, Clock, User, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export interface BookingStepperProps {
-  hasSelectedType: boolean;
-  hasSelectedDate: boolean;
-  hasSelectedTime: boolean;
-  hasDetails: boolean;
+  hasSelectedType?: boolean;
+  hasSelectedDate?: boolean;
+  hasSelectedTime?: boolean;
+  hasDetails?: boolean;
+  selectedType?: string | null;
+  selectedDate?: string | null;
+  selectedTime?: string | null;
   className?: string;
 }
 
@@ -17,6 +20,7 @@ interface StepConfig {
   done: boolean;
   active: boolean;
   icon: React.ComponentType<{ className?: string }>;
+  value?: string | number | boolean | null;
 }
 
 // Gentle audio ping chime using Web Audio API
@@ -53,17 +57,25 @@ export const BookingStepper = ({
   hasSelectedType,
   hasSelectedDate,
   hasSelectedTime,
-  hasDetails,
+  hasDetails = false,
+  selectedType,
+  selectedDate,
+  selectedTime,
   className,
 }: BookingStepperProps): JSX.Element => {
+  const isTypeDone = selectedType !== undefined ? Boolean(selectedType) : Boolean(hasSelectedType);
+  const isDateDone = selectedDate !== undefined ? Boolean(selectedDate) : Boolean(hasSelectedDate);
+  const isTimeDone = selectedTime !== undefined ? Boolean(selectedTime) : Boolean(hasSelectedTime);
+  const isDetailsDone = Boolean(hasDetails);
+
   // Determine active step
-  const activeStepIndex = !hasSelectedType
+  const activeStepIndex = !isTypeDone
     ? 0
-    : !hasSelectedDate
+    : !isDateDone
     ? 1
-    : !hasSelectedTime
+    : !isTimeDone
     ? 2
-    : !hasDetails
+    : !isDetailsDone
     ? 3
     : 4; // all done
 
@@ -71,28 +83,32 @@ export const BookingStepper = ({
     {
       id: 'session',
       label: 'Session',
-      done: hasSelectedType,
+      done: isTypeDone,
+      value: selectedType ?? (hasSelectedType ? 'selected' : null),
       active: activeStepIndex === 0,
       icon: Sparkles,
     },
     {
       id: 'date',
       label: 'Date',
-      done: hasSelectedDate,
+      done: isDateDone,
+      value: selectedDate ?? (hasSelectedDate ? 'selected' : null),
       active: activeStepIndex === 1,
       icon: CalendarDays,
     },
     {
       id: 'time',
       label: 'Time',
-      done: hasSelectedTime,
+      done: isTimeDone,
+      value: selectedTime ?? (hasSelectedTime ? 'selected' : null),
       active: activeStepIndex === 2,
       icon: Clock,
     },
     {
       id: 'details',
       label: 'Details',
-      done: hasDetails,
+      done: isDetailsDone,
+      value: hasDetails ? 'done' : null,
       active: activeStepIndex === 3,
       icon: User,
     },
@@ -141,20 +157,38 @@ interface StepItemProps {
 const StepItem = ({ step }: StepItemProps): JSX.Element => {
   const IconComponent = step.icon;
   const prevDoneRef = useRef(step.done);
+  const prevValueRef = useRef(step.value);
+  const isFirstMountRef = useRef(true);
   const [justFinished, setJustFinished] = useState(false);
+  const [pingKey, setPingKey] = useState(0);
 
-  // Trigger ping animation and audio ping when transitioning from false -> true
+  // Trigger ping animation and audio ping when transitioning to done OR when the chosen value changes
   useEffect(() => {
-    if (!prevDoneRef.current && step.done) {
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      prevDoneRef.current = step.done;
+      prevValueRef.current = step.value;
+      return;
+    }
+
+    const becameDone = !prevDoneRef.current && step.done;
+    const valueChanged = step.done && step.value != null && step.value !== prevValueRef.current;
+
+    if (becameDone || valueChanged) {
+      setPingKey((k) => k + 1);
       setJustFinished(true);
       playPingSound();
       const timer = setTimeout(() => {
         setJustFinished(false);
       }, 1200);
+      prevDoneRef.current = step.done;
+      prevValueRef.current = step.value;
       return () => clearTimeout(timer);
     }
+
     prevDoneRef.current = step.done;
-  }, [step.done]);
+    prevValueRef.current = step.value;
+  }, [step.done, step.value]);
 
   return (
     <div className="relative flex items-center gap-1 sm:gap-1.5">
@@ -190,15 +224,21 @@ const StepItem = ({ step }: StepItemProps): JSX.Element => {
         )}
 
         {/* Completion Ping Rings */}
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           {justFinished && (
-            <>
+            <motion.div
+              key={`ping-wrapper-${pingKey}`}
+              className="pointer-events-none absolute inset-0 flex items-center justify-center"
+              initial={{ opacity: 1 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
               {/* Primary fast expanding ping ring */}
               <span className="pointer-events-none absolute inset-0 -m-1 rounded-full border-2 border-sage bg-sage/35 animate-ping" />
 
               {/* Secondary smooth Framer Motion expanding ripple wave */}
               <motion.span
-                key="ripple-wave"
+                key={`ripple-wave-${pingKey}`}
                 initial={{ scale: 0.8, opacity: 0.95 }}
                 animate={{ scale: 2.6, opacity: 0 }}
                 exit={{ opacity: 0 }}
@@ -208,7 +248,7 @@ const StepItem = ({ step }: StepItemProps): JSX.Element => {
 
               {/* Glowing sparkle dots */}
               <motion.div
-                key="sparkle-orbit"
+                key={`sparkle-orbit-${pingKey}`}
                 initial={{ rotate: 0, scale: 0.5, opacity: 1 }}
                 animate={{ rotate: 180, scale: 1.5, opacity: 0 }}
                 exit={{ opacity: 0 }}
@@ -218,12 +258,13 @@ const StepItem = ({ step }: StepItemProps): JSX.Element => {
                 <span className="h-1 w-1 rounded-full bg-sage-dark shadow-[0_0_4px_rgba(111,143,122,0.9)]" />
                 <span className="h-1 w-1 rounded-full bg-terracotta shadow-[0_0_4px_rgba(217,144,110,0.9)]" />
               </motion.div>
-            </>
+            </motion.div>
           )}
         </AnimatePresence>
 
         {/* Badge circle */}
         <motion.div
+          key={`badge-${step.id}-${justFinished ? pingKey : 'idle'}`}
           className={cn(
             'relative flex h-6 w-6 sm:h-6.5 sm:w-6.5 items-center justify-center rounded-full transition-all duration-300',
             step.done

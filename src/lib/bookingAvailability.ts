@@ -30,17 +30,71 @@ export interface DbAvailabilityRule {
   is_active: boolean;
 }
 
-const DEFAULT_COACH_RULES: DbAvailabilityRule[] = [
-  { rule_type: 'recurring', day_of_week: 0, start_time: '10:00', end_time: '14:00', is_active: true, appointment_type_id: 'all', specific_date: null },
-  { rule_type: 'recurring', day_of_week: 1, start_time: '10:00', end_time: '14:00', is_active: true, appointment_type_id: 'all', specific_date: null },
-  { rule_type: 'recurring', day_of_week: 1, start_time: '16:00', end_time: '18:00', is_active: true, appointment_type_id: 'all', specific_date: null },
-  { rule_type: 'recurring', day_of_week: 2, start_time: '10:00', end_time: '14:00', is_active: true, appointment_type_id: 'all', specific_date: null },
-  { rule_type: 'recurring', day_of_week: 3, start_time: '10:00', end_time: '14:00', is_active: true, appointment_type_id: 'all', specific_date: null },
-  { rule_type: 'recurring', day_of_week: 3, start_time: '16:00', end_time: '18:00', is_active: true, appointment_type_id: 'all', specific_date: null },
-  { rule_type: 'recurring', day_of_week: 4, start_time: '10:00', end_time: '14:00', is_active: true, appointment_type_id: 'all', specific_date: null },
-  { rule_type: 'recurring', day_of_week: 5, start_time: '10:00', end_time: '14:00', is_active: true, appointment_type_id: 'all', specific_date: null },
-  { rule_type: 'recurring', day_of_week: 6, start_time: '10:00', end_time: '14:00', is_active: true, appointment_type_id: 'all', specific_date: null },
-];
+const AVAILABILITY_CACHE_TTL_MS = 60_000;
+const AVAILABILITY_CACHE_PREFIX = 'mai-booking-availability:';
+const AVAILABILITY_REQUEST_TIMEOUT_MS = 10_000;
+
+interface AvailabilityCacheEntry {
+  slots: string[];
+  fetchedAt: number;
+}
+
+interface AvailabilityResponse {
+  availableSlots?: string[];
+  error?: string;
+}
+
+const availabilityCache = new Map<string, AvailabilityCacheEntry>();
+const availabilityRequests = new Map<string, Promise<string[]>>();
+
+function rejectAfterTimeout(milliseconds: number): Promise<never> {
+  return new Promise((_, reject) => {
+    window.setTimeout(
+      () => reject(new Error('Available times took too long to load. Please try again.')),
+      milliseconds,
+    );
+  });
+}
+
+function availabilityCacheKey(date: string, appointmentTypeId: string, timeZone: string): string {
+  return `${date}|${appointmentTypeId}|${timeZone}`;
+}
+
+function readSessionCache(key: string): AvailabilityCacheEntry | null {
+  try {
+    const value = sessionStorage.getItem(`${AVAILABILITY_CACHE_PREFIX}${key}`);
+    if (!value) return null;
+    const parsed = JSON.parse(value) as AvailabilityCacheEntry;
+    if (!Array.isArray(parsed.slots) || typeof parsed.fetchedAt !== 'number') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionCache(key: string, entry: AvailabilityCacheEntry): void {
+  try {
+    sessionStorage.setItem(`${AVAILABILITY_CACHE_PREFIX}${key}`, JSON.stringify(entry));
+  } catch {
+    // Memory caching still works when session storage is unavailable.
+  }
+}
+
+export function getCachedClientAvailableSlots(options: {
+  date: string;
+  appointmentTypeId?: string;
+  timeZone?: string;
+}): string[] | null {
+  const key = availabilityCacheKey(
+    options.date,
+    options.appointmentTypeId ?? 'initial',
+    options.timeZone ?? 'Africa/Cairo',
+  );
+  const cached = availabilityCache.get(key) ?? readSessionCache(key);
+  if (!cached || Date.now() - cached.fetchedAt >= AVAILABILITY_CACHE_TTL_MS) return null;
+  availabilityCache.set(key, cached);
+  return cached.slots;
+}
 
 const WEEKDAY_INDEX: Record<string, number> = {
   Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
@@ -230,47 +284,36 @@ export async function getClientAvailableSlots(options: {
   timeZone?: string;
   coachTimeZone?: string;
 }): Promise<string[]> {
-  const { date, appointmentTypeId = 'initial', timeZone = 'Africa/Cairo', coachTimeZone = 'Africa/Cairo' } = options;
-  const config = APPOINTMENT_CONFIG[appointmentTypeId] || APPOINTMENT_CONFIG.initial;
-  const standardFallback = ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '16:00', '16:30', '17:00'];
+  const { date, appointmentTypeId = 'initial', timeZone = 'Africa/Cairo' } = options;
+  const key = availabilityCacheKey(date, appointmentTypeId, timeZone);
+  const cached = getCachedClientAvailableSlots({ date, appointmentTypeId, timeZone });
+  if (cached) return cached;
 
+  const pendingRequest = availabilityRequests.get(key);
+  if (pendingRequest) return pendingRequest;
+
+  const request = (async (): Promise<string[]> => {
+    const { data, error } = await Promise.race([
+      supabase.functions.invoke<AvailabilityResponse>('get-availability', {
+        body: { date, appointmentTypeId, timeZone },
+      }),
+      rejectAfterTimeout(AVAILABILITY_REQUEST_TIMEOUT_MS),
+    ]);
+
+    if (error) throw new Error(error.message || 'Could not load available times.');
+    if (data?.error) throw new Error(data.error);
+
+    const slots = Array.isArray(data?.availableSlots) ? data.availableSlots : [];
+    const cacheEntry = { slots, fetchedAt: Date.now() };
+    availabilityCache.set(key, cacheEntry);
+    writeSessionCache(key, cacheEntry);
+    return slots;
+  })();
+
+  availabilityRequests.set(key, request);
   try {
-    // 1. Fetch active coach availability rules
-    let rules: DbAvailabilityRule[] = DEFAULT_COACH_RULES;
-    try {
-      const { data, error } = await supabase
-        .from('coach_availability_rules')
-        .select('*')
-        .eq('is_active', true);
-
-      if (!error && data && data.length > 0) {
-        rules = data as DbAvailabilityRule[];
-      }
-    } catch {
-      rules = DEFAULT_COACH_RULES;
-    }
-
-    const openIntervalsProvider = (coachDate: string) =>
-      buildOpenIntervalsForCoachDate(coachDate, coachTimeZone, rules, appointmentTypeId);
-
-    // 2. Generate candidate slots from coach rules & session duration
-    const candidateSlots = candidateSlotsForClientDate({
-      clientDate: date,
-      clientTimeZone: timeZone,
-      coachTimeZone,
-      durationMinutes: config.durationMinutes,
-      bufferMinutes: config.bufferMinutes,
-      openIntervalsProvider,
-    });
-
-    const labels = candidateSlots.map((slot) => slot.label);
-    if (labels.length > 0) {
-      return labels;
-    }
-
-    return standardFallback;
-  } catch (err) {
-    console.error('getClientAvailableSlots error:', err);
-    return standardFallback;
+    return await request;
+  } finally {
+    availabilityRequests.delete(key);
   }
 }

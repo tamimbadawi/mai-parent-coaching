@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Heart, LogIn, Sparkles, UserRound } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../lib/utils';
@@ -21,7 +21,6 @@ export default function Navbar() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [navbarHeight, setNavbarHeight] = useState(68);
   const location = useLocation();
-  const navigate = useNavigate();
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const navRef = useRef<HTMLElement | null>(null);
   const { user, profile, loading, signOut } = useAuth();
@@ -108,7 +107,12 @@ export default function Navbar() {
           </div>
 
           <div className="hidden lg:flex items-center gap-3 justify-self-end">
-            {!user ? (
+            {loading ? (
+              <div
+                className="h-10 w-24 animate-pulse rounded-full border border-beige bg-cream"
+                aria-label="Loading account"
+              />
+            ) : !user ? (
               <button
                 type="button"
                 onClick={() => setIsLoginOpen(true)}
@@ -221,7 +225,9 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-            {!user ? (
+            {loading ? (
+              <div className="mt-4 h-12 w-full animate-pulse rounded-full bg-cream" aria-label="Loading account" />
+            ) : !user ? (
               <button
                 type="button"
                 onClick={() => {

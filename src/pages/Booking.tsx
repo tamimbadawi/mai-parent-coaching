@@ -373,6 +373,9 @@ export default function Booking() {
             hasSelectedDate={!!selectedDate}
             hasSelectedTime={!!selectedTime}
             hasDetails={!!(formData.name.trim() && formData.email.trim())}
+            selectedType={selectedType}
+            selectedDate={selectedDate}
+            selectedTime={selectedTime}
           />
         </div>
       </div>

@@ -112,42 +112,56 @@ Deno.serve(async (request) => {
     if (!supabaseUrl || !serviceRoleKey) return json({ error: 'Booking database configuration is missing.' }, 503);
     const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
-    // 1. Fetch active coach availability rules (ALLOW-LIST MODEL: closed by default)
-    const { data: rulesData, error: rulesError } = await supabase
+    // These sources are independent, so load them concurrently to keep the first
+    // availability response to the duration of the slowest source, not their sum.
+    const rulesRequest = supabase
       .from('coach_availability_rules')
       .select('*')
       .eq('is_active', true);
-    if (rulesError) throw new Error(`Could not load availability rules: ${rulesError.message}`);
-    const rules = (rulesData || []) as DbAvailabilityRule[];
-
-    const openIntervalsProvider = (coachDate: string) =>
-      buildOpenIntervalsForCoachDate(coachDate, coachTimeZone, rules, appointmentTypeId);
-
-    // 2. Fetch existing bookings
-    const { data: bookings, error: bookingsError } = await supabase
+    const bookingsRequest = supabase
       .from('bookings')
       .select('starts_at, reserved_until')
       .in('status', ['pending', 'confirmed', 'pending_calendar_sync'])
       .lt('starts_at', rangeEnd.toISOString())
       .gt('reserved_until', rangeStart.toISOString());
+
+    const hasGoogleCalendar = Boolean(
+      Deno.env.get('GOOGLE_CLIENT_ID') &&
+      Deno.env.get('GOOGLE_CLIENT_SECRET') &&
+      Deno.env.get('GOOGLE_REFRESH_TOKEN')
+    );
+    const calendarRequest = hasGoogleCalendar
+      ? getCalendarFreeBusy(rangeStart.toISOString(), rangeEnd.toISOString(), coachTimeZone)
+          .then((busy) => ({ busy, error: null }))
+          .catch((error: unknown) => ({ busy: [] as FreeBusyBlock[], error }))
+      : Promise.resolve({ busy: [] as FreeBusyBlock[], error: null });
+
+    const [rulesResult, bookingsResult, calendarResult] = await Promise.all([
+      rulesRequest,
+      bookingsRequest,
+      calendarRequest,
+    ]);
+
+    const { data: rulesData, error: rulesError } = rulesResult;
+    if (rulesError) throw new Error(`Could not load availability rules: ${rulesError.message}`);
+    const rules = (rulesData || []) as DbAvailabilityRule[];
+    const openIntervalsProvider = (coachDate: string) =>
+      buildOpenIntervalsForCoachDate(coachDate, coachTimeZone, rules, appointmentTypeId);
+
+    const { data: bookings, error: bookingsError } = bookingsResult;
     if (bookingsError) throw new Error(`Could not read booking reservations: ${bookingsError.message}`);
     const busyIntervals: BusyInterval[] = (bookings ?? []).map((booking) => ({
       startsAt: new Date(booking.starts_at),
       reservedUntil: new Date(booking.reserved_until),
     }));
 
-    // 3. Query Google Calendar freebusy if connected
-    let googleCalendarConnected = false;
-    if (Deno.env.get('GOOGLE_CLIENT_ID') && Deno.env.get('GOOGLE_CLIENT_SECRET') && Deno.env.get('GOOGLE_REFRESH_TOKEN')) {
-      let googleBusy: FreeBusyBlock[];
-      try {
-        googleBusy = await getCalendarFreeBusy(rangeStart.toISOString(), rangeEnd.toISOString(), coachTimeZone);
-        googleCalendarConnected = true;
-      } catch (error) {
-        console.error('Google Calendar availability check failed:', error);
-        return json({ error: 'Live calendar availability is temporarily unavailable.' }, 503);
-      }
-      for (const block of googleBusy) busyIntervals.push({ startsAt: new Date(block.start), reservedUntil: new Date(block.end) });
+    if (calendarResult.error) {
+      console.error('Google Calendar availability check failed:', calendarResult.error);
+      return json({ error: 'Live calendar availability is temporarily unavailable.' }, 503);
+    }
+    const googleCalendarConnected = hasGoogleCalendar;
+    for (const block of calendarResult.busy) {
+      busyIntervals.push({ startsAt: new Date(block.start), reservedUntil: new Date(block.end) });
     }
 
     const now = new Date();

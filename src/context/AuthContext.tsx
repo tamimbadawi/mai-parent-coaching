@@ -159,40 +159,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
 
     void initializeSession();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!isMounted) return;
 
       const epoch = bumpAuthEpoch();
 
-      try {
-        if (nextSession?.user) {
-          setUser(nextSession.user);
-          setProfile((prev) => prev ?? {
-            id: nextSession.user.id,
-            email: nextSession.user.email ?? '',
-            full_name: nextSession.user.user_metadata?.full_name ?? nextSession.user.email ?? '',
-            avatar_url: nextSession.user.user_metadata?.avatar_url ?? null,
-            phone: nextSession.user.user_metadata?.phone ?? null,
-            country: nextSession.user.user_metadata?.country ?? null,
-            role: nextSession.user.user_metadata?.role ?? (nextSession.user.email === 'admin@admin.com' ? 'admin' : 'student'),
-            approval_status: nextSession.user.user_metadata?.approval_status ?? 'approved',
-            approved_at: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+      if (nextSession?.user) {
+        const nextUser = nextSession.user;
+        setUser(nextUser);
+        setProfile((prev) => prev?.id === nextUser.id ? prev : {
+          id: nextUser.id,
+          email: nextUser.email ?? '',
+          full_name: nextUser.user_metadata?.full_name ?? nextUser.email ?? '',
+          avatar_url: nextUser.user_metadata?.avatar_url ?? null,
+          phone: nextUser.user_metadata?.phone ?? null,
+          country: nextUser.user_metadata?.country ?? null,
+          role: nextUser.user_metadata?.role ?? (nextUser.email === 'admin@admin.com' ? 'admin' : 'student'),
+          approval_status: nextUser.user_metadata?.approval_status ?? 'approved',
+          approved_at: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        setLoading(false);
+
+        // Supabase warns against awaiting client calls inside onAuthStateChange:
+        // the auth callback holds an internal lock that those calls may also need.
+        // Defer dependent reads until the callback has returned and released it.
+        window.setTimeout(() => {
+          if (!isMounted || epoch !== authEpochRef.current) return;
+          void Promise.all([
+            refreshProfile(nextUser, epoch),
+            refreshEnrollments(nextUser, epoch),
+          ]).catch((err: unknown) => {
+            console.error('AuthContext - deferred auth refresh error:', err);
           });
-          await refreshProfile(nextSession.user, epoch);
-          await refreshEnrollments(nextSession.user, epoch);
-        } else {
-          setUser(null);
-          setProfile(null);
-          setEnrollments([]);
-        }
-      } catch (err) {
-        console.error('AuthContext - onAuthStateChange error:', err);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        }, 0);
+      } else {
+        setUser(null);
+        setProfile(null);
+        setEnrollments([]);
+        setLoading(false);
       }
     });
 
