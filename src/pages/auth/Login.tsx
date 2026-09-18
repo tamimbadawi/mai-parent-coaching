@@ -55,6 +55,8 @@ const useTypewriter = (texts: string[], typingSpeed = 55, pauseMs = 2200, delete
 const inputCls =
   'w-full rounded-xl border border-beige bg-white px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage placeholder:text-warm-gray/50';
 
+import { supabase } from '../../lib/supabase';
+
 /* ── Component ────────────────────────────────────────────────────────────── */
 const Login = (): JSX.Element => {
   const navigate = useNavigate();
@@ -79,6 +81,29 @@ const Login = (): JSX.Element => {
     const { error: signInError } = await signIn(email, password);
     setLoading(false);
     if (signInError) { setError(signInError.message); return; }
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (userId) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('phone, country, role')
+          .eq('id', userId)
+          .maybeSingle();
+
+        const cleanDigits = (profileData?.phone || '').replace(/\D/g, '');
+        const isMissingDetails = !profileData?.phone || cleanDigits.length < 7 || !profileData?.country;
+
+        if (profileData?.role !== 'admin' && isMissingDetails) {
+          navigate('/auth/complete-profile');
+          return;
+        }
+      }
+    } catch {
+      // Fallback
+    }
+
     navigate(from);
   };
 

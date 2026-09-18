@@ -10,21 +10,49 @@ const AuthCallback = (): JSX.Element => {
   const [error, setError] = useState<string | null>(null);
   const redirectedRef = useRef(false);
 
-  const doRedirect = (): void => {
+  const doRedirect = async (sessionUser?: { id: string; email?: string } | null): Promise<void> => {
     if (redirectedRef.current) return;
     redirectedRef.current = true;
 
-    if (profile?.role === 'admin') {
-      void navigate('/admin', { replace: true });
-    } else {
+    const targetUser = sessionUser ?? user;
+    if (!targetUser) {
       void navigate('/', { replace: true });
+      return;
+    }
+
+    try {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('phone, country, role')
+        .eq('id', targetUser.id)
+        .maybeSingle();
+
+      const role = profileData?.role ?? profile?.role;
+      const phone = profileData?.phone ?? profile?.phone;
+      const country = profileData?.country ?? profile?.country;
+
+      if (role === 'admin') {
+        void navigate('/admin', { replace: true });
+        return;
+      }
+
+      const cleanDigits = (phone || '').replace(/\D/g, '');
+      const isMissingDetails = !phone || cleanDigits.length < 7 || !country;
+
+      if (isMissingDetails) {
+        void navigate('/auth/complete-profile', { replace: true });
+      } else {
+        void navigate('/', { replace: true });
+      }
+    } catch {
+      void navigate('/auth/complete-profile', { replace: true });
     }
   };
 
-  // 1. Reactive: As soon as AuthContext has user, redirect immediately
+  // 1. Reactive: As soon as AuthContext has user, redirect accordingly
   useEffect(() => {
     if (user) {
-      doRedirect();
+      void doRedirect(user);
     }
   }, [user, profile]);
 
@@ -40,7 +68,7 @@ const AuthCallback = (): JSX.Element => {
         if (code) {
           const { data } = await supabase.auth.exchangeCodeForSession(code);
           if (data.session?.user && isMounted) {
-            doRedirect();
+            void doRedirect(data.session.user);
             return;
           }
         }
@@ -57,7 +85,7 @@ const AuthCallback = (): JSX.Element => {
               refresh_token: refreshToken,
             });
             if (data.session?.user && isMounted) {
-              doRedirect();
+              void doRedirect(data.session.user);
               return;
             }
           }
@@ -66,7 +94,7 @@ const AuthCallback = (): JSX.Element => {
         // Check active session
         const { data: sessionData } = await supabase.auth.getSession();
         if (sessionData.session?.user && isMounted) {
-          doRedirect();
+          void doRedirect(sessionData.session.user);
           return;
         }
       } catch (err) {
@@ -78,14 +106,14 @@ const AuthCallback = (): JSX.Element => {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user && isMounted) {
-        doRedirect();
+        void doRedirect(session.user);
       }
     });
 
-    // 3. Absolute failsafe timer: after 1.5 seconds, redirect to homepage
+    // 3. Absolute failsafe timer: after 1.5 seconds, redirect
     const fallbackTimer = setTimeout(() => {
       if (isMounted && !redirectedRef.current) {
-        doRedirect();
+        void doRedirect();
       }
     }, 1500);
 

@@ -27,8 +27,8 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps): JSX.El
 
   if (profile && profile.role !== 'admin') {
     const cleanDigits = (profile.phone || '').replace(/\D/g, '');
-    if (!profile.phone || cleanDigits.length < 7) {
-      console.log('ProtectedRoute - Phone missing, redirecting to complete-profile');
+    if (!profile.phone || cleanDigits.length < 7 || !profile.country) {
+      console.log('ProtectedRoute - Phone or Country missing, redirecting to complete-profile');
       return <Navigate to="/auth/complete-profile" replace state={{ from: location.pathname }} />;
     }
   }

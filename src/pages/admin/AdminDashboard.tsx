@@ -28,7 +28,6 @@ interface Stats {
   totalUsers: number;
   totalMessages: number;
   totalEnrollments: number;
-  pendingUsers: number;
 }
 
 const statusBadgeStyles: Record<Booking['status'], { label: string; className: string }> = {
@@ -59,7 +58,6 @@ const AdminDashboard = (): JSX.Element => {
     totalUsers: 0,
     totalMessages: 0,
     totalEnrollments: 0,
-    pendingUsers: 0,
   });
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,13 +76,9 @@ const AdminDashboard = (): JSX.Element => {
     setLoading(true);
     setError(null);
     try {
-      const [usersRes, pendingUsersRes, messagesRes, enrollmentsRes, recentMsgsRes, bookingsRes] =
+      const [usersRes, messagesRes, enrollmentsRes, recentMsgsRes, bookingsRes] =
         await Promise.all([
           supabase.from('profiles').select('id', { count: 'exact', head: true }),
-          supabase
-            .from('profiles')
-            .select('id', { count: 'exact', head: true })
-            .eq('approval_status', 'pending'),
           supabase.from('contact_messages').select('id', { count: 'exact', head: true }),
           supabase.from('course_enrollments').select('id', { count: 'exact', head: true }),
           supabase
@@ -101,7 +95,6 @@ const AdminDashboard = (): JSX.Element => {
 
       setStats({
         totalUsers: usersRes.count ?? 0,
-        pendingUsers: pendingUsersRes.count ?? 0,
         totalMessages: messagesRes.count ?? 0,
         totalEnrollments: enrollmentsRes.count ?? 0,
       });
@@ -170,8 +163,6 @@ const AdminDashboard = (): JSX.Element => {
       todayCount: todaySessions.length,
     };
   }, [bookings, todaySessions.length]);
-
-  const totalPendingApprovals = bookingStats.pending + stats.pendingUsers;
 
   return (
     <AdminLayout
@@ -268,28 +259,28 @@ const AdminDashboard = (): JSX.Element => {
             </p>
           </Link>
 
-          {/* Card 3: Pending Approvals */}
+          {/* Card 3: Registered Clients */}
           <Link
-            to="/admin/bookings"
+            to="/admin/users"
             className="group rounded-2xl border border-beige/80 bg-white p-5 shadow-xs transition-colors hover:border-beige block"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
-                <UserCheck className="h-4 w-4" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sage/15 text-sage-dark">
+                <Users className="h-4 w-4" />
               </div>
               <span className="text-[10px] font-medium uppercase tracking-wider text-warm-gray group-hover:text-sage-dark transition-colors">
-                Approvals
+                Clients
               </span>
             </div>
             <p className="mt-4 font-serif text-3xl sm:text-4xl text-charcoal font-normal">
-              {loading ? '-' : totalPendingApprovals}
+              {loading ? '-' : stats.totalUsers}
             </p>
             <p className="mt-1.5 text-xs text-warm-gray leading-relaxed">
               {loading
-                ? 'Calculating...'
-                : totalPendingApprovals === 0
-                ? 'All bookings and registrations approved'
-                : `${bookingStats.pending} bookings · ${stats.pendingUsers} registrations waiting`}
+                ? 'Loading user directory...'
+                : stats.totalUsers === 1
+                ? '1 registered client in practice'
+                : `${stats.totalUsers} registered client accounts`}
             </p>
           </Link>
         </div>
@@ -561,7 +552,7 @@ const AdminDashboard = (): JSX.Element => {
                     Manage Client Accounts
                   </p>
                   <p className="mt-0.5 text-xs text-warm-gray">
-                    Approve new parent registrations and manage course enrollments.
+                    View member profiles, contact numbers, and course enrollments.
                   </p>
                 </div>
                 <ArrowUpRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warm-gray group-hover:text-sage-dark transition" />

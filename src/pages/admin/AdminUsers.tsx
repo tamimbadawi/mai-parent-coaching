@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Crown, Edit3, Hourglass, Phone, PlusCircle, ShieldCheck, Trash2, UserRound, X, XCircle } from 'lucide-react';
+import { Crown, Edit3, Phone, PlusCircle, ShieldCheck, Trash2, UserRound, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
 import PhoneInput, { formatPhone, parsePhone } from '../../components/ui/PhoneInput';
 import type { UserProfile } from '../../types';
 import { EmptyPanel, InsightChip, Panel, StatCard } from './components/AdminUI';
-
 
 interface UserDraft {
   email: string;
@@ -14,7 +13,6 @@ interface UserDraft {
   localPhone: string;
   password: string;
   role: UserProfile['role'];
-  approvalStatus: UserProfile['approval_status'];
 }
 
 const emptyDraft: UserDraft = {
@@ -24,7 +22,6 @@ const emptyDraft: UserDraft = {
   localPhone: '',
   password: '',
   role: 'student',
-  approvalStatus: 'approved',
 };
 
 const AdminUsers = (): JSX.Element => {
@@ -38,7 +35,6 @@ const AdminUsers = (): JSX.Element => {
 
   const adminCount = users.filter((user) => user.role === 'admin').length;
   const memberCount = users.length - adminCount;
-  const pendingCount = users.filter((user) => user.approval_status === 'pending').length;
   const sortedUsers = useMemo(
     () => [...users].sort((left, right) => right.created_at.localeCompare(left.created_at)),
     [users]
@@ -108,7 +104,6 @@ const AdminUsers = (): JSX.Element => {
       localPhone: local,
       password: '',
       role: user.role,
-      approvalStatus: user.approval_status,
     });
     setError(null);
     setSuccess(null);
@@ -207,7 +202,7 @@ const AdminUsers = (): JSX.Element => {
           fullName: draft.fullName.trim(),
           phone,
           role: draft.role,
-          approvalStatus: draft.approvalStatus,
+          approvalStatus: 'approved',
         }
       : {
           action: 'createUser',
@@ -216,7 +211,7 @@ const AdminUsers = (): JSX.Element => {
           fullName: draft.fullName.trim(),
           phone,
           role: draft.role,
-          approvalStatus: draft.approvalStatus,
+          approvalStatus: 'approved',
         };
 
     setUpdatingId(editingUser?.id ?? 'new-user');
@@ -249,34 +244,12 @@ const AdminUsers = (): JSX.Element => {
       fullName: user.full_name ?? '',
       phone: user.phone,
       role: newRole,
-      approvalStatus: user.approval_status,
+      approvalStatus: user.approval_status ?? 'approved',
     });
 
     if (!result.error) {
       await fetchUsers();
     }
-    setUpdatingId(null);
-  };
-
-  const updateApproval = async (
-    user: UserProfile,
-    approvalStatus: 'approved' | 'pending' | 'rejected'
-  ): Promise<void> => {
-    setUpdatingId(user.id);
-    const result = await invokeUserManager({
-      action: 'updateUser',
-      userId: user.id,
-      email: user.email,
-      fullName: user.full_name ?? '',
-      phone: user.phone,
-      role: user.role,
-      approvalStatus,
-    });
-
-    if (!result.error) {
-      await fetchUsers();
-    }
-
     setUpdatingId(null);
   };
 
@@ -301,26 +274,19 @@ const AdminUsers = (): JSX.Element => {
     setSuccess('User deleted successfully.');
   };
 
-  const approvalTone: Record<UserProfile['approval_status'], string> = {
-    approved: 'bg-sage text-white',
-    pending: 'bg-amber-100 text-amber-700',
-    rejected: 'bg-rose-100 text-rose-600',
-  };
-
   return (
     <AdminLayout title="Users">
       <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3">
             <StatCard icon={UserRound} label="People in system" value={users.length} detail="Every profile currently accessible inside the admin workspace." tone="sage" />
             <StatCard icon={Crown} label="Administrators" value={adminCount} detail="Accounts able to access this control center and manage data." tone="amber" />
             <StatCard icon={ShieldCheck} label="Members" value={memberCount} detail="Standard customers learning, booking, and receiving resources." tone="sky" />
-            <StatCard icon={Hourglass} label="Awaiting approval" value={pendingCount} detail="Registrations currently blocked until you manually approve them." tone="rose" />
           </div>
 
           <Panel title="User control center" eyebrow="Roles and access">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm leading-6 text-warm-gray">
-                Create accounts manually, adjust access, approve registrations, and remove users without leaving the admin workspace.
+                Create accounts manually, adjust access, assign roles, and manage users without leaving the admin workspace.
               </p>
               <button
                 type="button"
@@ -376,14 +342,6 @@ const AdminUsers = (): JSX.Element => {
                       <option value="admin">Admin</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">Approval status</label>
-                    <select value={draft.approvalStatus} onChange={(event) => setDraft((prev) => ({ ...prev, approvalStatus: event.target.value as UserProfile['approval_status'] }))} className="w-full rounded-2xl border border-beige bg-white px-4 py-3 text-sm text-charcoal outline-none focus:border-sage">
-                      <option value="pending">Pending</option>
-                      <option value="approved">Approved</option>
-                      <option value="rejected">Rejected</option>
-                    </select>
-                  </div>
                 </div>
 
                 <div className="mt-5 flex flex-wrap justify-end gap-3">
@@ -410,9 +368,6 @@ const AdminUsers = (): JSX.Element => {
                           <span className={`rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] ${user.role === 'admin' ? 'bg-sage text-white' : 'bg-white text-warm-gray'}`}>
                             {user.role}
                           </span>
-                          <span className={`rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] ${approvalTone[user.approval_status]}`}>
-                            {user.approval_status}
-                          </span>
                         </div>
                         <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-warm-gray">
                           <span>{user.email}</span>
@@ -428,25 +383,6 @@ const AdminUsers = (): JSX.Element => {
                       </div>
                       <div className="flex flex-wrap items-center gap-3">
                         <InsightChip label="Joined" value={new Date(user.created_at).toLocaleDateString()} />
-                        <InsightChip label="Approved" value={user.approved_at ? new Date(user.approved_at).toLocaleDateString() : 'Not yet'} />
-                        {user.role !== 'admin' ? (
-                          <>
-                            <button
-                              onClick={() => updateApproval(user, 'approved')}
-                              disabled={updatingId === user.id || user.approval_status === 'approved'}
-                              className="rounded-2xl border border-beige bg-white px-4 py-3 text-sm font-medium text-charcoal transition hover:border-sage hover:text-sage-dark disabled:opacity-50"
-                            >
-                              <span className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> Approve</span>
-                            </button>
-                            <button
-                              onClick={() => updateApproval(user, 'rejected')}
-                              disabled={updatingId === user.id || user.approval_status === 'rejected'}
-                              className="rounded-2xl border border-beige bg-white px-4 py-3 text-sm font-medium text-charcoal transition hover:border-rose-300 hover:text-rose-600 disabled:opacity-50"
-                            >
-                              <span className="inline-flex items-center gap-2"><XCircle className="h-4 w-4" /> Reject</span>
-                            </button>
-                          </>
-                        ) : null}
                         <button
                           onClick={() => openEdit(user)}
                           className="rounded-2xl border border-beige bg-white px-4 py-3 text-sm font-medium text-charcoal transition hover:border-sage hover:text-sage-dark"
