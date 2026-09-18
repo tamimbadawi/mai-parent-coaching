@@ -79,10 +79,10 @@ const ResetPassword = (): JSX.Element => {
               <p className="mt-2 text-sm text-warm-gray">You can now sign in with your new password.</p>
               <button
                 type="button"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/')}
                 className="mt-6 rounded-full bg-sage px-6 py-3 text-sm font-medium text-white hover:bg-sage-dark"
               >
-                Go to Dashboard
+                Go to Home
               </button>
             </div>
           ) : (

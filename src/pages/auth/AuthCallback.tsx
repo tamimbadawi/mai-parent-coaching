@@ -39,7 +39,7 @@ const AuthCallback = (): JSX.Element => {
         return;
       }
 
-      void navigate('/dashboard', { replace: true });
+      void navigate('/', { replace: true });
     };
 
     void handleCallback();

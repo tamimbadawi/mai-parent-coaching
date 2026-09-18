@@ -70,7 +70,7 @@ const Login = (): JSX.Element => {
   const [error, setError] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
-  const from = (location.state as { from?: string } | null)?.from ?? '/dashboard';
+  const from = (location.state as { from?: string } | null)?.from ?? '/';
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
