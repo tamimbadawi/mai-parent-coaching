@@ -172,9 +172,10 @@ export default function Booking() {
   const handleSelectDate = (key: string) => {
     setSelectedDate(key);
     setSelectedTime(null);
+    setAvailableTimes(TIMES);
   };
 
-  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  const [availableTimes, setAvailableTimes] = useState<string[]>(TIMES);
   const [userPreviousBookings, setUserPreviousBookings] = useState<BookingType[]>([]);
   const [loadingUserBookings, setLoadingUserBookings] = useState(false);
 
@@ -574,35 +575,34 @@ export default function Booking() {
                   <p className="py-2.5 text-center text-xs text-soft-gray">
                     Select a date above to view available open times.
                   </p>
-                ) : loadingSlots ? (
-                  <div className="flex items-center justify-center gap-2 py-3 text-xs text-soft-gray">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-sage" />
-                    <span>Checking open slots...</span>
-                  </div>
-                ) : availableTimes.length === 0 ? (
-                  <p className="py-2.5 text-center text-xs text-warm-gray">
-                    No available slots on this date. Please pick another day.
-                  </p>
                 ) : (
-                  <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
-                    {availableTimes.map((time) => {
-                      const sel = selectedTime === time;
-                      return (
-                        <button
-                          key={time}
-                          type="button"
-                          onClick={() => setSelectedTime(time)}
-                          className={cn(
-                            'flex items-center justify-center rounded-lg border py-1.5 text-xs font-semibold transition-all duration-150',
-                            sel
-                              ? 'border-sage bg-sage text-white shadow-sm ring-1 ring-sage/30'
-                              : 'border-beige/80 bg-white text-charcoal hover:border-sage/40 hover:bg-sage/5',
-                          )}
-                        >
-                          {time}
-                        </button>
-                      );
-                    })}
+                  <div className="space-y-2">
+                    {loadingSlots && (
+                      <div className="flex items-center justify-end gap-1.5 text-[10px] text-sage-dark">
+                        <Loader2 className="h-3 w-3 animate-spin text-sage" />
+                        <span>Syncing live availability...</span>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+                      {(availableTimes.length > 0 ? availableTimes : TIMES).map((time) => {
+                        const sel = selectedTime === time;
+                        return (
+                          <button
+                            key={time}
+                            type="button"
+                            onClick={() => setSelectedTime(time)}
+                            className={cn(
+                              'flex items-center justify-center rounded-lg border py-1.5 text-xs font-semibold transition-all duration-150',
+                              sel
+                                ? 'border-sage bg-sage text-white shadow-sm ring-1 ring-sage/30'
+                                : 'border-beige/80 bg-white text-charcoal hover:border-sage/40 hover:bg-sage/5',
+                            )}
+                          >
+                            {time}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
