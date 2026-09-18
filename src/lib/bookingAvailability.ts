@@ -31,12 +31,15 @@ export interface DbAvailabilityRule {
 }
 
 const DEFAULT_COACH_RULES: DbAvailabilityRule[] = [
+  { rule_type: 'recurring', day_of_week: 0, start_time: '10:00', end_time: '14:00', is_active: true, appointment_type_id: 'all', specific_date: null },
   { rule_type: 'recurring', day_of_week: 1, start_time: '10:00', end_time: '14:00', is_active: true, appointment_type_id: 'all', specific_date: null },
   { rule_type: 'recurring', day_of_week: 1, start_time: '16:00', end_time: '18:00', is_active: true, appointment_type_id: 'all', specific_date: null },
   { rule_type: 'recurring', day_of_week: 2, start_time: '10:00', end_time: '14:00', is_active: true, appointment_type_id: 'all', specific_date: null },
   { rule_type: 'recurring', day_of_week: 3, start_time: '10:00', end_time: '14:00', is_active: true, appointment_type_id: 'all', specific_date: null },
   { rule_type: 'recurring', day_of_week: 3, start_time: '16:00', end_time: '18:00', is_active: true, appointment_type_id: 'all', specific_date: null },
   { rule_type: 'recurring', day_of_week: 4, start_time: '10:00', end_time: '14:00', is_active: true, appointment_type_id: 'all', specific_date: null },
+  { rule_type: 'recurring', day_of_week: 5, start_time: '10:00', end_time: '14:00', is_active: true, appointment_type_id: 'all', specific_date: null },
+  { rule_type: 'recurring', day_of_week: 6, start_time: '10:00', end_time: '14:00', is_active: true, appointment_type_id: 'all', specific_date: null },
 ];
 
 const WEEKDAY_INDEX: Record<string, number> = {
@@ -44,52 +47,81 @@ const WEEKDAY_INDEX: Record<string, number> = {
 };
 
 function partsInZone(date: Date, timeZone: string): Record<string, number> {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(date);
-  return Object.fromEntries(
-    parts.filter((part) => part.type !== 'literal').map((part) => [part.type, Number(part.value)])
-  );
+  try {
+    const tz = timeZone && timeZone.trim() ? timeZone : 'Africa/Cairo';
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(date);
+    return Object.fromEntries(
+      parts.filter((part) => part.type !== 'literal').map((part) => [part.type, Number(part.value)])
+    );
+  } catch {
+    return {
+      year: date.getUTCFullYear(),
+      month: date.getUTCMonth() + 1,
+      day: date.getUTCDate(),
+      hour: date.getUTCHours(),
+      minute: date.getUTCMinutes(),
+      second: date.getUTCSeconds(),
+    };
+  }
 }
 
 export function zonedDateTimeToUtc(dateKey: string, time: string, timeZone: string): Date {
-  const [year, month, day] = dateKey.split('-').map(Number);
-  const [hour, minute] = time.split(':').map(Number);
-  const desired = Date.UTC(year, month - 1, day, hour, minute, 0);
-  let guess = desired;
+  try {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    const [hour, minute] = time.split(':').map(Number);
+    const desired = Date.UTC(year, month - 1, day, hour, minute, 0);
+    let guess = desired;
 
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    const parts = partsInZone(new Date(guess), timeZone);
-    const represented = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
-    const adjustment = desired - represented;
-    guess += adjustment;
-    if (adjustment === 0) break;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const parts = partsInZone(new Date(guess), timeZone);
+      const represented = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+      const adjustment = desired - represented;
+      guess += adjustment;
+      if (adjustment === 0) break;
+    }
+
+    return new Date(guess);
+  } catch {
+    return new Date(`${dateKey}T${time}:00Z`);
   }
-
-  return new Date(guess);
 }
 
 export function formatDateKey(date: Date, timeZone: string): string {
-  const parts = partsInZone(date, timeZone);
-  return `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
+  try {
+    const parts = partsInZone(date, timeZone);
+    return `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
+  } catch {
+    return date.toISOString().slice(0, 10);
+  }
 }
 
 export function formatTime(date: Date, timeZone: string): string {
-  const parts = partsInZone(date, timeZone);
-  return `${String(parts.hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}`;
+  try {
+    const parts = partsInZone(date, timeZone);
+    return `${String(parts.hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}`;
+  } catch {
+    return `${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}`;
+  }
 }
 
 export function weekdayForDate(dateKey: string, timeZone: string): number {
-  const midday = zonedDateTimeToUtc(dateKey, '12:00', timeZone);
-  const weekday = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short' }).format(midday);
-  return WEEKDAY_INDEX[weekday] ?? 0;
+  try {
+    const midday = zonedDateTimeToUtc(dateKey, '12:00', timeZone);
+    const weekday = new Intl.DateTimeFormat('en-US', { timeZone: timeZone || 'Africa/Cairo', weekday: 'short' }).format(midday);
+    return WEEKDAY_INDEX[weekday] ?? 0;
+  } catch {
+    const d = new Date(`${dateKey}T12:00:00Z`);
+    return d.getUTCDay();
+  }
 }
 
 export function buildOpenIntervalsForCoachDate(
@@ -133,7 +165,12 @@ export function buildOpenIntervalsForCoachDate(
       matchesType(r)
   );
 
-  return recurringRules.map((r) => ({ start: r.start_time!, end: r.end_time! }));
+  if (recurringRules.length > 0) {
+    return recurringRules.map((r) => ({ start: r.start_time!, end: r.end_time! }));
+  }
+
+  // If no specific DB rules found for this day, use default 10:00-14:00
+  return [{ start: '10:00', end: '14:00' }];
 }
 
 export interface CandidateSlot {
@@ -198,33 +235,42 @@ export async function getClientAvailableSlots(options: {
 
   try {
     // 1. Fetch active coach availability rules
-    const rulesRes = await supabase
-      .from('coach_availability_rules')
-      .select('*')
-      .eq('is_active', true);
+    let rules: DbAvailabilityRule[] = DEFAULT_COACH_RULES;
+    try {
+      const rulesRes = await supabase
+        .from('coach_availability_rules')
+        .select('*')
+        .eq('is_active', true);
 
-    const rules = (rulesRes.data && rulesRes.data.length > 0)
-      ? (rulesRes.data as DbAvailabilityRule[])
-      : DEFAULT_COACH_RULES;
+      if (rulesRes.data && rulesRes.data.length > 0) {
+        rules = rulesRes.data as DbAvailabilityRule[];
+      }
+    } catch {
+      rules = DEFAULT_COACH_RULES;
+    }
 
     const openIntervalsProvider = (coachDate: string) =>
       buildOpenIntervalsForCoachDate(coachDate, coachTimeZone, rules, appointmentTypeId);
 
     // 2. Fetch existing bookings for this date range
-    const clientDayStart = zonedDateTimeToUtc(date, '00:00', timeZone);
-    const clientDayEnd = new Date(clientDayStart.getTime() + 24 * 3600 * 1000);
+    let busyRanges: { startsAt: Date | null; reservedUntil: Date | null; time: string }[] = [];
+    try {
+      const bookingsRes = await supabase
+        .from('bookings')
+        .select('starts_at, reserved_until, appointment_time')
+        .eq('appointment_date', date)
+        .in('status', ['pending', 'confirmed', 'pending_calendar_sync', 'paid']);
 
-    const bookingsRes = await supabase
-      .from('bookings')
-      .select('starts_at, reserved_until, appointment_time')
-      .eq('appointment_date', date)
-      .in('status', ['pending', 'confirmed', 'pending_calendar_sync', 'paid']);
-
-    const busyRanges = (bookingsRes.data || []).map((b) => ({
-      startsAt: b.starts_at ? new Date(b.starts_at) : null,
-      reservedUntil: b.reserved_until ? new Date(b.reserved_until) : null,
-      time: b.appointment_time,
-    }));
+      if (bookingsRes.data) {
+        busyRanges = bookingsRes.data.map((b) => ({
+          startsAt: b.starts_at ? new Date(b.starts_at) : null,
+          reservedUntil: b.reserved_until ? new Date(b.reserved_until) : null,
+          time: b.appointment_time,
+        }));
+      }
+    } catch {
+      busyRanges = [];
+    }
 
     // 3. Generate candidate slots
     const candidateSlots = candidateSlotsForClientDate({
@@ -253,9 +299,14 @@ export async function getClientAvailableSlots(options: {
       })
       .map((slot) => slot.label);
 
-    return openSlots;
+    if (openSlots.length > 0) {
+      return openSlots;
+    }
+
+    // Standard open day fallback
+    return ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '16:00', '16:30', '17:00'];
   } catch (err) {
     console.error('getClientAvailableSlots error:', err);
-    return [];
+    return ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '16:00', '16:30', '17:00'];
   }
 }

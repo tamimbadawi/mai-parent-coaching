@@ -135,7 +135,7 @@ function resolveBookingEmail(profile: UserProfile | null, user: SupabaseUser | n
 
 export default function Booking() {
   const { user, profile, loading: authLoading } = useAuth();
-  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<string | null>('initial');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
@@ -151,7 +151,8 @@ export default function Booking() {
 
   const userTimeZone = useMemo(() => {
     try {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Cairo';
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      return tz && tz.trim() ? tz : 'Africa/Cairo';
     } catch {
       return 'Africa/Cairo';
     }
@@ -163,7 +164,7 @@ export default function Booking() {
     return eachDayOfInterval({ start: startOfWeek(monthStart), end: endOfWeek(monthEnd) });
   }, [calendarMonth]);
 
-  const isBookable = (date: Date) => !isBefore(date, today) && !isWeekend(date);
+  const isBookable = (date: Date) => !isBefore(date, today);
 
   const handleSelectDate = (key: string) => {
     setSelectedDate(key);
