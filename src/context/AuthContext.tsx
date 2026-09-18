@@ -277,8 +277,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
 
     try {
       await supabase.auth.signOut({ scope: 'global' });
-    } catch (err) {
-      console.warn('Global signout error, trying local scope:', err);
+    } catch {
       try {
         await supabase.auth.signOut({ scope: 'local' });
       } catch {
@@ -286,25 +285,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       }
     }
 
-    // Explicitly wipe all supabase session keys from browser storage
+    // 1. Wipe all localStorage items matching supabase or auth
     try {
-      const localKeys: string[] = [];
+      const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith('sb-') || key.includes('supabase.auth.token') || key.includes('auth-token'))) {
-          localKeys.push(key);
+        if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth') || key.includes('token'))) {
+          keysToRemove.push(key);
         }
       }
-      localKeys.forEach((k) => localStorage.removeItem(k));
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch {
+      // ignore
+    }
 
-      const sessionKeys: string[] = [];
+    // 2. Wipe all sessionStorage items
+    try {
+      const keysToRemove: string[] = [];
       for (let i = 0; i < sessionStorage.length; i++) {
         const key = sessionStorage.key(i);
-        if (key && (key.startsWith('sb-') || key.includes('supabase.auth.token') || key.includes('auth-token'))) {
-          sessionKeys.push(key);
+        if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth') || key.includes('token'))) {
+          keysToRemove.push(key);
         }
       }
-      sessionKeys.forEach((k) => sessionStorage.removeItem(k));
+      keysToRemove.forEach((k) => sessionStorage.removeItem(k));
+    } catch {
+      // ignore
+    }
+
+    // 3. Clear auth cookies
+    try {
+      document.cookie.split(';').forEach((cookie) => {
+        const eqPos = cookie.indexOf('=');
+        const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
+        if (name.startsWith('sb-') || name.includes('supabase') || name.includes('auth') || name.includes('token')) {
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+        }
+      });
     } catch {
       // ignore
     }
