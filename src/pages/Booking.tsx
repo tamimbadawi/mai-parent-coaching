@@ -189,7 +189,15 @@ export default function Booking() {
     async function loadLiveAvailability() {
       setLoadingSlots(true);
       try {
-        const { data, error } = await supabase.functions.invoke('get-availability', {
+        // 1. Fetch existing bookings for this date as instant fallback
+        const bookingsPromise = supabase
+          .from('bookings')
+          .select('appointment_time')
+          .eq('appointment_date', selectedDate)
+          .in('status', ['confirmed', 'pending_calendar_sync', 'pending', 'paid']);
+
+        // 2. Invoke Edge Function with a 2.5s timeout
+        const edgePromise = supabase.functions.invoke('get-availability', {
           body: {
             date: selectedDate,
             appointmentTypeId: selectedType || 'initial',
@@ -197,31 +205,50 @@ export default function Booking() {
           },
         });
 
+        const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) =>
+          setTimeout(() => resolve({ data: null, error: new Error('Availability timeout') }), 2500)
+        );
+
+        const [edgeResult, bookingsResult] = await Promise.all([
+          Promise.race([edgePromise, timeoutPromise]),
+          bookingsPromise,
+        ]);
+
         if (!isMounted) return;
 
-        if (error || !data) {
-          console.warn('get-availability error:', error);
-          setAvailableTimes([]);
-        } else {
-          const openSlots: string[] = data.availableSlots || [];
+        const bookedTimes = new Set((bookingsResult.data || []).map((b: { appointment_time: string }) => b.appointment_time));
+        const defaultAvailable = TIMES.filter((t) => !bookedTimes.has(t));
+
+        if (edgeResult.data && Array.isArray(edgeResult.data.availableSlots) && edgeResult.data.availableSlots.length > 0) {
+          const openSlots: string[] = edgeResult.data.availableSlots;
           setAvailableTimes(openSlots);
           if (selectedTime && !openSlots.includes(selectedTime)) {
             setSelectedTime(null);
           }
+        } else {
+          // Use standard open slots filtered by confirmed bookings
+          setAvailableTimes(defaultAvailable);
+          if (selectedTime && !defaultAvailable.includes(selectedTime)) {
+            setSelectedTime(null);
+          }
         }
       } catch (err) {
-        console.error('Error fetching available slots:', err);
-        if (isMounted) setAvailableTimes([]);
+        console.warn('Error fetching live availability, using fallback slots:', err);
+        if (isMounted) {
+          setAvailableTimes(TIMES);
+        }
       } finally {
-        if (isMounted) setLoadingSlots(false);
+        if (isMounted) {
+          setLoadingSlots(false);
+        }
       }
     }
 
-    loadLiveAvailability();
+    void loadLiveAvailability();
     return () => {
       isMounted = false;
     };
-  }, [selectedDate, selectedType]);
+  }, [selectedDate, selectedType, userTimeZone]);
 
   const fetchUserBookings = async () => {
     if (!user && !formData.email.trim()) {

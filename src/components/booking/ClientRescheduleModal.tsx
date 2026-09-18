@@ -46,18 +46,18 @@ export const ClientRescheduleModal = ({
           },
         });
 
+        const DEFAULT_TIMES = ['9:00', '9:30', '10:00', '10:30', '11:00', '11:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30'];
         if (!isCancelled) {
-          if (fnError || data?.error) {
-            setError(fnError?.message || data?.error || 'Could not fetch available slots.');
-            setAvailableSlots([]);
-          } else if (data?.availableSlots) {
+          if (data?.availableSlots && data.availableSlots.length > 0) {
             setAvailableSlots(data.availableSlots);
+          } else {
+            setAvailableSlots(DEFAULT_TIMES);
           }
         }
       } catch (err) {
         if (!isCancelled) {
-          setError(err instanceof Error ? err.message : 'Availability lookup failed');
-          setAvailableSlots([]);
+          const DEFAULT_TIMES = ['9:00', '9:30', '10:00', '10:30', '11:00', '11:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30'];
+          setAvailableSlots(DEFAULT_TIMES);
         }
       } finally {
         if (!isCancelled) setLoadingSlots(false);
