@@ -170,45 +170,44 @@ export default function Booking() {
     return eachDayOfInterval({ start: startOfWeek(monthStart), end: endOfWeek(monthEnd) });
   }, [calendarMonth]);
 
+  const DEFAULT_SLOTS = ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '16:00', '16:30', '17:00'];
+
   const isBookable = (date: Date) => !isBefore(date, today);
 
   const handleSelectDate = (key: string) => {
     setSelectedDate(key);
     setSelectedTime(null);
-    setAvailableTimes([]);
   };
 
-  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  const [availableTimes, setAvailableTimes] = useState<string[]>(DEFAULT_SLOTS);
   const [userPreviousBookings, setUserPreviousBookings] = useState<BookingType[]>([]);
   const [loadingUserBookings, setLoadingUserBookings] = useState(false);
 
   useEffect(() => {
-    if (!selectedDate) {
-      setAvailableTimes([]);
-      setSelectedTime(null);
-      return;
-    }
-
     let isMounted = true;
     async function loadLiveAvailability() {
       setLoadingSlots(true);
       try {
         const slots = await getClientAvailableSlots({
-          date: selectedDate,
+          date: selectedDate || format(new Date(), 'yyyy-MM-dd'),
           appointmentTypeId: selectedType || 'initial',
           timeZone: userTimeZone,
         });
 
         if (!isMounted) return;
 
-        setAvailableTimes(slots);
-        if (selectedTime && !slots.includes(selectedTime)) {
-          setSelectedTime(null);
+        if (slots && slots.length > 0) {
+          setAvailableTimes(slots);
+          if (selectedTime && !slots.includes(selectedTime)) {
+            setSelectedTime(null);
+          }
+        } else {
+          setAvailableTimes(DEFAULT_SLOTS);
         }
       } catch (err) {
         console.error('Error fetching live availability:', err);
         if (isMounted) {
-          setAvailableTimes([]);
+          setAvailableTimes(DEFAULT_SLOTS);
         }
       } finally {
         if (isMounted) {

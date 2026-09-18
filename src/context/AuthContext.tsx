@@ -275,11 +275,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     setProfile(null);
     setEnrollments([]);
 
-    const { error } = await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch (err) {
+      console.warn('Global signout error, trying local scope:', err);
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch {
+        // ignore
+      }
+    }
 
-    if (error) {
-      console.error('AuthContext - Sign out error, trying local scope:', error);
-      await supabase.auth.signOut({ scope: 'local' });
+    // Explicitly wipe all supabase session keys from browser storage
+    try {
+      const localKeys: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('supabase.auth.token') || key.includes('auth-token'))) {
+          localKeys.push(key);
+        }
+      }
+      localKeys.forEach((k) => localStorage.removeItem(k));
+
+      const sessionKeys: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('supabase.auth.token') || key.includes('auth-token'))) {
+          sessionKeys.push(key);
+        }
+      }
+      sessionKeys.forEach((k) => sessionStorage.removeItem(k));
+    } catch {
+      // ignore
     }
   }, []);
 
