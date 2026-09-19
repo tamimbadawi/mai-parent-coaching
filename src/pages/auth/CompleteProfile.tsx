@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Sparkles, Phone, ShieldCheck, LogOut, Loader2 } from 'lucide-react';
 import AnimatedSection from '../../components/ui/AnimatedSection';
 import { useAuth } from '../../context/AuthContext';
@@ -8,6 +7,7 @@ import { COUNTRIES, type CountryOption } from '../../data/countries';
 
 const CompleteProfile = (): JSX.Element => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, profile, loading, updateProfile, signOut } = useAuth();
 
   const [phone, setPhone] = useState(profile?.phone || '');
@@ -21,21 +21,8 @@ const CompleteProfile = (): JSX.Element => {
   useEffect(() => {
     if (!loading && !user) {
       void navigate('/auth/login', { replace: true });
-      return;
     }
-
-    if (!loading && user && profile) {
-      const cleanDigits = (profile.phone || '').replace(/\D/g, '');
-      if (profile.phone && cleanDigits.length >= 7 && profile.country) {
-        if (profile.role === 'admin') {
-          void navigate('/admin', { replace: true });
-        } else {
-          void navigate('/', { replace: true });
-        }
-        return;
-      }
-    }
-  }, [loading, user, profile, navigate]);
+  }, [loading, user, navigate]);
 
   useEffect(() => {
     if (profile?.phone && !phone) {
@@ -83,7 +70,10 @@ const CompleteProfile = (): JSX.Element => {
       return;
     }
 
-    if (profile?.role === 'admin') {
+    const from = (location.state as { from?: string } | null)?.from;
+    if (from) {
+      void navigate(from, { replace: true });
+    } else if (profile?.role === 'admin') {
       void navigate('/admin', { replace: true });
     } else {
       void navigate('/', { replace: true });
