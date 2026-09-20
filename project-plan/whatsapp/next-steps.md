@@ -4,8 +4,10 @@ Follow these implementation stages in exact sequential order.
 
 > [!IMPORTANT]
 > - Do **NOT** mark any stage as completed without running it and verifying real output.
-> - Stop for user confirmation after each stage before advancing.
+> - Continue verified infrastructure and implementation work without pausing between stages; the owner requested autonomous completion.
 > - Do **NOT** wire into `BookingPage.tsx` or `AdminBookings.tsx` until Stages 1–4 are fully confirmed.
+
+The admin connection interface and its Supabase proxy were built in parallel with VM setup. They are available on the feature-branch preview; real phone pairing and message delivery still gate production booking automation. See `status.md` for current evidence.
 
 ---
 

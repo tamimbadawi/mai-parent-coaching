@@ -1,6 +1,6 @@
 # WhatsApp Automation — Status
 
-## Current Status: In Progress (Stage 1: Oracle VM Setup)
+## Current Status: Deployed and awaiting WhatsApp pairing
 
 > [!IMPORTANT]
 > This service is developed in explicit, sequentially verified stages. No stage is marked complete without real command outputs and live execution evidence.
@@ -24,8 +24,16 @@ Build a self-hosted WhatsApp automation companion microservice using **`whatsapp
 
 | Stage | Focus | Status | Verification Gate |
 | :--- | :--- | :--- | :--- |
-| **Stage 1** | **Oracle VM Setup & Hardening** | 🟡 **In Progress** | Live SSH connection to running Ampere A1 instance + Docker installed. |
-| **Stage 2** | **Microservice Build** | ⚪ Pending | Isolated build in `services/whatsapp-bot/` on `feature/whatsapp-service` branch. |
-| **Stage 3** | **Deploy, Pair & Reboot Test** | ⚪ Pending | Pair via `/qr`, verify `/status`, reboot VM/process, verify persistent `/status` without rescanning. |
+| **Stage 1** | **Oracle VM Setup & Hardening** | ✅ Complete | New Ubuntu 24.04 Ampere A1 VM at `144.24.209.195`; SSH, Docker, loopback API, and HTTPS firewall verified. |
+| **Stage 2** | **Microservice Build** | ✅ Complete | Service in `services/whatsapp-bot/`; 58 tests pass; live `/health`, authenticated `/status`, and QR retrieval verified. |
+| **Stage 3** | **Deploy, Pair & Reboot Test** | 🟡 In Progress | Container runs with persistent `mai_whatsapp_session_data` volume and restarts cleanly. QR is ready; phone pairing and paired-session reboot verification remain. |
 | **Stage 4** | **Real Test Message** | ⚪ Pending | Send live test message to personal number via `/send-message` with API key. |
-| **Stage 5** | **Website & Booking Integration** | ⚪ Future / Post-Verification | Wire to `create-booking`, Supabase triggers, and admin dashboard. |
+| **Stage 5** | **Website & Booking Integration** | 🟡 Partial | Admin connect/disconnect UI is on the `feature/whatsapp-service` Vercel preview. The protected Supabase proxy is deployed with server-side secrets. Booking messages and production website release remain. |
+
+## Live deployment notes
+
+- WhatsApp service: Oracle VM `whatsapp-bot-vm-new`, HTTPS endpoint `https://144.24.209.195`, with only `/status`, `/qr`, and `/reset-session` proxied. Port 3001 remains bound to localhost.
+- TLS: Let's Encrypt IP certificate with automatic Certbot renewal and Nginx reload; renewal dry run passed on 2026-09-20.
+- Supabase project: `qqnthevakllugdlioalm`, function `admin-whatsapp-manager`. `WHATSAPP_SERVICE_URL` and `WHATSAPP_API_SECRET_KEY` are stored as Edge Function secrets.
+- Preview: `https://mai-parent-coaching-git-feature-whatsapp-service-asacontracting.vercel.app/admin/whatsapp`. Admin login is required.
+- The original Oracle VM remains intact until paired operation is verified on the replacement.

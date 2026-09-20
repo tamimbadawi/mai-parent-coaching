@@ -54,8 +54,8 @@
 
 ## 5. Security & Rate Limiting
 
-- **API Secret Key**: All mutative endpoints (`/send-message`, `/reset-session`) require `Authorization: Bearer <API_SECRET_KEY>` matching the server's environment variable.
-- **Network Hardening**: VM ingress restricted strictly to port `22` (SSH via Ed25519 key only) and service port `3001`.
+- **API Secret Key**: All operational endpoints except `/health` require `Authorization: Bearer <API_SECRET_KEY>` matching the server's environment variable.
+- **Network Hardening**: The service listens on VM loopback port `3001`. Public ingress allows port `22` for SSH, port `80` for certificate validation, and port `443` for the HTTPS reverse proxy. Only protected management routes are proxied; port `3001` is never public. Supabase stores the service bearer key server-side and checks the caller's admin role before forwarding requests.
 - **Anti-Ban Mitigation & Rate Limiting**:
   - Queue-based message dispatcher with randomized human-like delay between messages (e.g. 3–8 seconds).
   - *Honest Risk Assessment*: Rate limiting prevents flooding and automated burst detection by WhatsApp servers. It does **not** protect against WhatsApp bans if recipients manually report or block messages as unsolicited spam. Messages must only be sent to parents with active, opt-in relationships.
