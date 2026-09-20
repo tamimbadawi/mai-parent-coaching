@@ -5,7 +5,8 @@
  * - Serialized delivery with randomized human-like jitter (3-8 seconds).
  * - Returns a Promise settling ONLY after whatsapp-web.js sendMessage resolves.
  * - Resolves with the actual serialized message ID from WhatsApp.
- * - Missing/empty message ID is treated as DELIVERY_OUTCOME_UNKNOWN (non-2xx), no automatic retry.
+ * - A resolved send without a message ID is reported as submitted with
+ *   unconfirmed delivery; callers must not automatically retry.
  * - Catches synchronous and asynchronous sendMessage throws identically.
  * - Removes jobs strictly by identity; timing out during jitter sleep never drops adjacent jobs.
  * - PRIVACY: Serialized message ID is returned to the HTTP response, but NEVER logged.
@@ -33,6 +34,7 @@ class MessageQueue {
     this.currentSleepAbort = null;
     this.totalProcessed = 0;
     this.totalFailed = 0;
+    this.totalUnconfirmed = 0;
     this.client = null;
   }
 
@@ -255,8 +257,8 @@ class MessageQueue {
           const serializedId = (rawId && rawId.trim().length > 0) ? rawId.trim() : null;
 
           if (!serializedId) {
-            this.totalFailed++;
-            logger.error('WhatsApp dispatch returned missing or empty message ID', {
+            this.totalUnconfirmed++;
+            logger.warn('WhatsApp send resolved without a confirmable message ID', {
               jobId,
               reasonCode: 'MISSING_MESSAGE_ID',
             });
@@ -264,10 +266,13 @@ class MessageQueue {
             if (!currentJob.settled) {
               currentJob.settled = true;
               if (currentJob.timeoutTimer) clearTimeout(currentJob.timeoutTimer);
-              const unconfirmedErr = new Error('Message dispatch completed with unconfirmed message ID; delivery outcome unknown. Do not blindly retry.');
-              unconfirmedErr.status = 502;
-              unconfirmedErr.code = 'DELIVERY_OUTCOME_UNKNOWN';
-              currentJob.reject(unconfirmedErr);
+              currentJob.resolve({
+                success: true,
+                status: 'submitted',
+                deliveryConfirmed: false,
+                messageId: null,
+                jobId,
+              });
             }
           } else {
             // PRIVACY RULE: Log only non-sensitive operational metadata (NEVER log messageId!)
@@ -365,6 +370,7 @@ class MessageQueue {
       generation: this.generation,
       totalProcessed: this.totalProcessed,
       totalFailed: this.totalFailed,
+      totalUnconfirmed: this.totalUnconfirmed,
       maxSize: this.maxSize,
     };
   }

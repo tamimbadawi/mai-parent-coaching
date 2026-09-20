@@ -165,7 +165,7 @@ test('HTTP Endpoints & Routing Suite', async (t) => {
     messageQueue.setClient(null);
   });
 
-  await t.test('POST /send-message returns 502 with generic DELIVERY_OUTCOME_UNKNOWN when message ID is missing', async () => {
+  await t.test('POST /send-message returns 202 with unconfirmed delivery when message ID is missing', async () => {
     whatsAppClientManager.state = STATES.READY;
     messageQueue.setDelays(10, 15);
 
@@ -180,9 +180,10 @@ test('HTTP Endpoints & Routing Suite', async (t) => {
       .set('Authorization', `Bearer ${TEST_SECRET}`)
       .send({ to: '+966501234567', text: 'Missing ID check' });
 
-    assert.equal(res.status, 502);
-    assert.equal(res.body.code, 'DELIVERY_OUTCOME_UNKNOWN');
-    assert.equal(res.body.error, 'Message dispatch timed out or unconfirmed; delivery outcome unknown. Do not blindly retry.');
+    assert.equal(res.status, 202);
+    assert.equal(res.body.status, 'submitted');
+    assert.equal(res.body.deliveryConfirmed, false);
+    assert.equal(res.body.messageId, null);
 
     whatsAppClientManager.state = STATES.INITIALIZING;
     whatsAppClientManager.client = null;

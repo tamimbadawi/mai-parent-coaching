@@ -131,12 +131,22 @@ To maintain security:
   }
 }
 ```
-- **Response**: `200 OK` (Awaits actual delivery resolution from whatsapp-web.js)
+- **Response**: `200 OK` when whatsapp-web.js returns a message ID
 ```json
 {
   "success": true,
   "status": "sent",
   "messageId": "true_966501234567@c.us_3EB0123456789ABC",
+  "jobId": "msg_1726833600000_a1b2c3d4"
+}
+```
+- **`202 Accepted`**: WhatsApp Web resolved the send request without returning a message ID. Delivery is unconfirmed; do not automatically retry because the message may already have arrived.
+```json
+{
+  "success": true,
+  "status": "submitted",
+  "deliveryConfirmed": false,
+  "messageId": null,
   "jobId": "msg_1726833600000_a1b2c3d4"
 }
 ```

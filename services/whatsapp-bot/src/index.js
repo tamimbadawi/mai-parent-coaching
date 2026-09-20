@@ -189,7 +189,7 @@ app.post('/send-message', authenticate, validateSendMessage, async (req, res) =>
     // Await actual network dispatch resolution from whatsapp-web.js
     const result = await messageQueue.enqueue({ to: cleanTo, text: finalText });
 
-    return res.status(200).json(result);
+    return res.status(result.status === 'submitted' ? 202 : 200).json(result);
   } catch (err) {
     const status = err.status || 500;
     const code = err.code || (status >= 500 ? 'SERVER_ERROR' : 'REQUEST_ERROR');

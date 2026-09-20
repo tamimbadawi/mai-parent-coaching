@@ -227,7 +227,7 @@ test('MessageQueue and Anti-Flood Limiter', async (t) => {
     assert.equal(queue.getStatus().queueLength, 0);
   });
 
-  await t.test('missing or empty messageId from WhatsApp is treated as DELIVERY_OUTCOME_UNKNOWN (502)', async () => {
+  await t.test('resolved sends without message IDs are submitted with unconfirmed delivery', async () => {
     const queue = new MessageQueue({ maxSize: 10, minDelayMs: 10, maxDelayMs: 20 });
 
     // Client returning no ID at all
@@ -235,28 +235,19 @@ test('MessageQueue and Anti-Flood Limiter', async (t) => {
       sendMessage: async () => ({ id: null }),
     });
 
-    await assert.rejects(
-      () => queue.enqueue({ to: '966501234567@c.us', text: 'No ID test' }),
-      (err) => {
-        assert.equal(err.status, 502);
-        assert.equal(err.code, 'DELIVERY_OUTCOME_UNKNOWN');
-        assert.match(err.message, /unconfirmed message ID; delivery outcome unknown\. Do not blindly retry/);
-        return true;
-      }
-    );
+    const noId = await queue.enqueue({ to: '966501234567@c.us', text: 'No ID test' });
+    assert.equal(noId.status, 'submitted');
+    assert.equal(noId.deliveryConfirmed, false);
+    assert.equal(noId.messageId, null);
 
     // Client returning empty serialized string
     queue.setClient({
       sendMessage: async () => ({ id: { _serialized: '   ' } }),
     });
 
-    await assert.rejects(
-      () => queue.enqueue({ to: '966501234567@c.us', text: 'Empty ID test' }),
-      (err) => {
-        assert.equal(err.status, 502);
-        assert.equal(err.code, 'DELIVERY_OUTCOME_UNKNOWN');
-        return true;
-      }
-    );
+    const emptyId = await queue.enqueue({ to: '966501234567@c.us', text: 'Empty ID test' });
+    assert.equal(emptyId.status, 'submitted');
+    assert.equal(queue.getStatus().totalUnconfirmed, 2);
+    assert.equal(queue.getStatus().totalFailed, 0);
   });
 });
