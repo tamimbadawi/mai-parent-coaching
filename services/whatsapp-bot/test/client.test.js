@@ -133,6 +133,37 @@ test('Client Session Safety & Reset Fail-Closed', async (t) => {
     assert.equal(manager.state, STATES.INITIALIZING);
   });
 
+  await t.test('resetSession clears contents while preserving the mounted session directory', async () => {
+    const parentDir = path.resolve(__dirname, '../.test_auth_mounted_reset');
+    const testDir = path.join(parentDir, '.wwebjs_auth');
+    const sessionDir = path.join(testDir, 'session-mai');
+    const outsideCanary = path.join(parentDir, 'outside.txt');
+    fs.mkdirSync(sessionDir, { recursive: true });
+    fs.writeFileSync(path.join(sessionDir, 'session.json'), 'old session');
+    fs.writeFileSync(outsideCanary, 'keep');
+
+    const originalPath = config.SESSION_DATA_PATH;
+    config.SESSION_DATA_PATH = testDir;
+    const manager = new WhatsAppClientManager();
+    manager.client = {
+      removeAllListeners() {},
+      logout: async () => {},
+      destroy: async () => {},
+    };
+    manager.initialize = async () => {};
+
+    try {
+      const result = await manager.resetSession();
+      assert.equal(result.status, 'ok');
+      assert.equal(fs.existsSync(testDir), true, 'volume mount directory must remain');
+      assert.deepEqual(fs.readdirSync(testDir), [], 'old session data must be removed');
+      assert.equal(fs.readFileSync(outsideCanary, 'utf8'), 'keep');
+    } finally {
+      config.SESSION_DATA_PATH = originalPath;
+      fs.rmSync(parentDir, { recursive: true, force: true });
+    }
+  });
+
   await t.test('resetSession fails closed before logout/destroy if path is unsafe (no deletion, no success)', async () => {
     const originalPath = config.SESSION_DATA_PATH;
 

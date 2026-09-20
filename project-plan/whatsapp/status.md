@@ -25,8 +25,8 @@ Build a self-hosted WhatsApp automation companion microservice using **`whatsapp
 | Stage | Focus | Status | Verification Gate |
 | :--- | :--- | :--- | :--- |
 | **Stage 1** | **Oracle VM Setup & Hardening** | ✅ Complete | New Ubuntu 24.04 Ampere A1 VM at `144.24.209.195`; SSH, Docker, loopback API, and HTTPS firewall verified. |
-| **Stage 2** | **Microservice Build** | ✅ Complete | Service in `services/whatsapp-bot/`; 58 tests pass; live `/health`, authenticated `/status`, and QR retrieval verified. |
-| **Stage 3** | **Deploy, Pair & Reboot Test** | 🟡 In Progress | Container runs with persistent `mai_whatsapp_session_data` volume and restarts cleanly. QR is ready; phone pairing and paired-session reboot verification remain. |
+| **Stage 2** | **Microservice Build** | ✅ Complete | Service in `services/whatsapp-bot/`; 59 tests pass; live `/health`, authenticated `/status`, and QR retrieval verified. |
+| **Stage 3** | **Deploy, Pair & Reboot Test** | 🟡 In Progress | Container runs with persistent `mai_whatsapp_session_data` volume and restarts cleanly. Live `/reset-session` clears the mounted volume contents and regenerates a QR. Phone pairing and paired-session reboot verification remain. |
 | **Stage 4** | **Real Test Message** | ⚪ Pending | Send live test message to personal number via `/send-message` with API key. |
 | **Stage 5** | **Website & Booking Integration** | 🟡 Partial | Admin connect/disconnect UI is on the `feature/whatsapp-service` Vercel preview. The protected Supabase proxy is deployed with server-side secrets. Booking messages and production website release remain. |
 

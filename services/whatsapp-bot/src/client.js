@@ -480,14 +480,23 @@ class WhatsAppClientManager {
       throw failError;
     }
 
-    // 8. Purge session storage directory (FAIL-CLOSED)
+    // 8. Purge the contents, preserving the directory itself because Docker
+    // mounts the persistent volume at this path. Removing a mount point fails
+    // with EBUSY even after a successful logout.
     if (fs.existsSync(safePath)) {
       try {
-        fs.rmSync(safePath, { recursive: true, force: true });
-        if (fs.existsSync(safePath)) {
-          throw new Error('Directory still present after deletion');
+        for (const entry of fs.readdirSync(safePath, { withFileTypes: true })) {
+          const entryPath = path.join(safePath, entry.name);
+          if (entry.isDirectory() && !entry.isSymbolicLink()) {
+            fs.rmSync(entryPath, { recursive: true, force: true });
+          } else {
+            fs.unlinkSync(entryPath);
+          }
         }
-        logger.info('LocalAuth session data directory removed successfully');
+        if (fs.readdirSync(safePath).length !== 0) {
+          throw new Error('Session directory still contains data after purge');
+        }
+        logger.info('LocalAuth session data cleared successfully');
       } catch (err) {
         // FAIL-CLOSED: do NOT proceed to re-initialize; mark ERROR and reject
         this.state = STATES.ERROR;
