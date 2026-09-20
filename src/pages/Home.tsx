@@ -40,17 +40,27 @@ export default function Home() {
             </AnimatedSection>
 
             <AnimatedSection delay={0.2} direction="left">
-              <div className="relative">
-                <div className="rounded-3xl overflow-hidden shadow-xl">
+              <div className="relative flex items-center justify-center">
+                {/* Soft ambient backdrop glow */}
+                <div className="absolute -inset-4 rounded-[2.5rem] bg-gradient-to-tr from-sage/20 via-cream to-terracotta/10 blur-xl opacity-75" />
+
+                <div className="relative w-full max-w-md lg:max-w-lg overflow-hidden rounded-[2.5rem] bg-white p-3 sm:p-5 shadow-2xl border border-beige/70 group">
                   <img
-                    src="https://images.pexels.com/photos/3661356/pexels-photo-3661356.jpeg?auto=compress&cs=tinysrgb&w=1200"
-                    alt="Parent and child in a warm, connected moment"
-                    className="w-full h-[500px] object-cover"
+                    src="/mai-hero.png"
+                    alt="Mai Elbadawy, Child Psychologist & Parent Coach"
+                    className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.02]"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-charcoal/5 via-transparent to-transparent pointer-events-none" />
                 </div>
-                <div className="absolute -bottom-6 -right-6 bg-ivory rounded-2xl p-6 shadow-lg border border-beige">
-                  <p className="font-serif text-2xl text-charcoal">500+</p>
-                  <p className="text-sm text-warm-gray">Families Supported</p>
+
+                <div className="absolute -bottom-5 -right-2 sm:-right-4 bg-ivory/95 backdrop-blur-sm rounded-2xl p-4 sm:p-5 shadow-xl border border-beige/80">
+                  <p className="font-serif text-2xl font-bold text-charcoal">500+</p>
+                  <p className="text-xs sm:text-sm text-warm-gray font-medium">Families Supported</p>
+                </div>
+
+                <div className="absolute -top-3 -left-2 sm:-left-4 bg-ivory/95 backdrop-blur-sm rounded-2xl px-4 py-2 shadow-md border border-beige/80 flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-sage animate-pulse" />
+                  <span className="text-xs font-semibold text-charcoal tracking-wide">Mai Elbadawy</span>
                 </div>
               </div>
             </AnimatedSection>

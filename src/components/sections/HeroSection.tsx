@@ -65,13 +65,13 @@ export default function HeroSection() {
             transition={{ duration: 0.9, delay: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
             className="relative mx-auto w-full max-w-md lg:max-w-none"
           >
-            <div className="relative overflow-hidden rounded-[2rem] shadow-2xl shadow-charcoal/10 ring-1 ring-beige/60">
+            <div className="relative overflow-hidden rounded-[2rem] shadow-2xl shadow-charcoal/10 ring-1 ring-beige/60 bg-white p-3 sm:p-5">
               <img
-                src="https://images.pexels.com/photos/3661356/pexels-photo-3661356.jpeg?auto=compress&cs=tinysrgb&w=1200"
-                alt="Parent and child sharing a calm, connected moment"
-                className="aspect-[4/5] w-full object-cover sm:aspect-[5/6] lg:aspect-auto lg:h-[520px]"
+                src="/mai-hero.png"
+                alt="Mai Elbadawy, child psychologist and parent coach"
+                className="w-full h-auto object-contain"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-charcoal/25 via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-charcoal/5 via-transparent to-transparent pointer-events-none" />
             </div>
             <blockquote className="absolute -bottom-5 left-4 right-4 rounded-2xl border border-beige/60 bg-ivory/95 px-5 py-4 shadow-lg backdrop-blur-sm sm:-left-6 sm:max-w-xs">
               <p className="font-serif text-sm leading-relaxed text-charcoal">
