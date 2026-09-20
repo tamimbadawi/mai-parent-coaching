@@ -25,6 +25,7 @@ export default function AdminWhatsApp(): JSX.Element {
   // Main data states
   const [statusData, setStatusData] = useState<WhatsAppStatusResponse | null>(null);
   const [qrData, setQrData] = useState<WhatsAppQrResponse | null>(null);
+  const [qrError, setQrError] = useState<string | null>(null);
 
   // UI interaction states
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -41,6 +42,7 @@ export default function AdminWhatsApp(): JSX.Element {
   // Polling ref to safely clear interval on unmount or tab hide
   const pollTimerRef = useRef<number | null>(null);
   const isMountedRef = useRef<boolean>(true);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
 
   // Format uptime seconds into human-readable string
   const formatUptime = (seconds?: number): string => {
@@ -81,6 +83,7 @@ export default function AdminWhatsApp(): JSX.Element {
           void loadQr();
         } else {
           setQrData(null);
+          setQrError(null);
         }
       }
     } finally {
@@ -95,11 +98,20 @@ export default function AdminWhatsApp(): JSX.Element {
   const loadQr = useCallback(async () => {
     try {
       const result = await fetchWhatsAppQr();
-      if (isMountedRef.current && result.data && result.data.status === 'ok') {
-        setQrData(result.data);
+      if (isMountedRef.current) {
+        if (result.data && result.data.status === 'ok' && result.data.qr) {
+          setQrData(result.data);
+          setQrError(null);
+        } else {
+          setQrData(null);
+          setQrError(result.error || result.data?.message || 'Pairing code is temporarily unavailable.');
+        }
       }
     } catch {
-      // Handled silently
+      if (isMountedRef.current) {
+        setQrData(null);
+        setQrError('Pairing code is temporarily unavailable.');
+      }
     }
   }, []);
 
@@ -172,6 +184,13 @@ export default function AdminWhatsApp(): JSX.Element {
       }
     };
   }, [loadStatus]);
+
+  useEffect(() => {
+    if (!isDisconnectModalOpen) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialogRef.current?.focus();
+    return () => previousFocus?.focus();
+  }, [isDisconnectModalOpen]);
 
   // Determine current lifecycle state
   const clientState = statusData?.client?.state;
@@ -370,17 +389,18 @@ export default function AdminWhatsApp(): JSX.Element {
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs font-medium text-charcoal">
-                        Dynamic WhatsApp Web Pairing Code
+                        WhatsApp pairing code
                       </p>
                       <p className="text-[11px] text-warm-gray">
-                        Refreshes automatically to maintain cryptographic handshake.
+                        This code refreshes automatically.
                       </p>
                     </div>
                   </div>
                 ) : (
                   <div className="py-16 space-y-3">
-                    <Loader2 className="mx-auto h-8 w-8 text-sage animate-spin" />
-                    <p className="text-xs text-warm-gray">Fetching dynamic pairing QR from server...</p>
+                    {qrError ? <AlertTriangle className="mx-auto h-8 w-8 text-amber-700" /> : <Loader2 className="mx-auto h-8 w-8 text-sage animate-spin" />}
+                    <p className="text-xs text-warm-gray">{qrError || 'Loading pairing code...'}</p>
+                    {qrError && <button type="button" onClick={() => void loadQr()} className="rounded-lg border border-beige px-3 py-2 text-xs text-charcoal hover:bg-cream">Retry code</button>}
                   </div>
                 )}
               </div>
@@ -433,9 +453,9 @@ export default function AdminWhatsApp(): JSX.Element {
                 </div>
 
                 <div className="mt-6 rounded-xl border border-beige/80 bg-[#faf8f4] p-3.5 text-[11px] text-warm-gray flex items-center gap-2.5">
-                  <ShieldCheck className="h-4 w-4 text-sage-dark shrink-0" />
+                  <CheckCircle2 className="h-4 w-4 text-sage-dark shrink-0" />
                   <span>
-                    Sessions persist safely across VM reboots using encrypted disk tokens (<code className="text-charcoal font-mono">.wwebjs_auth</code>). You will not need to re-scan regularly.
+                    Your linked device stays connected across service restarts. If WhatsApp asks you to link again, scan a new code here.
                   </span>
                 </div>
               </div>
@@ -447,9 +467,9 @@ export default function AdminWhatsApp(): JSX.Element {
         {!isLoading && isInitializing && (
           <div className="rounded-2xl border border-sky-200/80 bg-sky-50/40 p-8 text-center shadow-xs">
             <Loader2 className="mx-auto h-7 w-7 text-sky-600 animate-spin" />
-            <h3 className="mt-4 font-serif text-lg text-charcoal font-normal">Starting WhatsApp Web Engine</h3>
+            <h3 className="mt-4 font-serif text-lg text-charcoal font-normal">Starting WhatsApp</h3>
             <p className="mt-1 text-xs text-warm-gray max-w-md mx-auto">
-              Headless Chromium is loading and verifying session files. This takes approximately 5–15 seconds. The page will refresh automatically.
+              Preparing the connection. This page will update automatically.
             </p>
           </div>
         )}
@@ -492,7 +512,7 @@ export default function AdminWhatsApp(): JSX.Element {
               <div>
                 <p className="text-sm font-medium text-charcoal">Disconnect Active Number</p>
                 <p className="mt-0.5 text-xs text-warm-gray max-w-xl">
-                  Safely terminates the active WhatsApp Web session, destroys the browser instance, and permanently deletes session credentials from the server. Use this if switching to a new coaching phone number.
+                  Unlinks the current phone and removes its saved session. You can link another number with a new QR code.
                 </p>
               </div>
 
@@ -512,6 +532,8 @@ export default function AdminWhatsApp(): JSX.Element {
       {/* Disconnect Confirmation Modal Dialog */}
       {isDisconnectModalOpen && (
         <div
+          ref={dialogRef}
+          tabIndex={-1}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/60 backdrop-blur-xs"
           role="dialog"
           aria-modal="true"
@@ -520,6 +542,19 @@ export default function AdminWhatsApp(): JSX.Element {
           onKeyDown={(e) => {
             if (e.key === 'Escape' && !isDisconnecting) {
               setIsDisconnectModalOpen(false);
+            }
+            if (e.key === 'Tab') {
+              const buttons = Array.from(dialogRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') || []);
+              if (buttons.length === 0) return;
+              const first = buttons[0];
+              const last = buttons[buttons.length - 1];
+              if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+              } else if (!e.shiftKey && (document.activeElement === last || document.activeElement === dialogRef.current)) {
+                e.preventDefault();
+                first.focus();
+              }
             }
           }}
         >
@@ -537,7 +572,7 @@ export default function AdminWhatsApp(): JSX.Element {
             </div>
 
             <p id="disconnect-dialog-desc" className="text-xs text-charcoal/80 leading-relaxed">
-              Are you sure you want to disconnect this device? The active <code className="font-mono bg-stone-100 px-1 py-0.5 rounded">LocalAuth</code> session tokens will be purged from the server, outbound notifications will pause, and a new QR code scan will be required before messages can be sent again.
+              The current phone will be unlinked and messages will pause. You will need to scan a new QR code before messages can be sent again.
             </p>
 
             {disconnectError && (
