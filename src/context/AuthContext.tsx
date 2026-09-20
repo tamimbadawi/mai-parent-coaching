@@ -69,6 +69,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
 
       if (!error && data) {
         setProfile(data);
+        // Sync user_metadata if different so local cached session retains full info
+        const meta = currentUser.user_metadata || {};
+        if (
+          (data.phone && meta.phone !== data.phone) ||
+          (data.country && meta.country !== data.country) ||
+          (data.role && meta.role !== data.role)
+        ) {
+          void supabase.auth.updateUser({
+            data: {
+              phone: data.phone,
+              country: data.country,
+              role: data.role,
+            },
+          }).catch(() => {});
+        }
       } else {
         if (error) {
           console.error('AuthContext - Profile fetch error, using fallback:', error);
@@ -128,19 +143,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
 
         if (session?.user) {
           setUser(session.user);
-          setProfile({
-            id: session.user.id,
-            email: session.user.email ?? '',
-            full_name: session.user.user_metadata?.full_name ?? session.user.email ?? '',
-            avatar_url: session.user.user_metadata?.avatar_url ?? null,
-            phone: session.user.user_metadata?.phone ?? null,
-            country: session.user.user_metadata?.country ?? null,
-            role: session.user.user_metadata?.role ?? (session.user.email === 'admin@admin.com' ? 'admin' : 'student'),
-            approval_status: session.user.user_metadata?.approval_status ?? 'approved',
-            approved_at: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
           await refreshProfile(session.user, epoch);
           await refreshEnrollments(session.user, epoch);
         } else {
@@ -167,20 +169,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       if (nextSession?.user) {
         const nextUser = nextSession.user;
         setUser(nextUser);
-        setProfile((prev) => prev?.id === nextUser.id ? prev : {
-          id: nextUser.id,
-          email: nextUser.email ?? '',
-          full_name: nextUser.user_metadata?.full_name ?? nextUser.email ?? '',
-          avatar_url: nextUser.user_metadata?.avatar_url ?? null,
-          phone: nextUser.user_metadata?.phone ?? null,
-          country: nextUser.user_metadata?.country ?? null,
-          role: nextUser.user_metadata?.role ?? (nextUser.email === 'admin@admin.com' ? 'admin' : 'student'),
-          approval_status: nextUser.user_metadata?.approval_status ?? 'approved',
-          approved_at: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-        setLoading(false);
+        // Only keep previous profile if it belongs to the same user
+        setProfile((prev) => (prev?.id === nextUser.id ? prev : null));
 
         // Supabase warns against awaiting client calls inside onAuthStateChange:
         // the auth callback holds an internal lock that those calls may also need.
@@ -192,6 +182,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
             refreshEnrollments(nextUser, epoch),
           ]).catch((err: unknown) => {
             console.error('AuthContext - deferred auth refresh error:', err);
+          }).finally(() => {
+            if (isMounted && epoch === authEpochRef.current) {
+              setLoading(false);
+            }
           });
         }, 0);
       } else {

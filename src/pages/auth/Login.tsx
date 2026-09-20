@@ -88,15 +88,12 @@ const Login = (): JSX.Element => {
       if (userId) {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('phone, country, role')
+          .select('role')
           .eq('id', userId)
           .maybeSingle();
 
-        const cleanDigits = (profileData?.phone || '').replace(/\D/g, '');
-        const isMissingDetails = !profileData?.phone || cleanDigits.length < 7 || !profileData?.country;
-
-        if (profileData?.role !== 'admin' && isMissingDetails) {
-          navigate('/auth/complete-profile');
+        if (profileData?.role === 'admin') {
+          navigate('/admin');
           return;
         }
       }

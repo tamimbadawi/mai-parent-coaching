@@ -1,3 +1,4 @@
+import { useState, useEffect, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Sparkles, Phone, ShieldCheck, LogOut, Loader2 } from 'lucide-react';
 import AnimatedSection from '../../components/ui/AnimatedSection';
@@ -21,8 +22,21 @@ const CompleteProfile = (): JSX.Element => {
   useEffect(() => {
     if (!loading && !user) {
       void navigate('/auth/login', { replace: true });
+      return;
     }
-  }, [loading, user, navigate]);
+
+    if (!loading && profile) {
+      if (profile.role === 'admin') {
+        void navigate('/admin', { replace: true });
+        return;
+      }
+      const cleanDigits = (profile.phone || '').replace(/\D/g, '');
+      if (profile.phone && cleanDigits.length >= 7 && profile.country) {
+        const from = (location.state as { from?: string } | null)?.from ?? '/';
+        void navigate(from, { replace: true });
+      }
+    }
+  }, [loading, user, profile, navigate, location.state]);
 
   useEffect(() => {
     if (profile?.phone && !phone) {
@@ -53,7 +67,7 @@ const CompleteProfile = (): JSX.Element => {
     return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setSubmitError(null);
     if (!validate()) return;
@@ -165,7 +179,7 @@ const CompleteProfile = (): JSX.Element => {
                   <button
                     id="comp-country"
                     type="button"
-                    onClick={() => setCountryOpen((p) => !p)}
+                    onClick={() => setCountryOpen((p: boolean) => !p)}
                     className={`flex w-full items-center justify-between rounded-xl border bg-white px-4 py-2.5 text-sm outline-none transition ${
                       country ? 'text-charcoal' : 'text-warm-gray/50'
                     } ${errors.country ? 'border-terracotta' : 'border-beige focus:border-sage'}`}

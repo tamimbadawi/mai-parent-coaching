@@ -23,29 +23,20 @@ const AuthCallback = (): JSX.Element => {
     try {
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('phone, country, role')
+        .select('role')
         .eq('id', targetUser.id)
         .maybeSingle();
 
       const role = profileData?.role ?? profile?.role;
-      const phone = profileData?.phone ?? profile?.phone;
-      const country = profileData?.country ?? profile?.country;
 
       if (role === 'admin') {
         void navigate('/admin', { replace: true });
         return;
       }
 
-      const cleanDigits = (phone || '').replace(/\D/g, '');
-      const isMissingDetails = !phone || cleanDigits.length < 7 || !country;
-
-      if (isMissingDetails) {
-        void navigate('/auth/complete-profile', { replace: true });
-      } else {
-        void navigate('/', { replace: true });
-      }
+      void navigate('/', { replace: true });
     } catch {
-      void navigate('/auth/complete-profile', { replace: true });
+      void navigate('/', { replace: true });
     }
   };
 
@@ -62,20 +53,37 @@ const AuthCallback = (): JSX.Element => {
 
     const handleTokens = async (): Promise<void> => {
       try {
-        // Handle PKCE code
         const url = new URL(window.location.href);
+
+        // Handle error parameters from OAuth provider
+        const urlError = url.searchParams.get('error_description') || url.searchParams.get('error');
+        if (urlError) {
+          if (isMounted) setError(decodeURIComponent(urlError));
+          return;
+        }
+
+        // Handle PKCE code
         const code = url.searchParams.get('code');
         if (code) {
-          const { data } = await supabase.auth.exchangeCodeForSession(code);
+          const { data, error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
           if (data.session?.user && isMounted) {
             void doRedirect(data.session.user);
             return;
+          }
+          if (exchangeErr) {
+            console.warn('AuthCallback code exchange notice:', exchangeErr.message);
           }
         }
 
         // Handle Hash token (#access_token=...&refresh_token=...)
         if (window.location.hash) {
           const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          const hashError = hashParams.get('error_description') || hashParams.get('error');
+          if (hashError) {
+            if (isMounted) setError(decodeURIComponent(hashError));
+            return;
+          }
+
           const accessToken = hashParams.get('access_token');
           const refreshToken = hashParams.get('refresh_token');
 
@@ -110,10 +118,14 @@ const AuthCallback = (): JSX.Element => {
       }
     });
 
-    // 3. Absolute failsafe timer: after 1.5 seconds, redirect
+    // 3. Absolute failsafe timer: after 1.5 seconds, redirect if no error occurred
     const fallbackTimer = setTimeout(() => {
       if (isMounted && !redirectedRef.current) {
-        void doRedirect();
+        const url = new URL(window.location.href);
+        const hasUrlError = !!(url.searchParams.get('error') || url.searchParams.get('error_description'));
+        if (!hasUrlError) {
+          void doRedirect();
+        }
       }
     }, 1500);
 

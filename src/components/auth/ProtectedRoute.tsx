@@ -10,8 +10,6 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps): JSX.El
   const { user, profile, loading } = useAuth();
   const location = useLocation();
 
-  console.log('ProtectedRoute - loading:', loading, 'user:', !!user, 'profile:', profile, 'requiredRole:', requiredRole);
-
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-ivory">
@@ -21,24 +19,17 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps): JSX.El
   }
 
   if (!user) {
-    console.log('ProtectedRoute - No user, redirecting to login');
     return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
   }
 
-  if (profile && profile.role !== 'admin') {
-    const cleanDigits = (profile.phone || '').replace(/\D/g, '');
-    if (!profile.phone || cleanDigits.length < 7 || !profile.country) {
-      console.log('ProtectedRoute - Phone or Country missing, redirecting to complete-profile');
-      return <Navigate to="/auth/complete-profile" replace state={{ from: location.pathname }} />;
-    }
-  }
-
   if (requiredRole === 'admin' && profile?.role !== 'admin') {
-    console.log('ProtectedRoute - Not admin, redirecting to dashboard');
     return <Navigate to="/dashboard" replace state={{ from: location.pathname }} />;
   }
 
-  console.log('ProtectedRoute - Rendering children');
+  if (!requiredRole && profile?.role === 'admin' && location.pathname.startsWith('/dashboard')) {
+    return <Navigate to="/admin" replace state={{ from: location.pathname }} />;
+  }
+
   return children;
 };
 
