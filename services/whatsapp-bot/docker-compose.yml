@@ -1,0 +1,29 @@
+services:
+  whatsapp-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mai-whatsapp-bot
+    restart: unless-stopped
+    ports:
+      # SECURITY: Bind host port to 127.0.0.1 loopback only.
+      # Prevents exposing unencrypted HTTP with Bearer API_SECRET_KEY to the public internet.
+      # Access locally via SSH tunnel (ssh -L 3001:127.0.0.1:3001) or behind an HTTPS reverse proxy.
+      - "127.0.0.1:3001:3001"
+    environment:
+      - PORT=3001
+      - HOST=0.0.0.0
+      - API_SECRET_KEY=${API_SECRET_KEY}
+      - SESSION_DATA_PATH=/app/.wwebjs_auth
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      - QUEUE_MAX_SIZE=100
+      - RATE_LIMIT_MIN_MS=3000
+      - RATE_LIMIT_MAX_MS=8000
+      - NODE_ENV=production
+    volumes:
+      # Persistent storage volume for LocalAuth WhatsApp session tokens
+      - whatsapp_session_data:/app/.wwebjs_auth
+
+volumes:
+  whatsapp_session_data:
+    name: mai_whatsapp_session_data

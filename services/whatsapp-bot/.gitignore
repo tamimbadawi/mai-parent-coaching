@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Environment configurations & secrets
+.env
+.env.local
+.env.*.local
+
+# WhatsApp Web LocalAuth session persistent cache & auth
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Puppeteer browser cache if downloaded locally
+.cache/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Coverage / Test outputs
+coverage/
+.nyc_output/

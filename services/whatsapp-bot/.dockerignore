@@ -1,0 +1,23 @@
+# Exclude local host dependencies to preserve clean Linux container installation
+node_modules/
+
+# Exclude secrets and local environment overrides
+.env*
+!.env.example
+
+# Exclude WhatsApp LocalAuth persistent data & caches
+.wwebjs_auth/
+.wwebjs_cache/
+.cache/
+
+# Exclude Git metadata
+.git/
+.gitignore
+
+# Exclude logs and diagnostics
+*.log
+npm-debug.log*
+
+# Exclude test artifacts and coverage reports
+coverage/
+.nyc_output/

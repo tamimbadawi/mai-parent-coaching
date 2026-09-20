@@ -1,0 +1,34 @@
+{
+  "name": "mai-whatsapp-service",
+  "version": "1.0.0",
+  "description": "Isolated WhatsApp automation companion microservice for Mai Parent Coaching",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test test/**/*.test.js"
+  },
+  "keywords": [
+    "whatsapp",
+    "whatsapp-web.js",
+    "parent-coaching",
+    "automation",
+    "microservice"
+  ],
+  "author": "Mai Parent Coaching",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4",
+    "whatsapp-web.js": "^1.26.0"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

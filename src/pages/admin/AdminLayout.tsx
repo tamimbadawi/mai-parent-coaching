@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   ExternalLink,
+  MessageCircle,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -39,7 +40,6 @@ interface AdminLayoutProps {
 const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): JSX.Element => {
   const { pathname } = useLocation();
   const { profile, signOut } = useAuth();
-  const navigate = useNavigate();
   const [notificationCount, setNotificationCount] = useState<number>(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -69,6 +69,7 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
         { to: '/admin/bookings', label: 'Bookings', icon: CalendarDays },
         { to: '/admin/users', label: 'Clients & Users', icon: Users },
         { to: '/admin/messages', label: 'Messages', icon: MessageSquare },
+        { to: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
       ],
     },
     {
