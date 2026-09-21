@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   MessageCircle,
+  HeartHandshake,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -67,6 +68,7 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
         { to: '/admin', label: 'Overview', icon: LayoutDashboard },
         { to: '/admin/bookings', label: 'Bookings', icon: CalendarDays },
         { to: '/admin/users', label: 'Clients & Users', icon: Users },
+        { to: '/admin/crm', label: 'Client CRM', icon: HeartHandshake },
         { to: '/admin/messages', label: 'Messages', icon: MessageSquare },
         { to: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
       ],

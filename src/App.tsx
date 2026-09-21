@@ -43,6 +43,7 @@ import AdminBlog from './pages/admin/AdminBlog';
 import AdminBookings from './pages/admin/AdminBookings';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminWhatsApp from './pages/admin/AdminWhatsApp';
+import AdminCRM from './pages/admin/AdminCRM';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -100,6 +101,7 @@ function AppShell() {
           <Route path="/admin/bookings" element={<ProtectedRoute requiredRole="admin"><AdminBookings /></ProtectedRoute>} />
           <Route path="/admin/orders" element={<ProtectedRoute requiredRole="admin"><AdminOrders /></ProtectedRoute>} />
           <Route path="/admin/whatsapp" element={<ProtectedRoute requiredRole="admin"><AdminWhatsApp /></ProtectedRoute>} />
+          <Route path="/admin/crm" element={<ProtectedRoute requiredRole="admin"><AdminCRM /></ProtectedRoute>} />
         </Routes>
       </main>
       {isAdminRoute || isDashboardRoute ? null : <Footer />}
