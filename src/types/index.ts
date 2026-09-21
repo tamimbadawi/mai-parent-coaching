@@ -222,8 +222,50 @@ export interface UserProfile {
   role: 'student' | 'admin';
   approval_status: 'pending' | 'approved' | 'rejected';
   approved_at: string | null;
+  engagement_status?: 'active' | 'paused' | 'opted_out';
+  engagement_cadence_days?: number;
   created_at: string;
   updated_at: string;
+}
+
+export type CRMTrack = 'track_a' | 'track_b';
+
+export type CRMLifecycleStage =
+  | 'track_a_active'
+  | 'track_a_booked'
+  | 'track_a_taper'
+  | 'track_a_inactive'
+  | 'track_b_active_coaching'
+  | 'track_b_between_sessions'
+  | 'track_b_quiet'
+  | 'track_b_reengagement_due'
+  | 'paused'
+  | 'opted_out'
+  | 'unknown';
+
+export interface CustomerJourneyState {
+  client_id: string;
+  parent_name: string;
+  email: string;
+  phone: string | null;
+  country: string | null;
+  role: string;
+  client_created_at: string;
+  engagement_status: 'active' | 'paused' | 'opted_out';
+  engagement_cadence_days: number;
+  current_track: CRMTrack;
+  completed_paid_sessions_count: number;
+  completed_free_sessions_count: number;
+  upcoming_sessions_count: number;
+  cancelled_sessions_count: number;
+  first_completed_paid_session_at: string | null;
+  last_completed_paid_session_at: string | null;
+  next_upcoming_session_at: string | null;
+  last_engagement_at: string;
+  days_since_last_engagement: number;
+  days_since_last_session: number | null;
+  lifecycle_stage: CRMLifecycleStage;
+  next_step_recommendation: string;
 }
 
 export interface AdminNotification {

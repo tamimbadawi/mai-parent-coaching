@@ -28,40 +28,26 @@ STAGE 5: Real End-to-End Loop Verification & Clean Disposal
 
 ---
 
-### STAGE 1 — Data Model: `customer_journey_state`
+### STAGE 1 — Data Model: `customer_journey_state` ✅ *(Complete)*
 
 **Objective**: Dynamically derive each client's track, lifecycle stage, and engagement recency from existing tables (`bookings`, `profiles`, `whatsapp_messages`, `contact_messages`) without requiring any manual data entry from Mai.
 
-1. [ ] **Design Computed Database View / Function**:
-   - Create migration `supabase/migrations/YYYYMMDDHHMMSS_create_customer_journey_state.sql`.
-   - Implement `customer_journey_state` view joining `profiles`, `bookings`, and messaging history.
-   - Output fields:
-     - `client_id` (uuid references `profiles.id`)
-     - `parent_name` (text)
-     - `email` (text)
-     - `phone` (text)
-     - `current_track`: `'track_a'` (0 completed paid sessions) vs `'track_b'` (1+ completed paid sessions).
-     - `completed_paid_sessions_count`: integer count where `status = 'completed'` and `appointment_type_id != 'initial'`.
-     - `upcoming_sessions_count`: count of future `confirmed` / `pending` bookings.
-     - `first_completed_session_at`: timestamptz.
-     - `last_completed_session_at`: timestamptz.
-     - `last_engagement_at`: latest timestamp across completed bookings, inbound/outbound messages, and inquiries.
-     - `days_since_last_engagement`: integer days elapsed since `last_engagement_at`.
-     - `lifecycle_stage`:
-       - `track_a_active` (Track A, < 60 days inactive)
-       - `track_a_taper` (Track A, 60–90 days inactive)
-       - `track_a_inactive` (Track A, > 90 days inactive — auto-halted)
-       - `track_b_active` (Track B, upcoming session or < 30 days since last)
-       - `track_b_quiet` (Track B, 30–45 days since last session)
-       - `track_b_reengagement_due` (Track B, > 45 days since last session)
-       - `opted_out` (client opted out of automated CRM)
-2. [ ] **Add Engagement Preferences to `profiles`**:
-   - Columns: `engagement_status text default 'active' check (engagement_status in ('active', 'paused', 'opted_out'))`, `engagement_cadence_days int default 14`.
-3. [ ] **Verification Gate**:
-   - Run live SQL query against test and existing profiles.
-   - Prove that a profile with 0 completed paid sessions evaluates to `track_a`.
-   - Prove that a profile with a completed paid session evaluates to `track_b`.
-   - Prove that a profile with only an *upcoming* or *cancelled* paid session remains `track_a`.
+1. [x] **Design Computed Database View / Function**:
+   - Migration deployed: `supabase/migrations/20260921150000_create_customer_journey_state.sql`.
+   - Implemented `customer_journey_state` view with `security_invoker = true` joining `profiles`, `bookings`, `whatsapp_messages`, and `contact_messages`.
+   - Derived fields: `client_id`, `parent_name`, `email`, `phone`, `country`, `role`, `current_track` (`track_a` vs `track_b`), `completed_paid_sessions_count`, `completed_free_sessions_count`, `upcoming_sessions_count`, `cancelled_sessions_count`, `first_completed_paid_session_at`, `last_completed_paid_session_at`, `next_upcoming_session_at`, `last_engagement_at`, `days_since_last_engagement`, `days_since_last_session`, `lifecycle_stage`, `next_step_recommendation`.
+2. [x] **Add Engagement Preferences to `profiles`**:
+   - Added `engagement_status` (`active`, `paused`, `opted_out` with default `active`) and `engagement_cadence_days` (default `14`) with index.
+   - Added TypeScript interfaces `CustomerJourneyState`, `CRMTrack`, and `CRMLifecycleStage` to `src/types/index.ts`.
+3. [x] **Verification Gate**:
+   - Executed `scripts/verify-stage-1-crm.js` on live database:
+     - Fresh student profile (0 bookings) $\rightarrow$ evaluates to `track_a`, stage `track_a_active`.
+     - Completed free Initial Consultation $\rightarrow$ strictly remains `track_a` (`completed_free: 1`, `completed_paid: 0`).
+     - Confirmed upcoming paid session $\rightarrow$ strictly remains `track_a` with stage `track_a_booked` (Decision 2 verified).
+     - Paid session marked `completed` $\rightarrow$ promoted immediately to `track_b` with stage `track_b_between_sessions`.
+     - `engagement_status = 'opted_out'` $\rightarrow$ propagates to `lifecycle_stage = 'opted_out'`.
+     - All test records safely cleaned up.
+   - Verified frontend production build (`npm run build`) passes cleanly.
 
 ---
 
