@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Clock, BookOpen, BarChart3, ArrowRight, Play, FileText, CheckCircle } from 'lucide-react';
+import { Search, Clock, BookOpen, BarChart3, ArrowRight, Play, FileText, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import AnimatedSection from '../../components/ui/AnimatedSection';
 import CTASection from '../../components/ui/CTASection';
-import { courses } from '../../data/content';
+import { fetchPublishedCourses } from '../../lib/courses';
 import type { Course } from '../../types';
 
 const levelColors: Record<string, string> = {
@@ -13,13 +13,41 @@ const levelColors: Record<string, string> = {
 };
 
 export default function Courses() {
+  const [coursesList, setCoursesList] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  const categories = ['All', ...new Set(courses.map((c) => c.category))];
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const { courses: data, error } = await fetchPublishedCourses();
+        if (mounted) {
+          if (error) {
+            setLoadError(error);
+          } else {
+            setCoursesList(data);
+          }
+        }
+      } catch (err) {
+        if (mounted) setLoadError(err instanceof Error ? err.message : 'Failed to load courses.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
-  const filtered = courses.filter((c) => {
-    const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const categories = ['All', ...new Set(coursesList.map((c) => c.category))];
+
+  const filtered = coursesList.filter((c) => {
+    const matchesSearch =
+      c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || c.category === selectedCategory;
     return matchesSearch && matchesCategory;
@@ -78,18 +106,40 @@ export default function Courses() {
       {/* Course Grid */}
       <section className="py-20 bg-ivory">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filtered.map((course, i) => (
-              <AnimatedSection key={course.id} delay={i * 0.08}>
-                <CourseCard course={course} />
-              </AnimatedSection>
-            ))}
-          </div>
-
-          {filtered.length === 0 && (
-            <div className="text-center py-20">
-              <p className="text-warm-gray text-lg">No courses found matching your criteria.</p>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-warm-gray">
+              <Loader2 className="h-8 w-8 animate-spin text-sage mb-2" />
+              <p className="text-sm">Loading course catalog...</p>
             </div>
+          ) : loadError ? (
+            <div className="text-center py-16 max-w-md mx-auto bg-white rounded-2xl border border-terracotta/20 p-8 shadow-xs">
+              <AlertCircle className="h-10 w-10 text-terracotta mx-auto mb-3" />
+              <h3 className="font-serif text-xl text-charcoal font-medium mb-2">Catalog Temporarily Unavailable</h3>
+              <p className="text-warm-gray text-sm mb-6">{loadError}</p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-sage text-white text-sm font-medium hover:bg-sage-dark transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {filtered.map((course, i) => (
+                  <AnimatedSection key={course.id} delay={i * 0.08}>
+                    <CourseCard course={course} />
+                  </AnimatedSection>
+                ))}
+              </div>
+
+              {filtered.length === 0 && (
+                <div className="text-center py-20">
+                  <p className="text-warm-gray text-lg">No courses found matching your criteria.</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
@@ -147,6 +197,9 @@ function CourseCard({ course }: { course: Course }) {
           src={course.thumbnail}
           alt={course.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/3663037/pexels-photo-3663037.jpeg?auto=compress&cs=tinysrgb&w=800';
+          }}
         />
         <div className="absolute top-4 left-4">
           <span className={`px-3 py-1 rounded-full text-xs font-medium ${levelColors[course.level]}`}>
@@ -167,7 +220,7 @@ function CourseCard({ course }: { course: Course }) {
         <h3 className="font-course text-xl text-charcoal mb-2 group-hover:text-sage-dark transition-colors">
           {course.title}
         </h3>
-        <p className="text-warm-gray text-sm leading-relaxed mb-4 flex-grow">{course.description}</p>
+        <p className="text-warm-gray text-sm leading-relaxed mb-4 flex-grow">{course.short_description || course.description}</p>
         <div className="space-y-2 mb-4">
           {course.outcomes.map((o) => (
             <div key={o} className="flex items-center gap-2 text-xs text-warm-gray">

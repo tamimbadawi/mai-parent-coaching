@@ -1,4 +1,5 @@
 import type { Service, Course, BlogPost, Testimonial, FAQ, FreeResource, AppointmentType, ShopProduct, CommunityPost } from '../types';
+import { courseVideoIds } from './courseVideoIds';
 
 export const services: Service[] = [
   {
@@ -65,7 +66,7 @@ export const courses: Course[] = [
         id: 'm1',
         title: 'Understanding Your Parenting Style',
         duration: '45 min',
-        videos: [{ id: 'v1', title: 'Introduction to Confident Parenting', duration: '12 min', url: '#' }],
+        videos: [{ id: 'v1', title: 'Introduction to Confident Parenting', duration: '12 min', url: '#', bunnyVideoId: courseVideoIds['parenting-confidence']?.v1 }],
         resources: [{ id: 'r1', title: 'Parenting Style Assessment', type: 'pdf', url: '#' }],
       },
     ],

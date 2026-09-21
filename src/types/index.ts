@@ -11,40 +11,79 @@ export interface Service {
 export interface Course {
   id: string;
   title: string;
+  short_description?: string;
   description: string;
   thumbnail: string;
+  thumbnail_url?: string;
   level: 'Beginner' | 'Intermediate' | 'Advanced';
   duration: string;
+  estimated_duration?: string;
   lessons: number;
   price: number;
+  currency?: string;
   category: string;
+  language?: string;
+  audience?: string;
+  prerequisites?: string[];
   outcomes: string[];
+  status?: 'draft' | 'published' | 'archived';
+  display_order?: number;
+  created_at?: string;
+  updated_at?: string;
   modules: CourseModule[];
 }
 
 export interface CourseModule {
   id: string;
+  course_id?: string;
   title: string;
+  description?: string;
   duration: string;
+  display_order?: number;
+  status?: 'draft' | 'published';
+  created_at?: string;
+  updated_at?: string;
   videos: Video[];
   resources: Resource[];
 }
 
 export interface Video {
   id: string;
+  module_id?: string;
+  course_id?: string;
   title: string;
+  description?: string;
   duration: string;
   url: string;
   bunnyVideoId?: string;
+  bunny_video_id?: string;
   bunnyCollectionId?: string;
+  is_preview?: boolean;
+  status?: 'draft' | 'published';
+  display_order?: number;
+  created_at?: string;
+  updated_at?: string;
+  materials?: CourseMaterial[];
 }
 
 export interface Resource {
   id: string;
+  lesson_id?: string;
+  course_id?: string;
   title: string;
-  type: 'pdf' | 'worksheet' | 'audio';
+  type: 'pdf' | 'worksheet' | 'audio' | 'link' | 'file';
   url: string;
+  file_path?: string;
+  external_url?: string;
+  file_size_bytes?: number;
+  display_order?: number;
+  is_enrolled_only?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
+
+export type CourseMaterial = Resource;
+export type Lesson = Video;
 
 export interface BlogPost {
   id: string;

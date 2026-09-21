@@ -1,17 +1,45 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Play, Clock, Sparkles } from 'lucide-react';
+import { BookOpen, Play, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { courses } from '../../data/content';
+import { fetchPublishedCourses } from '../../lib/courses';
 import { cn } from '../../lib/utils';
 import DashboardLayout from './DashboardLayout';
+import type { Course } from '../../types';
 
 const MyCourses = (): JSX.Element => {
   const { enrollments } = useAuth();
+  const [coursesList, setCoursesList] = useState<Course[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'in-progress' | 'completed'>('all');
 
-  const enrolledCourses = courses.filter((course) =>
-    enrollments.some((enrollment) => enrollment.course_id === course.id)
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const { courses: data, error } = await fetchPublishedCourses();
+        if (active) {
+          if (error) {
+            setErrorMsg(error);
+            setCoursesList([]);
+          } else {
+            setErrorMsg(null);
+            setCoursesList(data);
+          }
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const enrolledCourses = coursesList.filter((course) =>
+    enrollments.some((enrollment) => enrollment.course_id === course.id && enrollment.status === 'active')
   );
 
   return (
@@ -50,7 +78,29 @@ const MyCourses = (): JSX.Element => {
 
         {/* Courses Content Area */}
         <div className="flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
-          {enrolledCourses.length > 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-warm-gray">
+              <Loader2 className="h-8 w-8 animate-spin text-sage mb-2" />
+              <p className="text-xs">Loading your courses...</p>
+            </div>
+          ) : errorMsg ? (
+            <div className="h-full flex flex-col items-center justify-center rounded-2xl border border-terracotta/20 bg-white/90 p-8 text-center shadow-xs">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-terracotta/10 text-terracotta mb-3">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+              <h3 className="font-serif text-lg text-charcoal font-medium">Courses Temporarily Unavailable</h3>
+              <p className="mt-1 max-w-sm mx-auto text-xs text-warm-gray leading-relaxed mb-4">
+                {errorMsg}
+              </p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center gap-1.5 rounded-full bg-sage px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-sage-dark transition"
+              >
+                Retry
+              </button>
+            </div>
+          ) : enrolledCourses.length > 0 ? (
             <div className="grid gap-3.5 md:grid-cols-2 flex-1 min-h-0">
               {enrolledCourses.map((course) => (
                 <div
@@ -62,6 +112,10 @@ const MyCourses = (): JSX.Element => {
                       src={course.thumbnail}
                       alt={course.title}
                       className="h-24 w-32 rounded-xl object-cover border border-beige/60 shrink-0"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          'https://images.pexels.com/photos/3663037/pexels-photo-3663037.jpeg?auto=compress&cs=tinysrgb&w=800';
+                      }}
                     />
                     <div className="min-w-0 flex-1">
                       <span className="rounded-full bg-sage/15 px-2 py-0.5 text-[10px] font-semibold text-sage-dark">
@@ -71,7 +125,7 @@ const MyCourses = (): JSX.Element => {
                         {course.title}
                       </h3>
                       <p className="mt-1 text-xs text-warm-gray line-clamp-2 leading-relaxed">
-                        {course.description}
+                        {course.short_description || course.description}
                       </p>
                     </div>
                   </div>
