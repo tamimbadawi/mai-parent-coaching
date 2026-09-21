@@ -12,7 +12,6 @@ import {
   ArrowUpRight,
   Menu,
   X,
-  ExternalLink,
   MessageCircle,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -113,34 +112,43 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
         </button>
       </header>
 
-      {/* Left Charcoal Sidebar (Rounded container, larger fonts, internal scroll) */}
+      {/* Left Charcoal Sidebar (Compact zero-scroll container) */}
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-screen w-[235px] flex flex-col justify-between bg-[#1f1c1d] text-stone-300 transition-transform duration-200 ease-in-out
+          fixed top-0 left-0 z-50 h-screen w-[230px] flex flex-col justify-between bg-[#1f1c1d] text-stone-300 transition-transform duration-200 ease-in-out
           lg:static lg:z-auto lg:h-[calc(100vh-1.5rem)] lg:translate-x-0 lg:sticky lg:top-3 shrink-0 rounded-2xl lg:rounded-3xl border border-stone-800/90 shadow-lg select-none overflow-hidden
           ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:shadow-md'}
         `}
       >
-        {/* Zone 1: Pinned Brand Header */}
-        <div className="shrink-0 px-5 pt-6 pb-5 border-b border-stone-800/80">
-          <Link to="/admin" className="block group">
-            <span className="font-serif text-2xl tracking-tight text-white block leading-snug">
-              Mai <span className="text-sage font-normal">Elbadawy</span>
-            </span>
-            <p className="mt-1 text-xs tracking-wider uppercase text-stone-400 font-sans font-medium">
-              Parent Coaching
-            </p>
+        {/* Zone 1: Pinned Brand Header (Centered: Clicking Mai Elbadawy goes to website) */}
+        <div className="shrink-0 px-4 py-4 border-b border-stone-800/80 text-center">
+          <Link
+            to="/"
+            className="group flex flex-col items-center justify-center text-center mx-auto"
+            title="Go to website"
+          >
+            <div className="inline-flex items-center justify-center gap-1.5">
+              <span className="font-serif text-xl tracking-tight text-white leading-snug group-hover:text-sage transition-colors">
+                Mai <span className="text-sage font-normal group-hover:text-white transition-colors">Elbadawy</span>
+              </span>
+              <ArrowUpRight className="h-3.5 w-3.5 text-stone-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            </div>
+            <div className="mt-1.5 flex items-center justify-center">
+              <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-stone-300 group-hover:bg-sage/20 group-hover:text-sage transition-colors">
+                Admin Dashboard
+              </span>
+            </div>
           </Link>
         </div>
 
-        {/* Zone 2: Scrollable Navigation Menu (Larger fonts, comfortable tap targets) */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-3.5 py-5 space-y-6">
+        {/* Zone 2: Navigation Menu (Fits comfortably without scrolling) */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3.5">
           {navGroups.map((group) => (
-            <div key={group.group} className="space-y-1.5">
-              <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-[0.18em] text-stone-400">
+            <div key={group.group} className="space-y-1">
+              <p className="px-2.5 pb-0.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">
                 {group.group}
               </p>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {group.items.map(({ to, label, icon: Icon }) => {
                   const isActive = pathname === to;
                   return (
@@ -148,13 +156,13 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
                       key={to}
                       to={to}
                       onClick={() => setSidebarOpen(false)}
-                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                      className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] transition-colors ${
                         isActive
                           ? 'bg-sage/20 text-sage font-medium shadow-xs border border-sage/30'
                           : 'text-stone-300 hover:bg-white/8 hover:text-white'
                       }`}
                     >
-                      <Icon className={`h-4.5 w-4.5 shrink-0 ${isActive ? 'text-sage' : 'text-stone-400'}`} />
+                      <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-sage' : 'text-stone-400'}`} />
                       <span className="truncate">{label}</span>
                     </Link>
                   );
@@ -164,25 +172,14 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
           ))}
         </div>
 
-        {/* Zone 3: Pinned Bottom Controls (Always visible, larger fonts) */}
-        <div className="shrink-0 p-3.5 border-t border-stone-800/80 bg-[#191718]/90 space-y-2 text-sm">
-          <Link
-            to="/"
-            className="flex items-center justify-between rounded-xl px-3 py-2 text-stone-300 hover:bg-white/8 hover:text-white transition-colors"
-          >
-            <span className="flex items-center gap-2.5 font-medium">
-              <ExternalLink className="h-4 w-4 text-stone-400" />
-              <span>Live Website</span>
-            </span>
-            <ArrowUpRight className="h-3.5 w-3.5 text-stone-500" />
-          </Link>
-
+        {/* Zone 3: Pinned Bottom Controls (User Profile & Sign Out) */}
+        <div className="shrink-0 p-3 border-t border-stone-800/80 bg-[#191718]/90">
           <div className="flex items-center justify-between rounded-xl px-3 py-2 bg-white/5 border border-white/5">
             <div className="min-w-0 pr-2">
-              <p className="truncate text-sm font-medium text-stone-100">
+              <p className="truncate text-xs font-medium text-stone-100">
                 {profile?.full_name?.split(' ')[0] ?? 'Mai'}
               </p>
-              <p className="text-xs text-stone-400 capitalize">{profile?.role ?? 'Admin'}</p>
+              <p className="text-[11px] text-stone-400 capitalize">{profile?.role ?? 'Admin'}</p>
             </div>
             <button
               type="button"

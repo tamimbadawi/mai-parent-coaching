@@ -1,0 +1,16 @@
+# Bunny Stream — Next Steps
+
+**Coding agent: Antigravity.** Work in order. After each independently working phase, report evidence and suggest a short commit message. Do not deploy or publish until the owner approves the tested result.
+
+1. **Inventory and branch check.** Review `AGENTS.md`, this plan, the current branch and diff, `src/data/content.ts`, course pages, `BunnyStreamPlayer`, the Bunny manager function, and current migrations. Preserve the unrelated WhatsApp changes.
+2. **Confirm configuration and source material.** Obtain the Bunny library ID, video GUIDs for intended lessons, and access to the hosted Supabase project through the normal secret-management path. Record only which settings are present, never secret values. Update `docs/setup/BUNNY_STREAM_SETUP.md` to include the embed token key and Bunny dashboard security setting. Correct its path in admin UI and README references.
+3. **Create one lesson mapping.** Attach the first real processed Bunny video to the existing `parenting-confidence` lesson without changing course IDs. Keep that mapping available for server verification. Add further lessons only when their titles, order, and GUIDs are confirmed by the owner.
+4. **Secure playback endpoint.** Extend or add a Supabase Edge Function that authenticates the request, resolves course and lesson on the server, checks active enrollment, signs a short-lived Embed View URL, and returns only that URL. Return explicit 401, 403, 404, and configuration errors. Verify token format against official Bunny documentation and the library's security configuration.
+5. **Student lesson UI.** Replace the paid public preview with a locked curriculum view. Allow an enrolled student to select a mapped lesson, request its signed URL, and play it with clear loading, unavailable, expired-token, and error states. Keep the public course page and existing dashboard links working.
+6. **Progress persistence.** Add a constrained progress write path and any required RLS migration so users can update only their own progress for lessons in active enrollments. Resume from saved position if the Bunny player API supports it reliably; record completion from observed playback events, not from merely opening the page.
+7. **Verification gate.** Run typecheck and build; test admin listing, unauthenticated request, non-enrolled student, active student, suspended/refunded enrollment, unknown lesson/GUID, missing config, token expiry, and progress isolation. Test one actual processed video in the hosted environment. Capture observed outcomes without copying credentials or sensitive data into reports.
+8. **Release and documentation.** Update status only after live verification. Provide deployment commands, required secret names, Bunny dashboard steps, rollback instructions, and a concise operational handoff. Publishing remains subject to owner approval.
+
+## Definition of done
+
+A real mapped lesson plays for an actively enrolled student through a server-issued Bunny token; an unauthenticated or unenrolled visitor cannot play it; progress survives reload; admin inventory works; missing configuration and missing videos fail visibly; and the production setup has been verified end to end.

@@ -362,7 +362,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     return { error: null };
   }, [user, refreshProfile]);
 
-  const isEnrolled = useCallback((courseId: string): boolean => enrollments.some((enrollment) => enrollment.course_id === courseId), [enrollments]);
+  const isEnrolled = useCallback((courseId: string): boolean => enrollments.some((enrollment) => enrollment.course_id === courseId && enrollment.status === 'active'), [enrollments]);
 
   const refreshEnrollmentsHandler = useCallback(async (): Promise<void> => {
     await refreshEnrollments(user, authEpochRef.current);

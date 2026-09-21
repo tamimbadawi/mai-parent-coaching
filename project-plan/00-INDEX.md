@@ -19,11 +19,18 @@ This directory is the single source of truth for **project status, architectural
 | **Mobile App** | [`/mobile-app`](file:///d:/Cursor/Mai_Website/project-plan/mobile-app) | **Postponed** | Capacitor wrapper configured and verified; parked on dedicated branch. |
 | **Infrastructure** | [`/infrastructure`](file:///d:/Cursor/Mai_Website/project-plan/infrastructure) | **Live** | Keep-alive workflow live and confirmed working. |
 | **WhatsApp Automation** | [`/whatsapp`](file:///d:/Cursor/Mai_Website/project-plan/whatsapp) | **In Progress (Stage 1)** | Self-hosted `whatsapp-web.js` microservice on Oracle Always Free VM. |
+| **Bunny Stream** | [`/bunny-stream`](file:///d:/Cursor/Mai_Website/project-plan/bunny-stream) | **Admin example live** | Signed example playback works on the production admin page; real course lesson mapping and progress verification remain. |
+| **Course CMS & Delivery** | [`/courses`](file:///d:/Cursor/Mai_Website/project-plan/courses) | **In Progress** | Production-ready course authoring, modules, lessons, direct video uploads, materials, and student delivery. |
 
 ---
 
 ## Directory Navigation
 
+- [Course Authoring & Delivery Plan](file:///d:/Cursor/Mai_Website/project-plan/courses):
+  - [Status](file:///d:/Cursor/Mai_Website/project-plan/courses/status.md)
+  - [Decisions](file:///d:/Cursor/Mai_Website/project-plan/courses/decisions.md)
+  - [Database Schema](file:///d:/Cursor/Mai_Website/project-plan/courses/schema.md)
+  - [Next Steps](file:///d:/Cursor/Mai_Website/project-plan/courses/next-steps.md)
 - [Booking Plan](file:///d:/Cursor/Mai_Website/project-plan/booking):
   - [Status](file:///d:/Cursor/Mai_Website/project-plan/booking/status.md)
   - [Decisions](file:///d:/Cursor/Mai_Website/project-plan/booking/decisions.md)
@@ -44,3 +51,7 @@ This directory is the single source of truth for **project status, architectural
 - [Infrastructure Plan](file:///d:/Cursor/Mai_Website/project-plan/infrastructure):
   - [Status](file:///d:/Cursor/Mai_Website/project-plan/infrastructure/status.md)
   - [Decisions](file:///d:/Cursor/Mai_Website/project-plan/infrastructure/decisions.md)
+- [Bunny Stream Plan](file:///d:/Cursor/Mai_Website/project-plan/bunny-stream):
+  - [Status](file:///d:/Cursor/Mai_Website/project-plan/bunny-stream/status.md)
+  - [Decisions](file:///d:/Cursor/Mai_Website/project-plan/bunny-stream/decisions.md)
+  - [Next Steps](file:///d:/Cursor/Mai_Website/project-plan/bunny-stream/next-steps.md)
