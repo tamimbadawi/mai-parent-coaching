@@ -126,7 +126,7 @@ Deno.serve(async (request) => {
         email: payload.email,
         password: payload.password,
         email_confirm: payload.approvalStatus === 'approved',
-        user_metadata: { full_name: payload.fullName, phone: payload.phone },
+        user_metadata: { full_name: payload.fullName, phone: payload.phone, country: payload.country ?? null },
       });
 
       if (error || !data.user) {
@@ -138,6 +138,7 @@ Deno.serve(async (request) => {
         email: payload.email,
         full_name: payload.fullName ?? null,
         phone: payload.phone ?? null,
+        country: payload.country ?? null,
         role: payload.role ?? 'student',
         approval_status: payload.approvalStatus ?? 'approved',
         approved_at: (payload.approvalStatus ?? 'approved') === 'approved' ? new Date().toISOString() : null,
@@ -180,9 +181,15 @@ Deno.serve(async (request) => {
     }
 
     if (payload.action === 'updateUser') {
+      const metadataUpdates: Record<string, unknown> = {
+        full_name: payload.fullName,
+      };
+      if (payload.phone !== undefined) metadataUpdates.phone = payload.phone;
+      if (payload.country !== undefined) metadataUpdates.country = payload.country;
+
       const authUpdates: Record<string, unknown> = {
         email: payload.email,
-        user_metadata: { full_name: payload.fullName },
+        user_metadata: metadataUpdates,
       };
       if (payload.password?.trim()) authUpdates.password = payload.password;
       if (payload.approvalStatus === 'approved') authUpdates.email_confirm = true;
@@ -190,16 +197,21 @@ Deno.serve(async (request) => {
       const { error: authError } = await adminClient.auth.admin.updateUserById(payload.userId, authUpdates);
       if (authError) return json({ step: 'update_auth_user', error: authError.message }, 400);
 
+      const profileUpdates: Record<string, unknown> = {
+        full_name: payload.fullName ?? null,
+        phone: payload.phone ?? null,
+        role: payload.role ?? 'student',
+        approval_status: payload.approvalStatus ?? 'pending',
+        approved_at: payload.approvalStatus === 'approved' ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString(),
+      };
+      if (payload.country !== undefined) {
+        profileUpdates.country = payload.country;
+      }
+
       const { data: updatedProfile, error: profileUpdateError } = await adminClient
         .from('profiles')
-        .update({
-          full_name: payload.fullName ?? null,
-          phone: payload.phone ?? null,
-          role: payload.role ?? 'student',
-          approval_status: payload.approvalStatus ?? 'pending',
-          approved_at: payload.approvalStatus === 'approved' ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(profileUpdates)
         .eq('id', payload.userId)
         .select('*')
         .single();

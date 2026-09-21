@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 interface Country {
@@ -54,6 +54,16 @@ const COUNTRIES: Country[] = [
   { code: '+880', iso: 'BD', name: 'Bangladesh',           flag: '🇧🇩' },
 ];
 
+/** Look up dial code (e.g. "+971") for an ISO country code (e.g. "AE") or country name */
+export const getDialCodeForCountry = (isoOrName: string | null | undefined): string | null => {
+  if (!isoOrName) return null;
+  const target = isoOrName.trim().toLowerCase();
+  const match = COUNTRIES.find(
+    (c) => c.iso.toLowerCase() === target || c.name.toLowerCase() === target
+  );
+  return match?.code ?? null;
+};
+
 /** Parse a stored phone string like "+201005809498" into { dialCode: "+20", local: "1005809498" } */
 export const parsePhone = (stored: string | null): { dialCode: string; local: string } => {
   if (!stored) return { dialCode: '+20', local: '' };
@@ -86,6 +96,12 @@ const PhoneInput = ({ value, onChange, inputClassName = '', label }: PhoneInputP
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const { dialCode: d, local: l } = parsePhone(value || null);
+    setDialCode(d);
+    setLocal(l);
+  }, [value]);
 
   const selected = COUNTRIES.find((c) => c.code === dialCode) ?? COUNTRIES[0];
 
