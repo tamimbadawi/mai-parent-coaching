@@ -15,6 +15,9 @@ type CreateUserPayload = {
   password: string;
   fullName: string;
   phone?: string | null;
+  country?: string | null;
+  city?: string | null;
+  address?: string | null;
   role: UserRole;
   approvalStatus: ApprovalStatus;
 };
@@ -26,6 +29,9 @@ type UpdateUserPayload = {
   password?: string;
   fullName: string;
   phone?: string | null;
+  country?: string | null;
+  city?: string | null;
+  address?: string | null;
   role: UserRole;
   approvalStatus: ApprovalStatus;
 };
@@ -126,7 +132,13 @@ Deno.serve(async (request) => {
         email: payload.email,
         password: payload.password,
         email_confirm: payload.approvalStatus === 'approved',
-        user_metadata: { full_name: payload.fullName, phone: payload.phone, country: payload.country ?? null },
+        user_metadata: {
+          full_name: payload.fullName,
+          phone: payload.phone,
+          country: payload.country ?? null,
+          city: payload.city ?? null,
+          address: payload.address ?? null,
+        },
       });
 
       if (error || !data.user) {
@@ -139,6 +151,8 @@ Deno.serve(async (request) => {
         full_name: payload.fullName ?? null,
         phone: payload.phone ?? null,
         country: payload.country ?? null,
+        city: payload.city ?? null,
+        address: payload.address ?? null,
         role: payload.role ?? 'student',
         approval_status: payload.approvalStatus ?? 'approved',
         approved_at: (payload.approvalStatus ?? 'approved') === 'approved' ? new Date().toISOString() : null,
@@ -186,6 +200,8 @@ Deno.serve(async (request) => {
       };
       if (payload.phone !== undefined) metadataUpdates.phone = payload.phone;
       if (payload.country !== undefined) metadataUpdates.country = payload.country;
+      if (payload.city !== undefined) metadataUpdates.city = payload.city;
+      if (payload.address !== undefined) metadataUpdates.address = payload.address;
 
       const authUpdates: Record<string, unknown> = {
         email: payload.email,
@@ -207,6 +223,12 @@ Deno.serve(async (request) => {
       };
       if (payload.country !== undefined) {
         profileUpdates.country = payload.country;
+      }
+      if (payload.city !== undefined) {
+        profileUpdates.city = payload.city;
+      }
+      if (payload.address !== undefined) {
+        profileUpdates.address = payload.address;
       }
 
       const { data: updatedProfile, error: profileUpdateError } = await adminClient

@@ -45,6 +45,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       avatar_url: currentUser.user_metadata?.avatar_url ?? null,
       phone: currentUser.user_metadata?.phone ?? null,
       country: currentUser.user_metadata?.country ?? null,
+      city: currentUser.user_metadata?.city ?? null,
+      address: currentUser.user_metadata?.address ?? null,
       role: currentUser.user_metadata?.role ?? (currentUser.email === 'admin@admin.com' ? 'admin' : 'student'),
       approval_status: currentUser.user_metadata?.approval_status ?? 'approved',
       approved_at: null,
@@ -74,12 +76,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
         if (
           (data.phone && meta.phone !== data.phone) ||
           (data.country && meta.country !== data.country) ||
+          (data.city && meta.city !== data.city) ||
+          (data.address && meta.address !== data.address) ||
           (data.role && meta.role !== data.role)
         ) {
           void supabase.auth.updateUser({
             data: {
               phone: data.phone,
               country: data.country,
+              city: data.city,
+              address: data.address,
               role: data.role,
             },
           }).catch(() => {});
@@ -351,6 +357,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     if (updates.full_name !== undefined) metaUpdates.full_name = updates.full_name;
     if (updates.phone !== undefined) metaUpdates.phone = updates.phone;
     if (updates.country !== undefined) metaUpdates.country = updates.country;
+    if (updates.city !== undefined) metaUpdates.city = updates.city;
+    if (updates.address !== undefined) metaUpdates.address = updates.address;
 
     if (Object.keys(metaUpdates).length > 0) {
       await supabase.auth.updateUser({ data: metaUpdates }).catch((err) => {

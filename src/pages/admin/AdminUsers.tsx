@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, ChevronDown, Compass, Crown, Edit3, Globe, Loader2, Phone, PlusCircle, ShieldCheck, Trash2, UserRound, X } from 'lucide-react';
+import { AlertCircle, ChevronDown, Compass, Crown, Edit3, Globe, Loader2, MapPin, Phone, PlusCircle, ShieldCheck, Trash2, UserRound, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
 import PhoneInput, { formatPhone, getDialCodeForCountry, parsePhone } from '../../components/ui/PhoneInput';
@@ -14,6 +14,8 @@ interface UserDraft {
   dialCode: string;
   localPhone: string;
   country: string;
+  city: string;
+  address: string;
   password: string;
   role: UserProfile['role'];
 }
@@ -24,6 +26,8 @@ const emptyDraft: UserDraft = {
   dialCode: '+20',
   localPhone: '',
   country: '',
+  city: '',
+  address: '',
   password: '',
   role: 'student',
 };
@@ -145,6 +149,8 @@ const AdminUsers = (): JSX.Element => {
       dialCode,
       localPhone: local,
       country: user.country ?? '',
+      city: user.city ?? '',
+      address: user.address ?? '',
       password: '',
       role: user.role,
     });
@@ -249,6 +255,8 @@ const AdminUsers = (): JSX.Element => {
           fullName: draft.fullName.trim(),
           phone,
           country: draft.country.trim() || null,
+          city: draft.city.trim() || null,
+          address: draft.address.trim() || null,
           role: draft.role,
           approvalStatus: 'approved',
         }
@@ -259,6 +267,8 @@ const AdminUsers = (): JSX.Element => {
           fullName: draft.fullName.trim(),
           phone,
           country: draft.country.trim() || null,
+          city: draft.city.trim() || null,
+          address: draft.address.trim() || null,
           role: draft.role,
           approvalStatus: 'approved',
         };
@@ -383,6 +393,17 @@ const AdminUsers = (): JSX.Element => {
                               </span>
                             );
                           })() : null}
+                          {user.city ? (
+                            <span className="flex items-center gap-1 text-xs font-medium text-charcoal bg-white/70 px-2 py-0.5 rounded-lg border border-beige/60">
+                              <MapPin className="h-3 w-3 text-sage-dark" />
+                              {user.city}
+                            </span>
+                          ) : null}
+                          {user.address ? (
+                            <span className="text-xs text-warm-gray bg-white/70 px-2 py-0.5 rounded-lg border border-beige/60 truncate max-w-[200px]" title={user.address}>
+                              {user.address}
+                            </span>
+                          ) : null}
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-3">
@@ -590,6 +611,28 @@ const AdminUsers = (): JSX.Element => {
                       const { dialCode, local } = parsePhone(val || null);
                       setDraft((prev) => ({ ...prev, dialCode, localPhone: local }));
                     }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">City</label>
+                  <input
+                    value={draft.city}
+                    onChange={(event) => setDraft((prev) => ({ ...prev, city: event.target.value }))}
+                    placeholder="e.g. Cairo, Dubai"
+                    className="w-full rounded-2xl border border-beige bg-cream px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">Address / Delivery</label>
+                  <input
+                    value={draft.address}
+                    onChange={(event) => setDraft((prev) => ({ ...prev, address: event.target.value }))}
+                    placeholder="Street, building, apartment"
+                    className="w-full rounded-2xl border border-beige bg-cream px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
                   />
                 </div>
               </div>

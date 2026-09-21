@@ -27,6 +27,7 @@ import {
 import { supabase } from '../../../lib/supabase';
 import type { CustomerJourneyState, CRMContentItem, CRMLifecycleStage, CRMTrack } from '../../../types';
 import { COUNTRIES } from '../../../data/countries';
+import InternalWhatsAppMessengerModal from './InternalWhatsAppMessengerModal';
 
 export interface TimelineEvent {
   id: string;
@@ -132,6 +133,7 @@ export const ClientDossierModal = ({
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [updatingCadence, setUpdatingCadence] = useState(false);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const [isMessengerOpen, setIsMessengerOpen] = useState(false);
 
   // Country details
   const countryObj = useMemo(() => {
@@ -545,15 +547,15 @@ export const ClientDossierModal = ({
                     <span>{countryObj.name}</span>
                   </span>
                 ) : null}
-                {whatsappUrl ? (
-                  <a
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 font-medium text-emerald-700 hover:text-emerald-800 hover:underline"
+                {client.phone ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsMessengerOpen(true)}
+                    className="inline-flex items-center gap-1.5 font-medium text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
                   >
-                    <MessageCircle className="h-3.5 w-3.5" /> Chat on WhatsApp <ExternalLink className="h-3 w-3" />
-                  </a>
+                    <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Send WhatsApp Message</span>
+                  </button>
                 ) : null}
               </div>
             </div>
@@ -992,6 +994,14 @@ export const ClientDossierModal = ({
           </button>
         </div>
       </div>
+
+      {/* Internal WhatsApp Messenger Modal */}
+      <InternalWhatsAppMessengerModal
+        isOpen={isMessengerOpen}
+        onClose={() => setIsMessengerOpen(false)}
+        client={client}
+        onMessageSent={() => void loadTimeline()}
+      />
     </div>
   );
 };

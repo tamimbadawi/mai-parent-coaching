@@ -219,6 +219,8 @@ export interface UserProfile {
   avatar_url: string | null;
   phone: string | null;
   country: string | null;
+  city: string | null;
+  address: string | null;
   role: 'student' | 'admin';
   approval_status: 'pending' | 'approved' | 'rejected';
   approved_at: string | null;
