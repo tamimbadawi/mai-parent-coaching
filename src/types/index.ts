@@ -268,6 +268,23 @@ export interface CustomerJourneyState {
   next_step_recommendation: string;
 }
 
+export type CRMContentType = 'prompt' | 'tip' | 'worksheet' | 'check_in';
+export type CRMTargetTrack = 'track_a' | 'track_b' | 'all';
+
+export interface CRMContentItem {
+  id: string;
+  title: string;
+  body_template: string;
+  content_type: CRMContentType;
+  target_track: CRMTargetTrack;
+  tags: string[];
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
+}
+
 export interface AdminNotification {
   id: string;
   created_at: string;

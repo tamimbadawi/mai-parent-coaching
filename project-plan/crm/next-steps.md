@@ -51,36 +51,29 @@ STAGE 5: Real End-to-End Loop Verification & Clean Disposal
 
 ---
 
-### STAGE 2 — Content Library Schema & Admin CRUD UI
+### STAGE 2 — Content Library Schema & Admin CRUD UI ✅ *(Complete)*
 
 **Objective**: Create the admin-managed repository for Track A/B content pieces (the "empty vessel" Mai will populate over time) and verify it with initial test items.
 
-1. [ ] **Database Schema**:
-   - Create migration `supabase/migrations/YYYYMMDDHHMMSS_create_crm_content_library.sql`.
-   - Table `crm_content_library`:
-     - `id` (uuid primary key default `gen_random_uuid()`)
-     - `title` (text not null)
-     - `body_template` (text not null, supports `{parentName}` parameter)
-     - `content_type` (text check in `'prompt'`, `'tip'`, `'worksheet'`, `'check_in'`)
-     - `target_track` (text check in `'track_a'`, `'track_b'`, `'all'`)
-     - `tags` (text[] default `'{}'`)
-     - `is_active` (boolean default true)
-     - `sort_order` (integer default 0)
-     - `created_at`, `updated_at`, `created_by`
-   - Enable RLS: Admins only for all operations.
-2. [ ] **Admin Studio UI**:
-   - Build `ContentLibraryView` under Admin navigation (`/admin/whatsapp` tab or `/admin/crm`).
-   - Clean, zero-scroll responsive layout matching Admin Design System.
-   - Filterable by track (`All`, `Track A`, `Track B`) and tag chips.
-   - Modal for **Create / Edit Content**:
-     - Title, content type selector, target track radio, tag manager.
-     - Body editor with live preview rendering dynamic `{parentName}` placeholder.
-     - Active / Inactive switch.
-3. [ ] **Seed Test Content**:
-   - Seed 3–5 initial placeholder items (e.g. 1 grounding tip, 1 reflection prompt, 1 worksheet share).
-4. [ ] **Verification Gate**:
-   - Create, edit, preview, and archive content items in the UI.
-   - Verify DB persistence and clean TypeScript typing with zero console warnings.
+1. [x] **Database Schema**:
+   - Migration deployed: `supabase/migrations/20260921160000_create_crm_content_library.sql`.
+   - Table `crm_content_library` created with `id`, `title`, `body_template`, `content_type`, `target_track`, `tags`, `is_active`, `sort_order`, `created_at`, `updated_at`, `created_by`.
+   - RLS policies deployed: Admins only can select, insert, update, delete.
+   - Filter and sorting indexes added (`idx_crm_content_library_track_active`, `idx_crm_content_library_type`, `idx_crm_content_library_created_at`).
+2. [x] **Admin Studio UI**:
+   - Built [`src/pages/admin/components/ContentLibraryStudio.tsx`](file:///d:/Cursor/Mai_Website/src/pages/admin/components/ContentLibraryStudio.tsx) with search, track filter pills, type filter pills, active/archived toggle, and responsive cards.
+   - Created full modal for creating/editing content with dynamic `{parentName}` preview, tag suggestions, and sort priority.
+   - Integrated as the 4th tab ("Nurture Library (CRM)") in [`AdminWhatsApp.tsx`](file:///d:/Cursor/Mai_Website/src/pages/admin/AdminWhatsApp.tsx).
+3. [x] **Seed Test Content**:
+   - Seeded 5 realistic pieces (3 for Track A: grounding tip, bedtime reflection prompt, emotion thermometer worksheet; 2 for Track B: integration check-in, parental reserves prompt).
+4. [x] **Verification Gate**:
+   - Executed `scripts/verify-stage-2-crm.js` on live database:
+     - Verified initial 5 seeded pieces.
+     - Verified insert of new content piece.
+     - Verified update of title, body, and tags.
+     - Verified toggle of active/archive state (`is_active: false` and `is_active: true`).
+     - Verified deletion and clean orphan-free disposal.
+   - Verified frontend production build (`npm run build`) passes cleanly (`✓ built in 4.23s`).
 
 ---
 
