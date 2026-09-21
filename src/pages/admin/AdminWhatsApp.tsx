@@ -24,10 +24,12 @@ import {
   Sparkles,
   Sliders,
   Check,
+  BookOpen,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
 import { Panel, StatCard } from './components/AdminUI';
+import ContentLibraryStudio from './components/ContentLibraryStudio';
 import PhoneInput, { getDialCodeForCountry, parsePhone } from '../../components/ui/PhoneInput';
 import {
   fetchWhatsAppStatus,
@@ -47,7 +49,7 @@ import {
 
 export default function AdminWhatsApp(): JSX.Element {
   // Navigation tabs
-  const [activeTab, setActiveTab] = useState<'history' | 'rules' | 'connection'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'rules' | 'crm_library' | 'connection'>('history');
 
   // Connection & pairing states
   const [statusData, setStatusData] = useState<WhatsAppStatusResponse | null>(null);
@@ -630,6 +632,19 @@ export default function AdminWhatsApp(): JSX.Element {
 
           <button
             type="button"
+            onClick={() => setActiveTab('crm_library')}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition ${
+              activeTab === 'crm_library'
+                ? 'bg-charcoal text-white shadow-xs'
+                : 'text-charcoal hover:bg-cream/80'
+            }`}
+          >
+            <BookOpen className="h-4 w-4" />
+            <span>Nurture Library (CRM)</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab('connection')}
             className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition ${
               activeTab === 'connection'
@@ -1147,7 +1162,10 @@ export default function AdminWhatsApp(): JSX.Element {
           </div>
         )}
 
-        {/* TAB 3: LIVE CONNECTION & DEVICE PAIRING */}
+        {/* TAB 3: CLIENT NURTURE & CONTENT LIBRARY (CRM) */}
+        {activeTab === 'crm_library' && <ContentLibraryStudio />}
+
+        {/* TAB 4: LIVE CONNECTION & DEVICE PAIRING */}
         {activeTab === 'connection' && (
           <div className="space-y-6">
             {/* Loading State */}

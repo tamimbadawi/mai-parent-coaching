@@ -75,6 +75,7 @@ Deno.serve(async (request: Request) => {
       reminder_24h: { evaluated: 0, sent: 0, skipped: 0, failed: 0 },
       reminder_1h: { evaluated: 0, sent: 0, skipped: 0, failed: 0 },
       follow_up: { evaluated: 0, sent: 0, skipped: 0, failed: 0 },
+      crm_nurture: { evaluated: 0, sent: 0, skipped: 0, failed: 0 },
     };
 
     // 1. Stale pending recovery: Sweep rows pending > 5 minutes
@@ -190,8 +191,91 @@ Deno.serve(async (request: Request) => {
       }
     }
 
-    // 5. Explicit Test Harness Hook: If caller explicitly passed a test target
-    // { test_trigger: 'reminder_1h' | 'reminder_24h' | 'follow_up', test_booking_id: 'uuid' }
+    // 5. Evaluate CRM Nurture & Continuity Rotation
+    // Target clients: active students in customer_journey_state whose days_since_last_engagement >= cadence
+    const { data: eligibleClients } = await supabaseAdmin
+      .from('customer_journey_state')
+      .select('*')
+      .eq('engagement_status', 'active')
+      .not('phone', 'is', null)
+      .in('lifecycle_stage', ['track_a_active', 'track_a_taper', 'track_b_between_sessions', 'track_b_reengagement_due']);
+
+    if (eligibleClients && eligibleClients.length > 0) {
+      const clientsDue = eligibleClients.filter((c: any) => {
+        const cadence = c.lifecycle_stage === 'track_a_taper' ? 30 : (c.engagement_cadence_days || 14);
+        return c.days_since_last_engagement >= cadence;
+      });
+
+      results.crm_nurture.evaluated = clientsDue.length;
+
+      if (clientsDue.length > 0) {
+        const { data: activeLibrary } = await supabaseAdmin
+          .from('crm_content_library')
+          .select('*')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true });
+
+        if (activeLibrary && activeLibrary.length > 0) {
+          for (const client of clientsDue) {
+            try {
+              const { data: sentDeliveries } = await supabaseAdmin
+                .from('crm_deliveries')
+                .select('content_id')
+                .eq('recipient_phone', client.phone);
+
+              const sentContentIds = new Set((sentDeliveries || []).map((d: any) => d.content_id));
+              const unseenPiece = activeLibrary.find(
+                (item: any) =>
+                  (item.target_track === client.current_track || item.target_track === 'all') &&
+                  !sentContentIds.has(item.id)
+              );
+
+              if (!unseenPiece) {
+                results.crm_nurture.skipped++;
+                continue;
+              }
+
+              const renderedContent = unseenPiece.body_template.replace(
+                /\{parentName\}/g,
+                client.parent_name || 'Parent'
+              );
+
+              const dispatchRes = await fetch(`${supabaseUrl}/functions/v1/whatsapp-dispatcher`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${serviceRoleKey}`,
+                },
+                body: JSON.stringify({
+                  trigger: 'crm_nurture',
+                  recipient_phone: client.phone,
+                  recipient_name: client.parent_name,
+                  client_id: client.client_id,
+                  related_content_id: unseenPiece.id,
+                  params: {
+                    content: renderedContent,
+                  },
+                }),
+              });
+
+              const outcome = await dispatchRes.json();
+              if (outcome.skipped) {
+                results.crm_nurture.skipped++;
+              } else if (outcome.success) {
+                results.crm_nurture.sent++;
+              } else {
+                results.crm_nurture.failed++;
+              }
+            } catch (crmErr: any) {
+              console.error('Error dispatching CRM nurture for client:', client.client_id, crmErr?.message);
+              results.crm_nurture.failed++;
+            }
+          }
+        }
+      }
+    }
+
+    // 6. Explicit Test Harness Hook for Booking reminders
     if (body?.test_trigger && body?.test_booking_id) {
       const testOutcome = await dispatchMessage(body.test_trigger, body.test_booking_id);
       return json({
@@ -199,6 +283,75 @@ Deno.serve(async (request: Request) => {
         schedulerResults: results,
         testDispatchOutcome: testOutcome,
       });
+    }
+
+    // 7. Explicit Test Harness Hook for CRM dispatch test
+    if (body?.test_crm_client_id) {
+      const { data: testClient } = await supabaseAdmin
+        .from('customer_journey_state')
+        .select('*')
+        .eq('client_id', body.test_crm_client_id)
+        .single();
+
+      if (testClient) {
+        const { data: activeLibrary } = await supabaseAdmin
+          .from('crm_content_library')
+          .select('*')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true });
+
+        const { data: sentDeliveries } = await supabaseAdmin
+          .from('crm_deliveries')
+          .select('content_id')
+          .eq('recipient_phone', testClient.phone);
+
+        const sentContentIds = new Set((sentDeliveries || []).map((d: any) => d.content_id));
+        const unseenPiece = (activeLibrary || []).find(
+          (item: any) =>
+            (item.target_track === testClient.current_track || item.target_track === 'all') &&
+            !sentContentIds.has(item.id)
+        );
+
+        if (!unseenPiece) {
+          return json({
+            success: true,
+            skipped: true,
+            reason: 'ROTATION_EXHAUSTED',
+            message: 'All library pieces for this track have already been delivered.',
+          });
+        }
+
+        const renderedContent = unseenPiece.body_template.replace(
+          /\{parentName\}/g,
+          testClient.parent_name || 'Parent'
+        );
+
+        const dispatchRes = await fetch(`${supabaseUrl}/functions/v1/whatsapp-dispatcher`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({
+            trigger: 'crm_nurture',
+            recipient_phone: testClient.phone,
+            recipient_name: testClient.parent_name,
+            client_id: testClient.client_id,
+            related_content_id: unseenPiece.id,
+            params: {
+              content: renderedContent,
+            },
+          }),
+        });
+
+        const testOutcome = await dispatchRes.json();
+        return json({
+          success: true,
+          testClient,
+          unseenPiece,
+          testDispatchOutcome: testOutcome,
+        });
+      }
     }
 
     return json({

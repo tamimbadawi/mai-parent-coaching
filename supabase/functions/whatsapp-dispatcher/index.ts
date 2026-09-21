@@ -18,13 +18,17 @@ export type MessageType =
   | 'reminder_24h'
   | 'reminder_1h'
   | 'follow_up'
-  | 'manual';
+  | 'manual'
+  | 'crm_nurture'
+  | 'inbound';
 
 interface DispatchPayload {
   trigger: MessageType;
   recipient_phone?: string;
   recipient_name?: string | null;
   related_booking_id?: string | null;
+  related_content_id?: string | null;
+  client_id?: string | null;
   message_content?: string;
   params?: Record<string, string>;
 }
@@ -55,6 +59,12 @@ function renderTemplate(type: MessageType, params: Record<string, string>): stri
       return `Dear ${parentName},\n\nThank you for sharing your time and vulnerability during our session. Remember that meaningful change happens one small, patient moment at a time.\n\nWishing you a grounded and calm day ahead.\n\nWith care,\nMai`;
 
     case 'manual':
+      return params.text || '';
+
+    case 'crm_nurture':
+      return params.content || '';
+
+    case 'inbound':
       return params.text || '';
 
     default:
@@ -117,7 +127,7 @@ Deno.serve(async (request: Request) => {
 
     // Parse payload
     const payload = (await request.json()) as DispatchPayload;
-    const { trigger, related_booking_id } = payload;
+    const { trigger, related_booking_id, related_content_id, client_id } = payload;
 
     const validTriggers: MessageType[] = [
       'onboarding',
@@ -126,6 +136,7 @@ Deno.serve(async (request: Request) => {
       'reminder_1h',
       'follow_up',
       'manual',
+      'crm_nurture',
     ];
 
     if (!trigger || !validTriggers.includes(trigger)) {
@@ -275,6 +286,45 @@ Deno.serve(async (request: Request) => {
       }
     }
 
+    // 2c. Deduplication: CRM Content repeat check & 7-day frequency cap
+    if (trigger === 'crm_nurture' && related_content_id) {
+      const { data: existingDelivery } = await supabaseAdmin
+        .from('crm_deliveries')
+        .select('id')
+        .eq('recipient_phone', cleanPhone)
+        .eq('content_id', related_content_id)
+        .maybeSingle();
+
+      if (existingDelivery) {
+        return json({
+          success: true,
+          skipped: true,
+          reason: 'CONTENT_ALREADY_DELIVERED',
+          message: `Content piece ${related_content_id} has already been delivered to ${cleanPhone}.`,
+        });
+      }
+
+      // Frequency cap: max 1 outreach per 7 days
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: recentMessages } = await supabaseAdmin
+        .from('whatsapp_messages')
+        .select('id, sent_at')
+        .eq('recipient_phone', cleanPhone)
+        .eq('status', 'sent')
+        .neq('message_type', 'inbound')
+        .gte('sent_at', sevenDaysAgo)
+        .limit(1);
+
+      if (recentMessages && recentMessages.length > 0) {
+        return json({
+          success: true,
+          skipped: true,
+          reason: 'FREQUENCY_CAP_EXCEEDED',
+          message: 'An outreach message was already sent to this recipient within the last 7 days.',
+        });
+      }
+    }
+
     // 3. Stage 1 Persistence: Insert row as 'pending'
     const { data: messageRecord, error: insertErr } = await supabaseAdmin
       .from('whatsapp_messages')
@@ -284,6 +334,7 @@ Deno.serve(async (request: Request) => {
         message_type: trigger,
         message_content: messageContent,
         related_booking_id: related_booking_id || null,
+        related_content_id: related_content_id || null,
         status: 'pending',
       })
       .select('id')
@@ -362,6 +413,23 @@ Deno.serve(async (request: Request) => {
             whatsapp_message_id: whatsappMsgId,
           })
           .eq('id', messageRowId);
+
+        // Record in crm_deliveries if this was a CRM nurture delivery
+        if (related_content_id) {
+          try {
+            await supabaseAdmin
+              .from('crm_deliveries')
+              .insert({
+                recipient_phone: cleanPhone,
+                client_id: client_id || null,
+                content_id: related_content_id,
+                whatsapp_message_id: messageRowId,
+                sent_at: new Date().toISOString(),
+              });
+          } catch (delLogErr: any) {
+            console.warn('Failed to record crm_deliveries log:', delLogErr?.message);
+          }
+        }
 
         return json({
           success: true,
