@@ -25,6 +25,7 @@ import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
 import { StatCard, EmptyPanel } from './components/AdminUI';
 import { ClientDossierModal } from './components/ClientDossierModal';
+import ContentLibraryStudio from './components/ContentLibraryStudio';
 import type { CustomerJourneyState, CRMLifecycleStage } from '../../types';
 import { COUNTRIES } from '../../data/countries';
 
@@ -42,6 +43,21 @@ export const AdminCRM = (): JSX.Element => {
 
   // Selected client for dossier modal
   const [selectedClient, setSelectedClient] = useState<CustomerJourneyState | null>(null);
+
+  // Section switcher: 'clients' vs 'studio'
+  const sectionParam = searchParams.get('section') || searchParams.get('tab') || searchParams.get('view');
+  const [activeSection, setActiveSection] = useState<'clients' | 'studio'>(
+    sectionParam === 'studio' ? 'studio' : 'clients'
+  );
+
+  useEffect(() => {
+    const s = searchParams.get('section') || searchParams.get('tab') || searchParams.get('view');
+    if (s === 'studio') {
+      setActiveSection('studio');
+    } else if (s === 'clients') {
+      setActiveSection('clients');
+    }
+  }, [searchParams]);
 
   const fetchJourneyStates = async () => {
     setLoading(true);
@@ -148,28 +164,119 @@ export const AdminCRM = (): JSX.Element => {
 
   return (
     <AdminLayout
-      title="Client Relationship Management (CRM)"
-      subtitle="Two-track continuity engine, client lifecycle intelligence, and touchpoint timelines."
+      title={activeSection === 'studio' ? "Nurture Content Studio" : "Client Relationship Management (CRM)"}
+      subtitle={
+        activeSection === 'studio'
+          ? "Author, preview, and manage Track A & Track B nurture templates, worksheets, and prompts."
+          : "Two-track continuity engine, client lifecycle intelligence, and touchpoint timelines."
+      }
       action={
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void fetchJourneyStates()}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-2xl border border-beige bg-white px-4 py-2.5 text-sm font-medium text-charcoal hover:border-sage transition"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-          </button>
-          <Link
-            to="/admin/whatsapp"
-            className="inline-flex items-center gap-2 rounded-2xl bg-sage px-4 py-2.5 text-sm font-medium text-white hover:bg-sage-dark transition shadow-2xs"
-          >
-            <BookOpen className="h-4 w-4" /> Nurture Content Studio
-          </Link>
+          {activeSection === 'clients' ? (
+            <>
+              <button
+                type="button"
+                onClick={() => void fetchJourneyStates()}
+                disabled={loading}
+                className="inline-flex items-center gap-2 rounded-2xl border border-beige bg-white px-4 py-2.5 text-sm font-medium text-charcoal hover:border-sage transition"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveSection('studio');
+                  setSearchParams((prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.set('view', 'studio');
+                    return next;
+                  });
+                }}
+                className="inline-flex items-center gap-2 rounded-2xl bg-sage px-4 py-2.5 text-sm font-medium text-white hover:bg-sage-dark transition shadow-2xs cursor-pointer"
+              >
+                <BookOpen className="h-4 w-4" /> Nurture Content Studio
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveSection('clients');
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev);
+                  next.delete('view');
+                  next.delete('section');
+                  next.delete('tab');
+                  return next;
+                });
+              }}
+              className="inline-flex items-center gap-2 rounded-2xl border border-beige bg-white px-4 py-2.5 text-sm font-medium text-charcoal hover:border-sage transition cursor-pointer shadow-2xs"
+            >
+              <Users className="h-4 w-4 text-sage-dark" /> Back to Client Journeys
+            </button>
+          )}
         </div>
       }
     >
       <div className="space-y-6">
+        {/* Navigation Tabs between Client Journeys and Nurture Content Studio */}
+        <div className="inline-flex rounded-2xl border border-beige/90 bg-cream/40 p-1 text-xs">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveSection('clients');
+              setSearchParams((prev) => {
+                const next = new URLSearchParams(prev);
+                next.delete('view');
+                next.delete('section');
+                next.delete('tab');
+                return next;
+              });
+            }}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 font-medium transition ${
+              activeSection === 'clients'
+                ? 'bg-charcoal text-white shadow-xs'
+                : 'text-charcoal hover:bg-white/80'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            <span>Client Journeys</span>
+            {clients.length > 0 && (
+              <span
+                className={`ml-1 rounded-full px-2 py-0.5 text-[10px] ${
+                  activeSection === 'clients' ? 'bg-white/20 text-white' : 'bg-beige/60 text-charcoal'
+                }`}
+              >
+                {clients.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveSection('studio');
+              setSearchParams((prev) => {
+                const next = new URLSearchParams(prev);
+                next.set('view', 'studio');
+                return next;
+              });
+            }}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 font-medium transition ${
+              activeSection === 'studio'
+                ? 'bg-charcoal text-white shadow-xs'
+                : 'text-charcoal hover:bg-white/80'
+            }`}
+          >
+            <BookOpen className="h-4 w-4" />
+            <span>Nurture Content Studio</span>
+          </button>
+        </div>
+
+        {activeSection === 'studio' ? (
+          <ContentLibraryStudio />
+        ) : (
+          <>
         {/* Top Summary Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <StatCard
@@ -443,6 +550,8 @@ export const AdminCRM = (): JSX.Element => {
               );
             })}
           </div>
+        )}
+          </>
         )}
       </div>
 
