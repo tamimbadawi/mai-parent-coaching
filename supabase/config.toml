@@ -63,3 +63,6 @@ verify_jwt = false
 [functions.whatsapp-scheduler]
 verify_jwt = false
 
+[functions.whatsapp-inbound-handler]
+verify_jwt = false
+

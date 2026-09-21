@@ -351,6 +351,95 @@ class WhatsAppClientManager {
         generation: boundGeneration,
       });
     });
+
+    // Inbound Message Received
+    clientInstance.on('message', async (msg) => {
+      if (this.sessionGeneration !== boundGeneration || this.isResetting) return;
+      if (msg.fromMe) return;
+
+      try {
+        await this.handleInboundMessage(clientInstance, msg);
+      } catch (err) {
+        logger.error('Error processing inbound WhatsApp message', {
+          reasonCode: 'INBOUND_PROCESSING_FAILED',
+          errorCode: err?.code || 'UNKNOWN',
+        });
+      }
+    });
+  }
+
+  /**
+   * Handle incoming messages: detect keyword opt-out/opt-in commands,
+   * reply with calming confirmation, and forward webhook event to Supabase.
+   */
+  async handleInboundMessage(clientInstance, msg) {
+    if (!msg || !msg.body) return;
+
+    // Clean recipient phone from wid (e.g. '201005809498@c.us' -> '+201005809498')
+    const rawFrom = msg.from ? msg.from.replace(/@c\.us$/, '') : '';
+    const cleanPhone = rawFrom.startsWith('+') ? rawFrom : `+${rawFrom}`;
+    const text = (msg.body || '').trim();
+    const upperText = text.toUpperCase();
+
+    logger.info('Inbound WhatsApp message received', {
+      maskedPhone: logger.maskPhone(cleanPhone),
+      length: text.length,
+    });
+
+    const isOptOut = /^(STOP|PAUSE|UNSUBSCRIBE|CANCEL|HALT)$/i.test(upperText);
+    const isOptIn = /^(START|RESUME|UNPAUSE|SUBSCRIBE)$/i.test(upperText);
+
+    // 1. Send automatic response if opt-out or opt-in command recognized
+    if (isOptOut) {
+      try {
+        await msg.reply(
+          'You have been unsubscribed from automated coaching notes and reflections. If you ever wish to resume, simply reply START.'
+        );
+      } catch (replyErr) {
+        logger.warn('Failed to send opt-out confirmation reply', { reasonCode: 'OPT_OUT_REPLY_FAILED' });
+      }
+    } else if (isOptIn) {
+      try {
+        await msg.reply(
+          'Welcome back! You have been resubscribed to coaching notes and appointment updates.'
+        );
+      } catch (replyErr) {
+        logger.warn('Failed to send opt-in confirmation reply', { reasonCode: 'OPT_IN_REPLY_FAILED' });
+      }
+    }
+
+    // 2. Forward event to Supabase Webhook if configured
+    const webhookUrl = process.env.SUPABASE_INBOUND_WEBHOOK_URL ||
+      (process.env.SUPABASE_URL ? `${process.env.SUPABASE_URL}/functions/v1/whatsapp-inbound-handler` : null);
+    const secretKey = process.env.WHATSAPP_API_SECRET_KEY || process.env.API_SECRET_KEY;
+
+    if (webhookUrl && secretKey) {
+      try {
+        const res = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${secretKey}`,
+          },
+          body: JSON.stringify({
+            from: cleanPhone,
+            body: text,
+            isOptOut,
+            isOptIn,
+            timestamp: new Date().toISOString(),
+            whatsappMessageId: msg.id?.id || null,
+          }),
+        });
+
+        if (!res.ok) {
+          logger.warn('Supabase inbound webhook returned non-200', { status: res.status });
+        }
+      } catch (webhookErr) {
+        logger.error('Failed to forward inbound message to Supabase webhook', {
+          reasonCode: 'WEBHOOK_FORWARD_FAILED',
+        });
+      }
+    }
   }
 
   /**

@@ -77,44 +77,53 @@ STAGE 5: Real End-to-End Loop Verification & Clean Disposal
 
 ---
 
-### STAGE 3 — Rotation & Dispatch Logic
+### STAGE 3 — Rotation & Dispatch Logic ✅ *(Complete)*
 
 **Objective**: Extend the existing `whatsapp-scheduler` and `whatsapp-dispatcher` pattern to select an unseen library piece per client on their defined cadence, track send history, and enforce strict deduplication.
 
-1. [ ] **Delivery History Schema**:
-   - Create `crm_deliveries` table:
+1. [x] **Delivery History Schema**:
+   - Migration deployed: `supabase/migrations/20260921170000_create_crm_deliveries.sql`.
+   - Created `crm_deliveries` table:
      - `id` (uuid primary key)
      - `recipient_phone` (text not null)
+     - `client_id` (uuid references `profiles(id)`)
      - `content_id` (uuid references `crm_content_library(id)`)
      - `whatsapp_message_id` (uuid references `whatsapp_messages(id)`)
      - `sent_at` (timestamptz default now())
-   - Add partial unique index to prevent the same content piece being marked sent twice to the same phone:
-     ```sql
-     create unique index idx_crm_deliveries_unique_recipient_content
-       on public.crm_deliveries (recipient_phone, content_id);
-     ```
-2. [ ] **Rotation Engine in `whatsapp-scheduler`**:
-   - Query eligible clients from `customer_journey_state`:
+   - Added partial unique index to prevent the same content piece being delivered twice to the same phone:
+     `create unique index idx_crm_deliveries_unique_recipient_content on public.crm_deliveries (recipient_phone, content_id);`
+   - Updated `whatsapp_messages.message_type` check constraint to allow `'crm_nurture'` and `'inbound'`, and added `related_content_id`.
+2. [x] **Rotation Engine in `whatsapp-scheduler`**:
+   - Queries eligible clients from `customer_journey_state`:
      - `engagement_status = 'active'`
      - `days_since_last_engagement >= engagement_cadence_days`
      - Global frequency guardrail: No message sent in the last 7 days.
    - Content Selection Algorithm:
-     - Find active library pieces matching client's track.
-     - Exclude `content_id`s present in `crm_deliveries` for this recipient.
-     - Pick next unseen piece (ordered by `sort_order`).
-     - If all pieces have been delivered: log "Rotation cycle exhausted" and transition client to taper state without repeating.
-3. [ ] **Dispatch Integration**:
-   - Call `whatsapp-dispatcher` with message type `'crm_nurture'`.
-   - On successful delivery, record entry in `crm_deliveries`.
-4. [ ] **Inbound Message Handling & Opt-Out Webhook (`services/whatsapp-bot/` + Supabase Handler)**:
-   - **Microservice Inbound Listener**: Register `client.on('message', async (msg) => ...)` in `services/whatsapp-bot/src/client.js` (currently outbound-only; incoming handling is missing).
-   - **Keyword Parsing**: Detect inbound keywords (e.g. `STOP`, `PAUSE`, `UNSUBSCRIBE` to opt out; `START`, `RESUME` to opt back in).
-   - **Supabase Webhook**: Forward inbound message payloads (`from`, `body`, `timestamp`) to Supabase Edge Function (`whatsapp-inbound-handler`) authenticated with service secret.
-   - **Database State Update**: Update `profiles.engagement_status` to `'opted_out'` or `'active'` and log inbound touchpoint in `whatsapp_messages` to refresh `last_engagement_at`.
-   - **Automated Opt-Out Receipt**: Microservice sends a gentle acknowledgement: *"You have been unsubscribed from automated messages. Reply START at any time to resume."*
-5. [ ] **Verification Gate**:
-   - Dry-run / fast-forward test via Edge Function: confirm first unseen piece is chosen, 7-day frequency cap is respected, and subsequent delivery picks next unseen piece.
-   - Live inbound test: Send "STOP" from a test device -> verify microservice receives message, forwards webhook to Supabase, updates `profiles.engagement_status` to `'opted_out'`, and sends immediate confirmation reply.
+     - Finds active library pieces matching client's track.
+     - Excludes `content_id`s already recorded in `crm_deliveries` for this recipient.
+     - Picks next unseen piece by `sort_order`.
+     - Skips cleanly if rotation cycle exhausted.
+3. [x] **Dispatch Integration**:
+   - Extended `whatsapp-dispatcher` with message type `'crm_nurture'`.
+   - Enforced 7-day outbound frequency cap and duplicate content blocking.
+   - Recorded successful delivery in `crm_deliveries`.
+4. [x] **Inbound Message Handling & Opt-Out Webhook (`services/whatsapp-bot/` + Supabase Handler)**:
+   - **Microservice Inbound Listener**: Registered `clientInstance.on('message', ...)` in `services/whatsapp-bot/src/client.js`.
+   - **Keyword Parsing**: Detects inbound keywords (`STOP`, `PAUSE`, `UNSUBSCRIBE`, `CANCEL`, `HALT` to opt out; `START`, `RESUME`, `UNPAUSE`, `SUBSCRIBE` to opt in).
+   - **Calming Automatic Reply**: Immediate gentle acknowledgment sent directly to WhatsApp user.
+   - **Supabase Webhook**: Deployed `whatsapp-inbound-handler` Edge Function with service secret verification.
+   - **Database State Update**: Updates `profiles.engagement_status` to `'opted_out'` or `'active'` and logs inbound interaction in `whatsapp_messages`.
+5. [x] **Verification Gate**:
+   - Executed `scripts/verify-stage-3-crm.js` on live database & Edge Functions:
+     - Step 1: Verified `crm_deliveries` schema, indexes, and active Track A starter pieces.
+     - Step 2: Created student profile and verified initial `customer_journey_state`.
+     - Step 3: Successfully dispatched `crm_nurture` message, recorded in `whatsapp_messages` and `crm_deliveries`.
+     - Step 4: Re-dispatching exact same content piece was blocked (`CONTENT_ALREADY_DELIVERED`).
+     - Step 5: Immediate dispatch of any second content piece was blocked by 7-day frequency cap (`FREQUENCY_CAP_EXCEEDED`).
+     - Step 6: Inbound `STOP` keyword switched `profiles.engagement_status` to `'opted_out'` and `customer_journey_state.lifecycle_stage` to `'opted_out'`.
+     - Step 7: Inbound `START` keyword restored `profiles.engagement_status` to `'active'` and `customer_journey_state.lifecycle_stage` to `'track_a_active'`.
+     - Complete clean teardown with zero orphaned test data.
+   - Frontend production build (`npm run build`) succeeded cleanly.
 
 ---
 

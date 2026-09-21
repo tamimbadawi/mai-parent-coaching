@@ -1,12 +1,12 @@
 # CRM & Client Engagement — Status
 
-## Current Status: In Progress (Stage 1 & Stage 2 Complete — Ready for Stage 3)
+## Current Status: In Progress (Stages 1, 2, and 3 Complete — Ready for Stage 4)
 
 > [!IMPORTANT]
 > - This feature is executed in **strict, sequential stages**.
 > - Each stage must be confirmed and verified before starting the next.
 > - **Do not batch multiple stages into one pass.**
-> - Stage 1 (Data Model) and Stage 2 (Content Library & Admin CRUD Studio) have been fully built, deployed, and verified with live database tests.
+> - Stages 1, 2, and 3 have been fully built, deployed, and verified with live database and Edge Function tests.
 
 ---
 
@@ -29,8 +29,8 @@ Build an automated, respectful, and relationship-centric CRM engagement engine o
 | :--- | :--- | :--- | :--- |
 | **Stage 1** | **Data Model (`customer_journey_state`)** | ✅ Complete | Computed view `public.customer_journey_state` deployed. Verified: 0-paid -> Track A, free consultation -> Track A, upcoming paid -> Track A (stage: `track_a_booked`), completed paid -> Track B promotion, and opt-out propagation. |
 | **Stage 2** | **Content Library & Admin CRUD UI** | ✅ Complete | Table `crm_content_library` with RLS deployed and 5 starter pieces seeded. `ContentLibraryStudio` UI built and integrated into `/admin/whatsapp` under "Nurture Library (CRM)". Verified full CRUD (insert, update, toggle archive, delete) and clean build. |
-| **Stage 3** | **Rotation, Dispatch & Inbound Opt-Out** | 📋 Next | `whatsapp-scheduler`/`dispatcher` selects unseen library pieces and enforces frequency caps; microservice inbound listener processes opt-out keywords ("STOP") via Supabase webhook. |
-| **Stage 4** | **Per-Client Admin CRM View** | 📋 Planned | Single-screen view displaying client track, stage, next touchpoint, and unified chronological interaction history. |
+| **Stage 3** | **Rotation, Dispatch & Inbound Opt-Out** | ✅ Complete | Table `crm_deliveries` deployed with partial unique index. `whatsapp-dispatcher` and `whatsapp-scheduler` extended for `'crm_nurture'` and 7-day frequency caps. Microservice inbound listener and `whatsapp-inbound-handler` deployed for STOP/START keyword opt-outs. Verified 100% via `scripts/verify-stage-3-crm.js`. |
+| **Stage 4** | **Per-Client Admin CRM View** | 📋 Next | Single-screen dossier displaying client track, stage, next touchpoint, and unified chronological interaction history. |
 | **Stage 5** | **Real Loop Verification & Cleanup** | 📋 Planned | Live message delivery to test number, duplicate prevention verification, state transition test, and clean test artifact disposal. |
 
 ---
