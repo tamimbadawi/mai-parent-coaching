@@ -56,3 +56,10 @@ verify_jwt = false
 
 [functions.verify-calendar-event]
 verify_jwt = false
+
+[functions.whatsapp-dispatcher]
+verify_jwt = false
+
+[functions.whatsapp-scheduler]
+verify_jwt = false
+

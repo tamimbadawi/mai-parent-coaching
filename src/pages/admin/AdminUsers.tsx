@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Crown, Edit3, Phone, PlusCircle, ShieldCheck, Trash2, UserRound, X } from 'lucide-react';
+import { AlertCircle, Crown, Edit3, Loader2, Phone, PlusCircle, ShieldCheck, Trash2, UserRound, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
 import PhoneInput, { formatPhone, parsePhone } from '../../components/ui/PhoneInput';
@@ -84,6 +84,16 @@ const AdminUsers = (): JSX.Element => {
   useEffect((): void => {
     void fetchUsers();
   }, []);
+
+  useEffect((): (() => void) => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape' && composerOpen) {
+        closeComposer();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return (): void => window.removeEventListener('keydown', handleKeyDown);
+  }, [composerOpen]);
 
   const openCreate = (): void => {
     setComposerOpen(true);
@@ -297,63 +307,8 @@ const AdminUsers = (): JSX.Element => {
               </button>
             </div>
 
-            {error ? <p className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
+            {error && !composerOpen ? <p className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
             {success ? <p className="mb-4 rounded-2xl border border-sage/20 bg-sage/10 px-4 py-3 text-sm text-sage-dark">{success}</p> : null}
-
-            {composerOpen ? (
-              <div className="mb-5 rounded-[24px] border border-beige bg-cream p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-warm-gray">{editingUser ? 'Edit user' : 'Create user'}</p>
-                    <h3 className="mt-1 font-serif text-2xl text-charcoal">{editingUser ? 'Update account details' : 'Add a new managed account'}</h3>
-                  </div>
-                  <button type="button" onClick={closeComposer} className="rounded-2xl border border-beige bg-white p-3 text-warm-gray transition hover:text-charcoal">
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">Full name</label>
-                    <input value={draft.fullName} onChange={(event) => setDraft((prev) => ({ ...prev, fullName: event.target.value }))} className="w-full rounded-2xl border border-beige bg-white px-4 py-3 text-sm text-charcoal outline-none focus:border-sage" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">Email</label>
-                    <input type="email" value={draft.email} onChange={(event) => setDraft((prev) => ({ ...prev, email: event.target.value }))} className="w-full rounded-2xl border border-beige bg-white px-4 py-3 text-sm text-charcoal outline-none focus:border-sage" />
-                  </div>
-                  <div>
-                    <PhoneInput
-                      label="Working phone number *"
-                      value={formatPhone(draft.dialCode, draft.localPhone) ?? ''}
-                      onChange={(val) => {
-                        const { dialCode, local } = parsePhone(val || null);
-                        setDraft((prev) => ({ ...prev, dialCode, localPhone: local }));
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">{editingUser ? 'New password (optional)' : 'Password'}</label>
-                    <input type="password" value={draft.password} onChange={(event) => setDraft((prev) => ({ ...prev, password: event.target.value }))} className="w-full rounded-2xl border border-beige bg-white px-4 py-3 text-sm text-charcoal outline-none focus:border-sage" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">Role</label>
-                    <select value={draft.role} onChange={(event) => setDraft((prev) => ({ ...prev, role: event.target.value as UserProfile['role'] }))} className="w-full rounded-2xl border border-beige bg-white px-4 py-3 text-sm text-charcoal outline-none focus:border-sage">
-                      <option value="student">Student</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="mt-5 flex flex-wrap justify-end gap-3">
-                  <button type="button" onClick={closeComposer} className="rounded-2xl border border-beige bg-white px-4 py-3 text-sm font-medium text-charcoal transition hover:bg-cream">
-                    Cancel
-                  </button>
-                  <button type="button" onClick={() => void saveUser()} disabled={updatingId === 'new-user' || (!!editingUser && updatingId === editingUser.id)} className="rounded-2xl bg-sage px-4 py-3 text-sm font-medium text-white transition hover:bg-sage-dark disabled:opacity-50">
-                    {editingUser ? 'Save changes' : 'Create user'}
-                  </button>
-                </div>
-              </div>
-            ) : null}
 
             {users.length === 0 ? (
               <EmptyPanel title="No users found" description="When new members sign up, they will appear here with role, join date, and access controls." />
@@ -413,6 +368,142 @@ const AdminUsers = (): JSX.Element => {
             )}
           </Panel>
       </div>
+
+      {composerOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/60 p-4 backdrop-blur-xs overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="user-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              closeComposer();
+            }
+          }}
+        >
+          <div className="relative my-8 w-full max-w-lg rounded-2xl border border-beige bg-white p-6 shadow-2xl space-y-4">
+            <button
+              type="button"
+              onClick={closeComposer}
+              className="absolute right-4 top-4 rounded-xl p-2 text-warm-gray transition hover:bg-beige/40 hover:text-charcoal"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sage/20 text-sage-dark">
+                {editingUser ? <Edit3 className="h-5 w-5" /> : <PlusCircle className="h-5 w-5" />}
+              </div>
+              <div>
+                <h2 id="user-modal-title" className="font-serif text-xl font-semibold text-charcoal">
+                  {editingUser ? 'Edit User Details' : 'Add New User'}
+                </h2>
+                <p className="text-xs text-warm-gray">
+                  {editingUser ? `Updating account: ${editingUser.email}` : 'Create a managed account with assigned role'}
+                </p>
+              </div>
+            </div>
+
+            {error ? (
+              <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+                <div className="flex-1">
+                  <p className="font-semibold">Unable to {editingUser ? 'update' : 'create'} user</p>
+                  <p className="mt-0.5 text-rose-700">{error}</p>
+                </div>
+              </div>
+            ) : null}
+
+            <form onSubmit={(e) => { e.preventDefault(); void saveUser(); }} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">Full name *</label>
+                <input
+                  required
+                  value={draft.fullName}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, fullName: event.target.value }))}
+                  placeholder="e.g. Sarah Jenkins"
+                  className="w-full rounded-2xl border border-beige bg-cream px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">Email *</label>
+                <input
+                  type="email"
+                  required
+                  value={draft.email}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, email: event.target.value }))}
+                  placeholder="user@example.com"
+                  className="w-full rounded-2xl border border-beige bg-cream px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <PhoneInput
+                  label="Working phone number *"
+                  value={formatPhone(draft.dialCode, draft.localPhone) ?? ''}
+                  onChange={(val) => {
+                    const { dialCode, local } = parsePhone(val || null);
+                    setDraft((prev) => ({ ...prev, dialCode, localPhone: local }));
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">
+                  {editingUser ? 'New password (leave blank to keep current)' : 'Password *'}
+                </label>
+                <input
+                  type="password"
+                  value={draft.password}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, password: event.target.value }))}
+                  placeholder={editingUser ? '••••••••' : 'Minimum 6 characters'}
+                  className="w-full rounded-2xl border border-beige bg-cream px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">Role</label>
+                <select
+                  value={draft.role}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, role: event.target.value as UserProfile['role'] }))}
+                  className="w-full rounded-2xl border border-beige bg-cream px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
+                >
+                  <option value="student">Student (Member)</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </div>
+
+              <div className="flex flex-wrap justify-end gap-3 pt-3 border-t border-beige">
+                <button
+                  type="button"
+                  onClick={closeComposer}
+                  className="rounded-2xl border border-beige bg-white px-4 py-2.5 text-sm font-medium text-charcoal transition hover:bg-cream"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updatingId === 'new-user' || (!!editingUser && updatingId === editingUser.id)}
+                  className="rounded-2xl bg-sage px-5 py-2.5 text-sm font-medium text-white transition hover:bg-sage-dark disabled:opacity-50"
+                >
+                  {updatingId === 'new-user' || (!!editingUser && updatingId === editingUser.id) ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving…
+                    </span>
+                  ) : editingUser ? (
+                    'Save changes'
+                  ) : (
+                    'Create user'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </AdminLayout>
   );
 };

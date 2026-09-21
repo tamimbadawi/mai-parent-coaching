@@ -28,3 +28,11 @@
 > During initial environment configuration, the Supabase `SUPABASE_SERVICE_ROLE_KEY` was briefly exposed when pasted into an external context (an AI chat conversation). A deliberate decision was made not to rotate it at that time.
 >
 > This is recorded here for audit and visibility purposes rather than as an active blocking defect, ensuring future development sessions are aware of the project's credential history if database security or credential audits arise.
+
+---
+
+## 4. Version Control of Server & Reverse-Proxy Configurations
+
+- **Selected**: All manual or SSH-applied VM configuration changes (e.g. Nginx sites-available configs, Docker host overrides, firewall rules) must have an exact equivalent version-controlled file committed under `infrastructure/` (e.g. `infrastructure/nginx/whatsapp-reverse-proxy.conf`).
+- **Rationale**: Server configurations applied solely via SSH drift silently from the repository over time. Version-controlling exact host configurations ensures reproducible infrastructure, transparent auditing, and rapid recovery if VMs are reprovisioned.
+

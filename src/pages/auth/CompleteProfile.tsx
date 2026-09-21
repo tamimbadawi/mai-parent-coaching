@@ -5,6 +5,7 @@ import AnimatedSection from '../../components/ui/AnimatedSection';
 import { useAuth } from '../../context/AuthContext';
 import PhoneInput from '../../components/ui/PhoneInput';
 import { COUNTRIES, type CountryOption } from '../../data/countries';
+import { dispatchWhatsAppMessage } from '../../lib/whatsappAdmin';
 
 const CompleteProfile = (): JSX.Element => {
   const navigate = useNavigate();
@@ -82,6 +83,14 @@ const CompleteProfile = (): JSX.Element => {
     if (error) {
       setSubmitError(error.message || 'Failed to update profile. Please try again.');
       return;
+    }
+
+    if (phone.trim().replace(/\D/g, '').length >= 7) {
+      void dispatchWhatsAppMessage({
+        trigger: 'onboarding',
+        recipient_phone: phone.trim(),
+        recipient_name: profile?.full_name || null,
+      }).catch((err) => console.warn('Onboarding dispatch notice:', err));
     }
 
     const from = (location.state as { from?: string } | null)?.from;

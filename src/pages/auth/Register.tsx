@@ -4,6 +4,7 @@ import { Eye, EyeOff, Sparkles } from 'lucide-react';
 import AnimatedSection from '../../components/ui/AnimatedSection';
 import { useAuth } from '../../context/AuthContext';
 import PhoneInput from '../../components/ui/PhoneInput';
+import { dispatchWhatsAppMessage } from '../../lib/whatsappAdmin';
 
 /* ── Typing quotes ────────────────────────────────────────────────────────── */
 const QUOTES = [
@@ -114,6 +115,15 @@ const Register = (): JSX.Element => {
       );
       return;
     }
+
+    if (phone && phone.replace(/\D/g, '').length >= 7) {
+      void dispatchWhatsAppMessage({
+        trigger: 'onboarding',
+        recipient_phone: phone,
+        recipient_name: fullName,
+      }).catch((err) => console.warn('Onboarding dispatch notice:', err));
+    }
+
     navigate('/auth/verify-email', { state: { email } });
   };
 

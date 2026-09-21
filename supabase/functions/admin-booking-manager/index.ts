@@ -150,11 +150,34 @@ Deno.serve(async (request) => {
         return json({ error: `Failed to approve booking: ${updateErr.message}` }, 400);
       }
 
+      // Trigger canonical WhatsApp Booking Confirmation if booking has phone number
+      let whatsappDispatchResult = null;
+      if (finalStatus === 'confirmed' && updatedBooking.phone) {
+        try {
+          const dispatchRes = await fetch(`${supabaseUrl}/functions/v1/whatsapp-dispatcher`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${serviceRoleKey}`,
+            },
+            body: JSON.stringify({
+              trigger: 'booking_confirmation',
+              related_booking_id: bookingId,
+            }),
+          });
+          whatsappDispatchResult = await dispatchRes.json();
+        } catch (dispatchErr: any) {
+          console.error('WhatsApp booking confirmation dispatch error:', dispatchErr);
+          whatsappDispatchResult = { error: dispatchErr?.message || 'Dispatch call failed' };
+        }
+      }
+
       return json({
         success: true,
         booking: updatedBooking,
         calendarEventId: calendarEvent?.id ?? null,
         hangoutLink: calendarEvent?.hangoutLink ?? null,
+        whatsappDispatch: whatsappDispatchResult,
       });
     }
 

@@ -161,6 +161,21 @@ Deno.serve(async (request) => {
         .eq('type', 'new_user_registration')
         .is('read_at', null);
 
+      if (newProfile?.phone && newProfile.approval_status === 'approved') {
+        fetch(`${supabaseUrl}/functions/v1/whatsapp-dispatcher`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({
+            trigger: 'onboarding',
+            recipient_phone: newProfile.phone,
+            recipient_name: newProfile.full_name,
+          }),
+        }).catch((err) => console.warn('Admin createUser onboarding dispatch notice:', err));
+      }
+
       return json({ profile: newProfile });
     }
 
@@ -198,6 +213,21 @@ Deno.serve(async (request) => {
           .eq('entity_id', payload.userId)
           .eq('type', 'new_user_registration')
           .is('read_at', null);
+      }
+
+      if (updatedProfile?.phone && updatedProfile.approval_status === 'approved') {
+        fetch(`${supabaseUrl}/functions/v1/whatsapp-dispatcher`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({
+            trigger: 'onboarding',
+            recipient_phone: updatedProfile.phone,
+            recipient_name: updatedProfile.full_name,
+          }),
+        }).catch((err) => console.warn('Admin updateUser onboarding dispatch notice:', err));
       }
 
       return json({ profile: updatedProfile });
