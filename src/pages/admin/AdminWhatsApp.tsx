@@ -28,6 +28,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
 import { Panel, StatCard } from './components/AdminUI';
+import PhoneInput, { getDialCodeForCountry, parsePhone } from '../../components/ui/PhoneInput';
 import {
   fetchWhatsAppStatus,
   fetchWhatsAppQr,
@@ -89,6 +90,7 @@ export default function AdminWhatsApp(): JSX.Element {
     full_name: string | null;
     email: string;
     phone: string | null;
+    country?: string | null;
     role?: string;
   }>>([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState<boolean>(false);
@@ -97,6 +99,7 @@ export default function AdminWhatsApp(): JSX.Element {
     full_name: string | null;
     email: string;
     phone: string | null;
+    country?: string | null;
     role?: string;
   } | null>(null);
 
@@ -379,7 +382,7 @@ export default function AdminWhatsApp(): JSX.Element {
       try {
         let q = supabase
           .from('profiles')
-          .select('id, full_name, email, phone, role')
+          .select('id, full_name, email, phone, country, role')
           .order('full_name', { ascending: true })
           .limit(10);
 
@@ -410,33 +413,55 @@ export default function AdminWhatsApp(): JSX.Element {
     full_name: string | null;
     email: string;
     phone: string | null;
+    country?: string | null;
     role?: string;
   }) => {
     setSelectedUser(u);
     if (u.phone) {
       setManualPhone(u.phone);
+    } else if (u.country) {
+      const dial = getDialCodeForCountry(u.country);
+      setManualPhone(dial || '+20');
     } else {
-      setManualPhone('');
+      setManualPhone('+20');
     }
   };
 
   const handleClearSelectedUser = () => {
     setSelectedUser(null);
-    setManualPhone('');
+    setManualPhone('+20');
     setUserSearchTerm('');
+  };
+
+  const handleOpenManualModal = () => {
+    setIsManualModalOpen(true);
+    setManualSendResult(null);
+    if (!manualPhone) {
+      setManualPhone('+20');
+    }
   };
 
   // Manual message dispatch
   const handleSendManual = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!manualPhone.trim() || !manualText.trim()) return;
+    const { dialCode, local } = parsePhone(manualPhone);
+    const cleanedDigits = local.replace(/\D/g, '');
+    if (!cleanedDigits || cleanedDigits.length < 6) {
+      setManualSendResult({ success: false, message: 'Please enter a valid phone number with at least 6 digits.' });
+      return;
+    }
+    if (!manualText.trim()) {
+      setManualSendResult({ success: false, message: 'Please enter a message body.' });
+      return;
+    }
 
+    const recipientPhone = `${dialCode}${cleanedDigits}`;
     setIsSendingManual(true);
     setManualSendResult(null);
 
     const res = await dispatchWhatsAppMessage({
       trigger: 'manual',
-      recipient_phone: manualPhone.trim(),
+      recipient_phone: recipientPhone,
       recipient_name: selectedUser?.full_name || null,
       message_content: manualText.trim(),
     });
@@ -454,6 +479,7 @@ export default function AdminWhatsApp(): JSX.Element {
         setManualSendResult(null);
         setSelectedUser(null);
         setUserSearchTerm('');
+        setManualPhone('+20');
       }, 1500);
     }
   };
@@ -544,7 +570,7 @@ export default function AdminWhatsApp(): JSX.Element {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsManualModalOpen(true)}
+            onClick={handleOpenManualModal}
             className="inline-flex items-center gap-1.5 rounded-xl bg-sage px-3.5 py-2 text-xs font-medium text-white hover:bg-sage-dark active:bg-sage-dark transition shadow-xs"
           >
             <Send className="h-3.5 w-3.5" />
@@ -795,8 +821,10 @@ export default function AdminWhatsApp(): JSX.Element {
                       <button
                         type="button"
                         onClick={() => {
-                          setManualPhone(debouncedSearchQuery.replace(/[^\d+]/g, ''));
-                          setIsManualModalOpen(true);
+                          const digits = debouncedSearchQuery.replace(/[^\d+]/g, '');
+                          setManualPhone(digits ? (digits.startsWith('+') ? digits : `+20${digits}`) : '+20');
+                          setRecipientMode('direct');
+                          handleOpenManualModal();
                         }}
                         className="rounded-xl bg-sage px-3.5 py-1.5 text-xs font-medium text-white hover:bg-sage-dark"
                       >
@@ -910,7 +938,7 @@ export default function AdminWhatsApp(): JSX.Element {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
-                  onClick={() => setIsManualModalOpen(true)}
+                  onClick={handleOpenManualModal}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-sage px-3.5 py-2 text-xs font-medium text-white hover:bg-sage-dark transition shadow-xs"
                 >
                   <Send className="h-3.5 w-3.5" />
@@ -1387,6 +1415,7 @@ export default function AdminWhatsApp(): JSX.Element {
                       onClick={() => {
                         setRecipientMode('direct');
                         setSelectedUser(null);
+                        if (!manualPhone) setManualPhone('+20');
                       }}
                       className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
                         recipientMode === 'direct'
@@ -1488,35 +1517,30 @@ export default function AdminWhatsApp(): JSX.Element {
                       </div>
                     )}
 
-                    {/* Verified/target phone input */}
+                    {/* Verified/target phone input with country code selector */}
                     <div>
                       <label className="block text-[11px] text-warm-gray mb-1">
-                        Recipient Phone Number {selectedUser && !selectedUser.phone ? '(Required for this user)' : ''}
+                        Recipient Mobile Number {selectedUser && !selectedUser.phone ? '(Required for this user)' : ''}
                       </label>
-                      <input
-                        type="text"
-                        required
+                      <PhoneInput
                         value={manualPhone}
-                        onChange={(e) => setManualPhone(e.target.value)}
-                        placeholder="+966501234567 or +201012345678"
-                        className={`w-full rounded-xl border px-3 py-2 text-xs font-mono text-charcoal outline-none focus:border-sage ${
-                          selectedUser && !selectedUser.phone ? 'border-amber-300 bg-amber-50/20' : 'border-beige bg-white'
-                        }`}
+                        onChange={(val) => setManualPhone(val)}
+                        inputClassName="!py-2 !rounded-xl !text-xs font-mono"
                       />
                     </div>
                   </div>
                 ) : (
                   <div>
-                    <input
-                      type="text"
-                      required
+                    <label className="block text-[11px] text-warm-gray mb-1">
+                      Recipient Mobile Number
+                    </label>
+                    <PhoneInput
                       value={manualPhone}
-                      onChange={(e) => setManualPhone(e.target.value)}
-                      placeholder="+966501234567 or +201012345678"
-                      className="w-full rounded-xl border border-beige bg-white px-3 py-2 text-xs font-mono text-charcoal outline-none focus:border-sage placeholder:font-sans"
+                      onChange={(val) => setManualPhone(val)}
+                      inputClassName="!py-2 !rounded-xl !text-xs font-mono"
                     />
                     <p className="text-[11px] text-warm-gray mt-1">
-                      Enter the recipient's phone number with international country code.
+                      Choose country code from the dropdown and enter the local mobile number.
                     </p>
                   </div>
                 )}
@@ -1556,7 +1580,7 @@ export default function AdminWhatsApp(): JSX.Element {
               </button>
               <button
                 type="submit"
-                disabled={isSendingManual || !manualPhone.trim() || !manualText.trim()}
+                disabled={isSendingManual || parsePhone(manualPhone).local.trim().length < 6 || !manualText.trim()}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-sage px-4 py-2 text-xs font-medium text-white hover:bg-sage-dark transition disabled:opacity-50"
               >
                 {isSendingManual ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}

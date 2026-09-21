@@ -103,6 +103,20 @@ const PhoneInput = ({ value, onChange, inputClassName = '', label }: PhoneInputP
     setLocal(l);
   }, [value]);
 
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    if (open) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [open]);
+
   const selected = COUNTRIES.find((c) => c.code === dialCode) ?? COUNTRIES[0];
 
   const filtered = COUNTRIES.filter(
@@ -116,14 +130,21 @@ const PhoneInput = ({ value, onChange, inputClassName = '', label }: PhoneInputP
     setDialCode(country.code);
     setOpen(false);
     setSearch('');
-    onChange(formatPhone(country.code, local) ?? '');
+    onChange(formatPhone(country.code, local) ?? country.code);
   };
 
   const handleLocalChange = (val: string): void => {
+    if (val.trim().startsWith('+')) {
+      const parsed = parsePhone(val.trim());
+      setDialCode(parsed.dialCode);
+      setLocal(parsed.local);
+      onChange(formatPhone(parsed.dialCode, parsed.local) ?? parsed.dialCode);
+      return;
+    }
     // Only allow digits, spaces, hyphens
     const cleaned = val.replace(/[^\d\s-]/g, '');
     setLocal(cleaned);
-    onChange(formatPhone(dialCode, cleaned) ?? '');
+    onChange(formatPhone(dialCode, cleaned) ?? dialCode);
   };
 
   return (
