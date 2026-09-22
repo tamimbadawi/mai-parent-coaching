@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   X,
   Phone,
@@ -557,6 +558,13 @@ export const ClientDossierModal = ({
                     <span>Send WhatsApp Message</span>
                   </button>
                 ) : null}
+                <Link
+                  to={`/admin/sessions?client=${client.client_id}`}
+                  className="inline-flex items-center gap-1.5 font-medium text-sage-dark hover:text-charcoal hover:underline cursor-pointer"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-sage-dark" />
+                  <span>View Session Notes</span>
+                </Link>
               </div>
             </div>
           </div>

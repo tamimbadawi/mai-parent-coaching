@@ -14,6 +14,7 @@ import {
   X,
   MessageCircle,
   HeartHandshake,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -23,6 +24,7 @@ interface NavItem {
   to: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  badge?: string;
 }
 
 interface NavGroup {
@@ -69,6 +71,7 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
         { to: '/admin/bookings', label: 'Bookings', icon: CalendarDays },
         { to: '/admin/users', label: 'Clients & Users', icon: Users },
         { to: '/admin/crm', label: 'Client CRM', icon: HeartHandshake },
+        { to: '/admin/sessions', label: 'Session Notes', icon: Sparkles, badge: 'Super' },
         { to: '/admin/messages', label: 'Messages', icon: MessageSquare },
         { to: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
       ],
@@ -151,7 +154,7 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
                 {group.group}
               </p>
               <div className="space-y-0.5">
-                {group.items.map(({ to, label, icon: Icon }) => {
+                {group.items.map(({ to, label, icon: Icon, badge }) => {
                   const isActive = pathname === to;
                   return (
                     <Link
@@ -166,6 +169,11 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
                     >
                       <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-sage' : 'text-stone-400'}`} />
                       <span className="truncate">{label}</span>
+                      {badge && (
+                        <span className="ml-auto text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-amber-400/20 text-amber-300 border border-amber-400/30 font-mono">
+                          {badge}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
@@ -199,7 +207,7 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
       {/* Main Workspace Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Workspace Top Bar */}
-        <header className="sticky top-0 z-20 border border-beige/80 rounded-2xl lg:rounded-3xl bg-white/85 backdrop-blur-md px-5 py-4 sm:px-8 sm:py-5 shadow-xs">
+        <header className="sticky top-0 z-20 border border-beige/80 rounded-2xl lg:rounded-3xl bg-white/85 backdrop-blur-md px-5 py-3 sm:px-6 sm:py-3.5 shadow-xs shrink-0">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between max-w-[1440px] mx-auto w-full">
             <div>
               <h1 className="font-serif text-2xl sm:text-3xl text-charcoal tracking-tight font-normal">
@@ -225,7 +233,7 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
         </header>
 
         {/* Page Content Body */}
-        <main className="flex-1 pt-5 pb-8 px-1 sm:px-4 max-w-[1440px] w-full mx-auto">
+        <main className="flex-1 pt-2.5 pb-2.5 px-1 sm:px-3 max-w-[1440px] w-full mx-auto min-h-0">
           {children}
         </main>
       </div>

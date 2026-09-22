@@ -22,6 +22,7 @@ This directory is the single source of truth for **project status, architectural
 | **Bunny Stream** | [`/bunny-stream`](file:///d:/Cursor/Mai_Website/project-plan/bunny-stream) | **Admin example live** | Signed example playback works on the production admin page; real course lesson mapping and progress verification remain. |
 | **Course CMS & Delivery** | [`/courses`](file:///d:/Cursor/Mai_Website/project-plan/courses) | **In Progress** | Production-ready course authoring, modules, lessons, direct video uploads, materials, and student delivery. |
 | **CRM & Client Engagement** | [`/crm`](file:///d:/Cursor/Mai_Website/project-plan/crm) | **Planned** | Two-track engagement model, dynamic content library, unseen rotation, and per-client admin CRM view. |
+| **Session Intelligence** | [`/session-intelligence`](file:///d:/Cursor/Mai_Website/project-plan/session-intelligence) | **Planned (Part 2 Frontend)** | Clinical notes viewer, action checklist, and multi-turn context-aware Gemini chat for admin. |
 
 ---
 
@@ -60,3 +61,8 @@ This directory is the single source of truth for **project status, architectural
   - [Status](file:///d:/Cursor/Mai_Website/project-plan/crm/status.md)
   - [Decisions](file:///d:/Cursor/Mai_Website/project-plan/crm/decisions.md)
   - [Next Steps](file:///d:/Cursor/Mai_Website/project-plan/crm/next-steps.md)
+- [Session Intelligence & Conversational UI](file:///d:/Cursor/Mai_Website/project-plan/session-intelligence):
+  - [Status](file:///d:/Cursor/Mai_Website/project-plan/session-intelligence/status.md)
+  - [Decisions](file:///d:/Cursor/Mai_Website/project-plan/session-intelligence/decisions.md)
+  - [Database Schema](file:///d:/Cursor/Mai_Website/project-plan/session-intelligence/schema.md)
+  - [Next Steps](file:///d:/Cursor/Mai_Website/project-plan/session-intelligence/next-steps.md)
