@@ -15,6 +15,7 @@ import {
   MessageCircle,
   HeartHandshake,
   Sparkles,
+  Home,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -71,7 +72,8 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
         { to: '/admin/bookings', label: 'Bookings', icon: CalendarDays },
         { to: '/admin/users', label: 'Clients & Users', icon: Users },
         { to: '/admin/crm', label: 'Client CRM', icon: HeartHandshake },
-        { to: '/admin/families', label: 'Family Cases', icon: Sparkles },
+        { to: '/admin/families', label: 'Family Cases', icon: Home },
+        { to: '/admin/sessions', label: 'Session Notes', icon: Sparkles, badge: 'Super' },
         { to: '/admin/messages', label: 'Messages', icon: MessageSquare },
         { to: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
       ],

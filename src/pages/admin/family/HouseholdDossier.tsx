@@ -561,7 +561,7 @@ export const HouseholdDossier = (): JSX.Element => {
                       />
                       <button
                         type="button"
-                        onClick={() => navigate(`/admin/families/${household.id}/sessions/${s.id}`)}
+                        onClick={() => navigate(`/admin/sessions?client=${household.primary_contact_profile_id}&session=${s.id}`)}
                         className="flex-1 flex items-center justify-between text-left cursor-pointer"
                       >
                         <div className="flex items-center gap-2 text-sm text-charcoal">

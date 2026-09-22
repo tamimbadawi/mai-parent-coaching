@@ -23,6 +23,7 @@ This directory is the single source of truth for **project status, architectural
 | **Course CMS & Delivery** | [`/courses`](file:///d:/Cursor/Mai_Website/project-plan/courses) | **In Progress** | Production-ready course authoring, modules, lessons, direct video uploads, materials, and student delivery. |
 | **CRM & Client Engagement** | [`/crm`](file:///d:/Cursor/Mai_Website/project-plan/crm) | **Planned** | Two-track engagement model, dynamic content library, unseen rotation, and per-client admin CRM view. |
 | **Family Client System** | [`/family-system`](file:///d:/Cursor/Mai_Website/project-plan/family-system) | **In Progress (Stage 1)** | Core household/family data model, multi-member sessions, 4-source content capture, and multi-session pattern analysis. |
+| **Session Intelligence** | [`/session-intelligence`](file:///d:/Cursor/Mai_Website/project-plan/session-intelligence) | **Active / Restored** | Clinical notes viewer, action checklist, and multi-turn context-aware Gemini chat for admin. |
 | **Gemini AI Integration** | [`/gemini-integration`](file:///d:/Cursor/Mai_Website/project-plan/gemini-integration) | **Wired and Verified** | Shared server-side Gemini client + admin-only callable Edge Function; verified end-to-end. Foundation for family-system's OCR/analysis features. |
 
 ---
@@ -69,3 +70,8 @@ This directory is the single source of truth for **project status, architectural
   - [Next Steps](file:///d:/Cursor/Mai_Website/project-plan/family-system/next-steps.md)
 - [Gemini AI Integration Plan](file:///d:/Cursor/Mai_Website/project-plan/gemini-integration):
   - [Status](file:///d:/Cursor/Mai_Website/project-plan/gemini-integration/status.md)
+- [Session Intelligence & Conversational UI](file:///d:/Cursor/Mai_Website/project-plan/session-intelligence):
+  - [Status](file:///d:/Cursor/Mai_Website/project-plan/session-intelligence/status.md)
+  - [Decisions](file:///d:/Cursor/Mai_Website/project-plan/session-intelligence/decisions.md)
+  - [Database Schema](file:///d:/Cursor/Mai_Website/project-plan/session-intelligence/schema.md)
+  - [Next Steps](file:///d:/Cursor/Mai_Website/project-plan/session-intelligence/next-steps.md)
