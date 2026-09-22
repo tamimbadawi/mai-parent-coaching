@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Plus,
@@ -11,10 +11,14 @@ import {
   X,
   Calendar,
   ChevronRight,
+  Compass,
+  UserRound,
+  Phone,
+  Mail,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import AdminLayout from '../AdminLayout';
-import { Panel, EmptyPanel } from '../components/AdminUI';
+import { Panel, EmptyPanel, InsightChip } from '../components/AdminUI';
 import {
   currentAge,
   roleLabel,
@@ -27,6 +31,15 @@ import { MultiSessionAnalysisPanel } from './MultiSessionAnalysisPanel';
 
 const ROLE_OPTIONS: HouseholdMemberRole[] = ['mother', 'father', 'child', 'guardian', 'other'];
 
+type ClientProfile = { id: string; full_name: string | null; email: string | null; phone: string | null };
+type BookingRow = {
+  id: string;
+  appointment_date: string;
+  appointment_time: string;
+  status: string;
+  child_name: string | null;
+};
+
 export const HouseholdDossier = (): JSX.Element => {
   const { householdId } = useParams<{ householdId: string }>();
   const navigate = useNavigate();
@@ -34,6 +47,10 @@ export const HouseholdDossier = (): JSX.Element => {
   const [household, setHousehold] = useState<Household | null>(null);
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [sessions, setSessions] = useState<CaseSession[]>([]);
+  const [attendeesBySession, setAttendeesBySession] = useState<Record<string, string[]>>({});
+  const [clientProfile, setClientProfile] = useState<ClientProfile | null>(null);
+  const [clientBookings, setClientBookings] = useState<BookingRow[]>([]);
+  const [journey, setJourney] = useState<{ upcoming_sessions_count: number; completed_paid_sessions_count: number; days_since_last_engagement: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,22 +67,53 @@ export const HouseholdDossier = (): JSX.Element => {
     setLoading(true);
     setError(null);
     try {
-      const [{ data: h, error: hErr }, { data: m, error: mErr }, { data: s, error: sErr }] = await Promise.all([
-        supabase.from('households').select('*').eq('id', householdId).single(),
-        supabase.from('household_members').select('*').eq('household_id', householdId).order('created_at', { ascending: true }),
-        supabase.from('case_sessions').select('*').eq('household_id', householdId).order('session_date', { ascending: false }),
-      ]);
+      const { data: h, error: hErr } = await supabase.from('households').select('*').eq('id', householdId).single();
       if (hErr) throw hErr;
-      if (mErr) throw mErr;
-      if (sErr) throw sErr;
       setHousehold(h);
-      setMembers(m ?? []);
-      setSessions(s ?? []);
       setCaseDraft({
         presenting_issue: h.presenting_issue ?? '',
         working_plan: h.working_plan ?? '',
         next_step: h.next_step ?? '',
       });
+
+      const [{ data: m, error: mErr }, { data: s, error: sErr }, { data: profile }, { data: bookings }, { data: journeyRow }] =
+        await Promise.all([
+          supabase.from('household_members').select('*').eq('household_id', householdId).order('created_at', { ascending: true }),
+          supabase.from('case_sessions').select('*').eq('household_id', householdId).order('session_date', { ascending: false }),
+          supabase.from('profiles').select('id, full_name, email, phone').eq('id', h.primary_contact_profile_id).maybeSingle(),
+          supabase
+            .from('bookings')
+            .select('id, appointment_date, appointment_time, status, child_name')
+            .eq('user_id', h.primary_contact_profile_id)
+            .order('appointment_date', { ascending: false }),
+          supabase
+            .from('customer_journey_state')
+            .select('upcoming_sessions_count, completed_paid_sessions_count, days_since_last_engagement')
+            .eq('client_id', h.primary_contact_profile_id)
+            .maybeSingle(),
+        ]);
+      if (mErr) throw mErr;
+      if (sErr) throw sErr;
+      setMembers(m ?? []);
+      setSessions(s ?? []);
+      setClientProfile(profile ?? null);
+      setClientBookings(bookings ?? []);
+      setJourney(journeyRow ?? null);
+
+      const sessionIds = (s ?? []).map((row) => row.id);
+      if (sessionIds.length > 0) {
+        const { data: attendeeRows } = await supabase
+          .from('session_attendees')
+          .select('session_id, household_member_id')
+          .in('session_id', sessionIds);
+        const map: Record<string, string[]> = {};
+        for (const row of attendeeRows ?? []) {
+          map[row.session_id] = [...(map[row.session_id] ?? []), row.household_member_id];
+        }
+        setAttendeesBySession(map);
+      } else {
+        setAttendeesBySession({});
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load family case.');
     } finally {
@@ -127,15 +175,37 @@ export const HouseholdDossier = (): JSX.Element => {
     setMembers((prev) => prev.filter((m) => m.id !== id));
   };
 
-  const handleCreateSession = async (): Promise<void> => {
+  // Bookings for this client that haven't been turned into a case session yet -- the primary,
+  // real-data way to add a session. A blank/manual session stays available as a fallback.
+  const unconvertedBookings = useMemo(() => {
+    const usedBookingIds = new Set(sessions.map((s) => s.booking_id).filter(Boolean));
+    return clientBookings.filter((b) => !usedBookingIds.has(b.id));
+  }, [sessions, clientBookings]);
+
+  const handleCreateSessionFromBooking = async (booking: BookingRow): Promise<void> => {
     if (!household) return;
     const { data, error: insertErr } = await supabase
       .from('case_sessions')
       .insert({
         household_id: household.id,
-        session_date: new Date().toISOString(),
-        status: 'scheduled',
+        booking_id: booking.id,
+        session_date: new Date(`${booking.appointment_date}T00:00:00`).toISOString(),
+        status: booking.status === 'completed' ? 'completed' : 'scheduled',
       })
+      .select()
+      .single();
+    if (insertErr) {
+      setError(insertErr.message);
+      return;
+    }
+    navigate(`/admin/families/${household.id}/sessions/${data.id}`);
+  };
+
+  const handleCreateBlankSession = async (): Promise<void> => {
+    if (!household) return;
+    const { data, error: insertErr } = await supabase
+      .from('case_sessions')
+      .insert({ household_id: household.id, session_date: new Date().toISOString(), status: 'scheduled' })
       .select()
       .single();
     if (insertErr) {
@@ -149,10 +219,23 @@ export const HouseholdDossier = (): JSX.Element => {
     setSelectedSessionIds((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
   };
 
+  const toggleAttendee = async (sessionId: string, memberId: string): Promise<void> => {
+    const current = attendeesBySession[sessionId] ?? [];
+    const attending = current.includes(memberId);
+    if (attending) {
+      await supabase.from('session_attendees').delete().eq('session_id', sessionId).eq('household_member_id', memberId);
+      setAttendeesBySession((prev) => ({ ...prev, [sessionId]: (prev[sessionId] ?? []).filter((id) => id !== memberId) }));
+    } else {
+      await supabase.from('session_attendees').insert({ session_id: sessionId, household_member_id: memberId });
+      setAttendeesBySession((prev) => ({ ...prev, [sessionId]: [...(prev[sessionId] ?? []), memberId] }));
+    }
+  };
+
   const sortedMembers = useMemo(() => {
     const order: Record<HouseholdMemberRole, number> = { mother: 0, father: 1, guardian: 2, child: 3, other: 4 };
     return [...members].sort((a, b) => order[a.role] - order[b.role]);
   }, [members]);
+
 
   if (loading) {
     return (
@@ -175,7 +258,7 @@ export const HouseholdDossier = (): JSX.Element => {
   return (
     <AdminLayout
       title={household.family_name}
-      subtitle="Household members, case overview, and session history."
+      subtitle="Household members, case overview, and session history — all traced back to the linked client account."
       action={
         <button
           type="button"
@@ -193,6 +276,63 @@ export const HouseholdDossier = (): JSX.Element => {
             <p>{error}</p>
           </div>
         ) : null}
+
+        {/* Client Account & Interactions */}
+        <Panel
+          title={clientProfile?.full_name || 'Linked Client'}
+          eyebrow="Client account this case is a spinoff of"
+          action={
+            <Link
+              to={`/admin/crm?client=${household.primary_contact_profile_id}`}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-beige px-3 py-1.5 text-xs font-medium text-charcoal hover:border-sage"
+            >
+              <Compass className="h-3.5 w-3.5 text-sage-dark" /> CRM Dossier
+            </Link>
+          }
+        >
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2 text-xs text-warm-gray">
+              {clientProfile?.email ? (
+                <p className="flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5 text-sage-dark" /> {clientProfile.email}
+                </p>
+              ) : null}
+              {clientProfile?.phone ? (
+                <p className="flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5 text-sage-dark" /> {clientProfile.phone}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {journey ? (
+                  <>
+                    <InsightChip label="Paid Sessions" value={String(journey.completed_paid_sessions_count)} />
+                    <InsightChip label="Upcoming" value={String(journey.upcoming_sessions_count)} />
+                    <InsightChip label="Last Touch" value={`${journey.days_since_last_engagement}d ago`} />
+                  </>
+                ) : null}
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-warm-gray mb-1.5">
+                All bookings ({clientBookings.length})
+              </p>
+              {clientBookings.length === 0 ? (
+                <p className="text-xs text-warm-gray italic">No bookings on record for this client.</p>
+              ) : (
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {clientBookings.map((b) => (
+                    <div key={b.id} className="flex items-center justify-between text-xs text-charcoal">
+                      <span>
+                        {new Date(b.appointment_date).toLocaleDateString()} {b.child_name ? `· ${b.child_name}` : ''}
+                      </span>
+                      <span className="text-[10px] uppercase text-warm-gray">{b.status}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </Panel>
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Household Members */}
@@ -365,61 +505,113 @@ export const HouseholdDossier = (): JSX.Element => {
         {/* Sessions */}
         <Panel
           title="Sessions"
-          eyebrow="Chronological history"
+          eyebrow="Chronological history — with real attendee connections"
           action={
-            <button
-              type="button"
-              onClick={handleCreateSession}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-sage px-3.5 py-2 text-xs font-medium text-white hover:bg-sage-dark"
-            >
-              <Plus className="h-3.5 w-3.5" /> New Session
-            </button>
+            <div className="flex items-center gap-2">
+              {unconvertedBookings.length > 0 ? (
+                <span className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">
+                  {unconvertedBookings.length} booking{unconvertedBookings.length > 1 ? 's' : ''} not yet added as sessions
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={handleCreateBlankSession}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-sage px-3.5 py-2 text-xs font-medium text-white hover:bg-sage-dark"
+              >
+                <Plus className="h-3.5 w-3.5" /> Blank Session
+              </button>
+            </div>
           }
         >
+          {unconvertedBookings.length > 0 ? (
+            <div className="mb-4 space-y-1.5">
+              {unconvertedBookings.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => handleCreateSessionFromBooking(b)}
+                  className="w-full flex items-center justify-between rounded-xl border border-dashed border-sage/40 bg-sage/5 px-3.5 py-2.5 text-left hover:bg-sage/10"
+                >
+                  <span className="text-xs text-charcoal">
+                    <Calendar className="inline h-3.5 w-3.5 text-sage-dark mr-1.5" />
+                    Add session from booking on {new Date(b.appointment_date).toLocaleDateString()}
+                    {b.child_name ? ` (${b.child_name})` : ''}
+                  </span>
+                  <Plus className="h-3.5 w-3.5 text-sage-dark" />
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           {sessions.length === 0 ? (
             <p className="text-xs text-warm-gray italic">No sessions recorded yet.</p>
           ) : (
             <div className="space-y-2">
-              {sessions.map((s) => (
-                <div
-                  key={s.id}
-                  className="flex items-center gap-3 rounded-xl border border-beige/70 bg-[#faf8f4] px-3.5 py-2.5"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedSessionIds.includes(s.id)}
-                    onChange={() => toggleSessionSelection(s.id)}
-                    className="h-4 w-4 rounded border-beige text-sage-dark focus:ring-sage"
-                    title="Select for multi-session analysis"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/admin/families/${household.id}/sessions/${s.id}`)}
-                    className="flex-1 flex items-center justify-between text-left cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2 text-sm text-charcoal">
-                      <Calendar className="h-3.5 w-3.5 text-sage-dark" />
-                      {new Date(s.session_date).toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase ${
-                          s.status === 'completed'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : s.status === 'cancelled'
-                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                            : 'bg-sky-50 text-sky-700 border border-sky-200'
-                        }`}
+              {sessions.map((s) => {
+                const attendingIds = attendeesBySession[s.id] ?? [];
+                return (
+                  <div key={s.id} className="rounded-xl border border-beige/70 bg-[#faf8f4] px-3.5 py-2.5 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedSessionIds.includes(s.id)}
+                        onChange={() => toggleSessionSelection(s.id)}
+                        className="h-4 w-4 rounded border-beige text-sage-dark focus:ring-sage"
+                        title="Select for multi-session analysis"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/admin/families/${household.id}/sessions/${s.id}`)}
+                        className="flex-1 flex items-center justify-between text-left cursor-pointer"
                       >
-                        {s.status}
-                      </span>
+                        <div className="flex items-center gap-2 text-sm text-charcoal">
+                          <Calendar className="h-3.5 w-3.5 text-sage-dark" />
+                          {new Date(s.session_date).toLocaleDateString(undefined, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase ${
+                              s.status === 'completed'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : s.status === 'cancelled'
+                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                : 'bg-sky-50 text-sky-700 border border-sky-200'
+                            }`}
+                          >
+                            {s.status}
+                          </span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-warm-gray" />
+                      </button>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-warm-gray" />
-                  </button>
-                </div>
-              ))}
+                    {members.length > 0 ? (
+                      <div className="flex flex-wrap items-center gap-1.5 pl-7">
+                        <UserRound className="h-3 w-3 text-warm-gray" />
+                        {members.map((m) => {
+                          const attending = attendingIds.includes(m.id);
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => toggleAttendee(s.id, m.id)}
+                              className={`text-[10px] px-2 py-0.5 rounded-full border transition ${
+                                attending
+                                  ? 'bg-sage text-white border-sage'
+                                  : 'bg-white text-warm-gray border-beige hover:border-sage/50'
+                              }`}
+                              title={attending ? `${m.full_name} attended — click to remove` : `${m.full_name} did not attend — click to add`}
+                            >
+                              {m.full_name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           )}
         </Panel>

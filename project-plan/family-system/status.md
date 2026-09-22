@@ -1,6 +1,6 @@
 # Family / Household Client Management System — Status
 
-## Current Status: 🟢 Stages 0–4 Complete and Live-Verified. Stage 5 Complete.
+## Current Status: 🟢 Stages 0–5 Complete and Live-Verified, plus a Stage 6 correction.
 
 > [!IMPORTANT]
 > - Branch: `feature/family-client-system`, correctly based on `main` (see note below — this needed a fix).
@@ -33,6 +33,18 @@ Stage 0 was originally marked complete as "branched fresh from `main`," but that
 
 ---
 
+## Correction on record: household-to-client relationship (Stage 6)
+
+The first version of Stages 2-5 built `households` as a standalone entity with an *optional* `primary_contact_profile_id`, and a manual "type a family name" creation form. The user flagged this directly: a family case is a spinoff of a real client account, not a parallel record — every household, session, and member must trace back to Clients & Users, and all client interactions must be visible from the case, not just linkable.
+
+Fixed:
+- **Migration `20260922170000_require_household_client_link.sql`**: `households.primary_contact_profile_id` is now `NOT NULL`. A household cannot exist without a real client. Verified live: inserting one without it fails with a constraint violation (see `scripts/verify-family-system-client-link.js`).
+- **`AdminFamilies.tsx` creation flow rebuilt**: picking an existing client (search over `profiles`) is now step one and mandatory. Step two shows that client's *real* bookings and lets the admin choose which become case sessions. On create: household members (parent, and any named child) and case sessions (with real `session_date`, `google_meet_url`, `booking_id`) are auto-seeded from the selected bookings' actual data, and every seeded member is linked as an attendee on every seeded session — not typed in blind.
+- **`AdminUsers.tsx`**: added a "Family Case" deep-link next to the existing "CRM Dossier" link on every client row, matching the established pattern, so the connection works from both directions.
+- **`HouseholdDossier.tsx`**: now shows a "Client Account" panel at the top — the linked profile's name/email/phone, a link to their CRM dossier, their `customer_journey_state` engagement snapshot, and their full booking history (not just the ones converted to sessions). Bookings not yet turned into a session are surfaced as one-click "add session from booking" prompts instead of a blank manual form.
+- **Attendee visibility**: `session_attendees` existed in the schema since Stage 1 but had no UI. Both `HouseholdDossier.tsx` (per-session chip row) and `SessionWorkspace.tsx` (attendee bar at the top of a session) now show and let you toggle which household members attended which session — the family-member connections are visible, not just stored.
+- Live-verified end to end in `scripts/verify-family-system-client-link.js`: real client + real booking -> household -> seeded members -> seeded session (with `booking_id`) -> attendees -> cross-checked against `customer_journey_state`. All assertions pass against the actual deployed database.
+
 ## Deferred (explicitly, not silently dropped)
 
 - **Pre-session recap auto-generation**: not built. Needs a decision on what should trigger generation and what it should draw from — flagged rather than guessed.
@@ -42,4 +54,5 @@ Stage 0 was originally marked complete as "branched fresh from `main`," but that
 ## Verification artifacts (real, not mocked)
 - `scripts/verify-family-system-rls.js` — Stage 1 RLS, real admin/student JWTs, full CRUD.
 - `scripts/verify-family-system-stage4.js` — Stage 4 no-hallucination guard, real deployed Edge Function call.
+- `scripts/verify-family-system-client-link.js` — Stage 6 correction: mandatory client link, booking-derived seeding, attendee connections, CRM cross-reference.
 - `npm run build` and `npm run typecheck` both pass; the handful of typecheck errors present in the repo are pre-existing, unrelated to this module (confirmed by filtering typecheck output for this module's files — zero matches).

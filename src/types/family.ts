@@ -5,7 +5,7 @@ export type SessionContentType = 'pre_session_recap' | 'live_transcript' | 'hand
 
 export interface Household {
   id: string;
-  primary_contact_profile_id: string | null;
+  primary_contact_profile_id: string;
   family_name: string;
   presenting_issue: string | null;
   working_plan: string | null;

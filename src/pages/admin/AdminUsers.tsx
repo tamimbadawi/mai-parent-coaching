@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, ChevronDown, Compass, Crown, Edit3, Globe, Loader2, MapPin, Phone, PlusCircle, ShieldCheck, Trash2, UserRound, X } from 'lucide-react';
+import { AlertCircle, ChevronDown, Compass, Crown, Edit3, Globe, Loader2, MapPin, Phone, PlusCircle, ShieldCheck, Sparkles, Trash2, UserRound, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
 import PhoneInput, { formatPhone, getDialCodeForCountry, parsePhone } from '../../components/ui/PhoneInput';
@@ -416,6 +416,12 @@ const AdminUsers = (): JSX.Element => {
                             <span className="inline-flex items-center gap-2"><Compass className="h-4 w-4 text-sage-dark" /> CRM Dossier</span>
                           </Link>
                         ) : null}
+                        <Link
+                          to={`/admin/families?client=${user.id}&name=${encodeURIComponent(user.full_name ?? '')}&email=${encodeURIComponent(user.email ?? '')}`}
+                          className="rounded-2xl border border-beige bg-[#faf8f4] px-4 py-3 text-sm font-medium text-charcoal transition hover:border-sage hover:text-sage-dark"
+                        >
+                          <span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4 text-sage-dark" /> Family Case</span>
+                        </Link>
                         <button
                           onClick={() => openEdit(user)}
                           className="rounded-2xl border border-beige bg-white px-4 py-3 text-sm font-medium text-charcoal transition hover:border-sage hover:text-sage-dark"

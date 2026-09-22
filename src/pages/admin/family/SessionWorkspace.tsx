@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, AlertCircle, Check, Pencil, Upload, ImagePlus, Calendar } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, Check, Pencil, Upload, ImagePlus, Calendar, UserRound } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import AdminLayout from '../AdminLayout';
 import { Panel } from '../components/AdminUI';
@@ -8,6 +8,7 @@ import {
   CONTENT_TYPE_LABELS,
   type CaseSession,
   type Household,
+  type HouseholdMember,
   type SessionContent,
   type SessionContentType,
 } from '../../../types/family';
@@ -33,6 +34,8 @@ export const SessionWorkspace = (): JSX.Element => {
   const [household, setHousehold] = useState<Household | null>(null);
   const [session, setSession] = useState<CaseSession | null>(null);
   const [contentBySlot, setContentBySlot] = useState<Record<string, SessionContent | undefined>>({});
+  const [members, setMembers] = useState<HouseholdMember[]>([]);
+  const [attendingIds, setAttendingIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,16 +50,21 @@ export const SessionWorkspace = (): JSX.Element => {
     setLoading(true);
     setError(null);
     try {
-      const [{ data: h, error: hErr }, { data: s, error: sErr }, { data: c, error: cErr }] = await Promise.all([
-        supabase.from('households').select('*').eq('id', householdId).single(),
-        supabase.from('case_sessions').select('*').eq('id', sessionId).single(),
-        supabase.from('session_content').select('*').eq('session_id', sessionId),
-      ]);
+      const [{ data: h, error: hErr }, { data: s, error: sErr }, { data: c, error: cErr }, { data: m }, { data: attendees }] =
+        await Promise.all([
+          supabase.from('households').select('*').eq('id', householdId).single(),
+          supabase.from('case_sessions').select('*').eq('id', sessionId).single(),
+          supabase.from('session_content').select('*').eq('session_id', sessionId),
+          supabase.from('household_members').select('*').eq('household_id', householdId).order('created_at', { ascending: true }),
+          supabase.from('session_attendees').select('household_member_id').eq('session_id', sessionId),
+        ]);
       if (hErr) throw hErr;
       if (sErr) throw sErr;
       if (cErr) throw cErr;
       setHousehold(h);
       setSession(s);
+      setMembers(m ?? []);
+      setAttendingIds((attendees ?? []).map((a) => a.household_member_id));
       const map: Record<string, SessionContent> = {};
       for (const row of c ?? []) map[row.content_type] = row;
       setContentBySlot(map);
@@ -131,6 +139,18 @@ export const SessionWorkspace = (): JSX.Element => {
     }
   };
 
+  const toggleAttendee = async (memberId: string): Promise<void> => {
+    if (!sessionId) return;
+    const attending = attendingIds.includes(memberId);
+    if (attending) {
+      await supabase.from('session_attendees').delete().eq('session_id', sessionId).eq('household_member_id', memberId);
+      setAttendingIds((prev) => prev.filter((id) => id !== memberId));
+    } else {
+      await supabase.from('session_attendees').insert({ session_id: sessionId, household_member_id: memberId });
+      setAttendingIds((prev) => [...prev, memberId]);
+    }
+  };
+
   if (loading) {
     return (
       <AdminLayout title="Session" subtitle="Loading...">
@@ -173,6 +193,29 @@ export const SessionWorkspace = (): JSX.Element => {
           <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
             <p>{error}</p>
+          </div>
+        ) : null}
+
+        {members.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-beige/80 bg-white px-4 py-3 shadow-2xs">
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-warm-gray">
+              <UserRound className="h-3.5 w-3.5" /> Attendees:
+            </span>
+            {members.map((m) => {
+              const attending = attendingIds.includes(m.id);
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => toggleAttendee(m.id)}
+                  className={`text-xs px-2.5 py-1 rounded-full border transition ${
+                    attending ? 'bg-sage text-white border-sage' : 'bg-[#faf8f4] text-warm-gray border-beige hover:border-sage/50'
+                  }`}
+                >
+                  {m.full_name}
+                </button>
+              );
+            })}
           </div>
         ) : null}
 
