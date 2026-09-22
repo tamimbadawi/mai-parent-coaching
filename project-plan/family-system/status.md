@@ -45,6 +45,15 @@ Fixed:
 - **Attendee visibility**: `session_attendees` existed in the schema since Stage 1 but had no UI. Both `HouseholdDossier.tsx` (per-session chip row) and `SessionWorkspace.tsx` (attendee bar at the top of a session) now show and let you toggle which household members attended which session — the family-member connections are visible, not just stored.
 - Live-verified end to end in `scripts/verify-family-system-client-link.js`: real client + real booking -> household -> seeded members -> seeded session (with `booking_id`) -> attendees -> cross-checked against `customer_journey_state`. All assertions pass against the actual deployed database.
 
+## Correction on record: session workspace UI (Stage 7)
+
+The user pointed at the deleted `feature/session-intelligence-ui` prototype's screenshot (tabbed content + fixed "Session Intelligence" chat panel, client/session dropdowns in the header) as the layout they actually wanted, and said the Stage 3 grid-of-4-panels version wasn't good. Rebuilt `SessionWorkspace.tsx` around that layout, on the real data:
+
+- Header: client and session dropdown pills (matching the old `SessionControlBar` pattern) live in `AdminLayout`'s action slot, so switching family or session is one click, same as the reference.
+- Content pane: tab bar restored visually (`FileText`/`MessageSquare`/`Camera`/`Pencil` icons, active-tab underline), but mapped to what actually exists — **Pre-Session Recap / Live Transcript / Handwritten Notes / Post-Session Notes** — not the old prototype's `Clinical Summary` / `Action Plan` / `Emotional Dynamics` / `Raw Transcript`. Deliberately did not restore the checklist/dropdown clinical fields: those require Mai's real assessment framework, which still doesn't exist (see the `clinical_analysis_rules` guard in Stage 4). Live transcript tab has the old raw-transcript search box back.
+- Chat panel: this is now a **real, persisted, multi-turn conversation**, not the old prototype's `isMockMode` simulation. New table `session_chat_messages` (migration `20260922180000`) and Edge Function `session-chat`: scoped to the household (continuous conversation about one family across all their sessions, matching "Context-scoped to {family}" from the old UI), grounded in that family's real case fields + all session content, applies the same no-invented-framework guard as Stage 4, and persists both turns. `SessionChatPanel.tsx` reuses the old prototype's message-bubble/markdown styling almost verbatim (it was well built) but loads/sends against the real backend.
+- Live-verified end to end in `scripts/verify-session-chat.js`: a real admin JWT asks a real question about the seeded Jenkins family, gets a reply that correctly cites the actual seeded session content (meltdown duration trend), and both turns are confirmed persisted in `session_chat_messages`.
+
 ## Deferred (explicitly, not silently dropped)
 
 - **Pre-session recap auto-generation**: not built. Needs a decision on what should trigger generation and what it should draw from — flagged rather than guessed.
@@ -55,4 +64,6 @@ Fixed:
 - `scripts/verify-family-system-rls.js` — Stage 1 RLS, real admin/student JWTs, full CRUD.
 - `scripts/verify-family-system-stage4.js` — Stage 4 no-hallucination guard, real deployed Edge Function call.
 - `scripts/verify-family-system-client-link.js` — Stage 6 correction: mandatory client link, booking-derived seeding, attendee connections, CRM cross-reference.
+- `scripts/verify-session-chat.js` — Stage 7 correction: real multi-turn chat, grounded in actual seeded session content, persisted correctly.
+- `scripts/seed-family-system-demo-data.js` / `scripts/remove-family-system-demo-data.js` — extensive realistic demo data (4 families, real auth accounts, bookings, sessions, rich session content) seeded into the live project, clearly tagged (`@demo-family.test` emails, `[DEMO] ` household prefix) so it can be found and removed without touching real clients.
 - `npm run build` and `npm run typecheck` both pass; the handful of typecheck errors present in the repo are pre-existing, unrelated to this module (confirmed by filtering typecheck output for this module's files — zero matches).

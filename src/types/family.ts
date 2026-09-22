@@ -73,6 +73,15 @@ export const roleLabel = (role: HouseholdMemberRole): string => {
   return labels[role];
 };
 
+export interface SessionChatMessage {
+  id: string;
+  household_id: string;
+  session_id: string | null;
+  sender: 'admin' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
 export const CONTENT_TYPE_LABELS: Record<SessionContentType, string> = {
   pre_session_recap: 'Pre-Session Recap',
   live_transcript: 'Live Transcript',
