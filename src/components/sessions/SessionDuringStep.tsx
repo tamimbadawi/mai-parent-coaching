@@ -59,6 +59,8 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
   const [newTimestamp, setNewTimestamp] = useState('');
   const [newText, setNewText] = useState('');
 
+  const hasUnsavedNotes = draftHandwritten !== initialHandwrittenNotes;
+
   useEffect(() => {
     setDraftHandwritten(initialHandwrittenNotes);
     setSaveNotesSuccess(false);
@@ -137,14 +139,26 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
         year: 'numeric',
       });
       const appendHeader = `— From photo, ${dateStr} —`;
+      const trimmed = draftHandwritten.trim();
+      const updatedNotes = trimmed
+        ? `${trimmed}\n\n${appendHeader}\n${transcribedText}`
+        : `${appendHeader}\n${transcribedText}`;
 
-      setDraftHandwritten((prev) => {
-        const trimmed = prev.trim();
-        return trimmed ? `${trimmed}\n\n${appendHeader}\n${transcribedText}` : `${appendHeader}\n${transcribedText}`;
-      });
+      setDraftHandwritten(updatedNotes);
 
-      setOcrSuccessMsg('Handwritten notes transcribed and appended below!');
-      setTimeout(() => setOcrSuccessMsg(null), 4000);
+      // 4. Autosave immediately to handwritten_notes row in database
+      setIsSavingNotes(true);
+      const saveOk = await onSaveHandwrittenNotes(updatedNotes);
+      setIsSavingNotes(false);
+
+      if (saveOk) {
+        setSaveNotesSuccess(true);
+        setTimeout(() => setSaveNotesSuccess(false), 3000);
+        setOcrSuccessMsg('Handwritten notes transcribed and saved!');
+        setTimeout(() => setOcrSuccessMsg(null), 4000);
+      } else {
+        setOcrError('Photo transcribed, but autosaving to database failed. Please click Save Notes.');
+      }
     } catch (err: any) {
       console.error('OCR processing error:', err);
       setOcrError(err.message || 'Failed to transcribe photo. Please try again.');
@@ -315,7 +329,12 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
               )}
             </button>
 
-            {/* Save Notes Button */}
+            {/* Save Notes Button & Status */}
+            {hasUnsavedNotes && !saveNotesSuccess && !isSavingNotes && (
+              <span className="text-[11px] font-medium text-amber-800 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">
+                Unsaved changes
+              </span>
+            )}
             {saveNotesSuccess && (
               <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
                 <Check className="w-3 h-3 text-emerald-600" /> Saved

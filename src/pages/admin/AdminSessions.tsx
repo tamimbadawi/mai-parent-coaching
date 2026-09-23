@@ -1120,7 +1120,6 @@ export const AdminSessions: React.FC = () => {
       {showDossierModal && dossierClient ? (
         <ClientDossierModal
           client={dossierClient}
-          sessions={activeClient?.sessions}
           onClose={() => setShowDossierModal(false)}
           onClientUpdated={(updated) => {
             setDossierClient((prev) => (prev ? { ...prev, ...updated } : null));

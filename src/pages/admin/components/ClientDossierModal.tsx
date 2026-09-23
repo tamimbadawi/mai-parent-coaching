@@ -30,7 +30,6 @@ import {
 import { supabase } from '../../../lib/supabase';
 import type { CustomerJourneyState, CRMContentItem, CRMLifecycleStage } from '../../../types';
 import { roleLabel, currentAge, type Household, type HouseholdMember } from '../../../types/family';
-import type { SessionTranscript } from '../../../types/session';
 import { COUNTRIES } from '../../../data/countries';
 import InternalWhatsAppMessengerModal from './InternalWhatsAppMessengerModal';
 
@@ -54,7 +53,6 @@ interface ClientDossierModalProps {
   client: CustomerJourneyState;
   onClose: () => void;
   onClientUpdated?: (updatedClient: Partial<CustomerJourneyState>) => void;
-  sessions?: SessionTranscript[];
 }
 
 const LIFECYCLE_CONFIG: Record<
@@ -122,7 +120,6 @@ export const ClientDossierModal = ({
   client: initialClient,
   onClose,
   onClientUpdated,
-  sessions,
 }: ClientDossierModalProps): JSX.Element => {
   const [client, setClient] = useState<CustomerJourneyState>(initialClient);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);

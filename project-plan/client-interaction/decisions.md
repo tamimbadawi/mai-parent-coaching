@@ -116,17 +116,18 @@ Full schema: [schema.md](file:///d:/Cursor/Mai_Website/project-plan/client-inter
 
 ---
 
-## 9. Session page follows Mai's workflow: Before → Session → After (user, 2026-09-23)
+## 9. Session page follows Mai's workflow: Prep → Session → Write-up (user, 2026-09-23)
 
 The session page is organised around Mai's three moments, not by content type. Replaces the Notes / Action Plan / Dynamics / Transcript tabs.
 
 | Step | Purpose | Contents | Storage |
 | :--- | :--- | :--- | :--- |
-| **Before** | Recap just before the call | Auto-assembled (no AI needed): presenting issue + working plan, last session's write-up, open `member_action_items` per member, member concern levels + recent `member_notes`. Plus "My prep notes". | Recap assembled live; prep notes → `session_content.pre_session_recap` |
-| **Session** | Raw capture during the call | Handwritten notes (typed, or photo → Gemini OCR **appended**), Drive recording link, transcript when available. | `handwritten_notes`, `case_sessions.drive_web_view_url`, `live_transcript` |
-| **After** | Fresh analysis right after | Write-up, key insights, dynamics, action items assigned per member, quick member note per attendee. | `post_session_notes`, `member_action_items`, `member_notes` |
+| **Prep** | Recap just before the call ("Your recap before the call — the client doesn't see this") | Auto-assembled (no AI needed): presenting issue + working plan, last session's write-up, open `member_action_items` per member, member concern levels + recent `member_notes`. Plus "My prep notes". | Recap assembled live; prep notes → `session_content.pre_session_recap` |
+| **Session** | Raw capture during the call | Handwritten notes (typed, or photo → Gemini OCR **autosaved & appended**), Drive recording link, transcript when available. | `handwritten_notes`, `case_sessions.drive_web_view_url`, `live_transcript` |
+| **Write-up** | Fresh analysis right after | Write-up, key insights, dynamics, action items assigned per member, quick member note per attendee. | `post_session_notes`, `member_action_items`, `member_notes` |
 
-- Default step: future session → Before; today → Session; past without a write-up → After.
+- Default step: future session → Prep; today → Session; past without a write-up → Write-up.
 - Chat panel stays visible on all steps.
-- **Action items live only in `member_action_items`** (with `session_id`), never inside `post_session_notes.source_metadata`. This is what lets "After" feed the next session's "Before" and the member persona.
+- **Action items live only in `member_action_items`** (with `session_id`), never inside `post_session_notes.source_metadata`. This is what lets "Write-up" feed the next session's "Prep" and the member persona.
 - Existing action items in `source_metadata` are demo/seed data; no migration of them needed unless real ones exist.
+

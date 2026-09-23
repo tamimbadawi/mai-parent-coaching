@@ -50,11 +50,11 @@ Rules out the whole approach cheaply before UI work.
 - [x] Session view (`AdminSessions.tsx`): paste a Drive link, save it, clear it. Only accept links starting with `https://drive.google.com/`.
 - [x] Client card: the existing "Open in Google Drive" button shows when the link is set.
 
-## Stage 3b — Session page: Before → Session → After (decisions.md §9)
-- [x] Replace the Notes / Action Plan / Dynamics / Transcript tabs with three steps: Before, Session, After. Default step chosen by session date.
-- [x] Before: auto recap from existing data + "My prep notes" (`pre_session_recap`).
-- [x] Session: handwritten notes (typed + photo upload that appends via Gemini OCR), Drive link, transcript.
-- [x] After: write-up, insights, dynamics, per-member action items (`member_action_items`), quick member notes.
+## Stage 3b — Session page: Prep → Session → Write-up (decisions.md §9)
+- [x] Replace the Notes / Action Plan / Dynamics / Transcript tabs with three steps: Prep, Session, Write-up. Default step chosen by session date.
+- [x] Prep: auto recap from existing data ("Your recap before the call — the client doesn't see this") + "My prep notes" (`pre_session_recap`).
+- [x] Session: handwritten notes (typed + photo upload that autosaves & appends via Gemini OCR), Drive link, transcript.
+- [x] Write-up: consultation write-up, insights, dynamics, per-member action items (`member_action_items`), quick member notes.
 - [x] Real save status (check Supabase errors); no demo/mock fallback text on real DB sessions; demo clients labeled with `(Demo)`.
 
 ## Stage 4 — Transcribe button

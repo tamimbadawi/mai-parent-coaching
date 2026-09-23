@@ -27,7 +27,7 @@ export const SessionWorkflowTabs: React.FC<SessionWorkflowTabsProps> = ({
   }[] = [
     {
       key: 'before',
-      label: 'Before',
+      label: 'Prep',
       description: 'Prep & Family Recap',
       icon: Clock,
       badge: openActionItemsCount > 0 ? (
@@ -49,7 +49,7 @@ export const SessionWorkflowTabs: React.FC<SessionWorkflowTabsProps> = ({
     },
     {
       key: 'after',
-      label: 'After',
+      label: 'Write-up',
       description: 'Write-up & Commitments',
       icon: CheckCircle2,
       badge: hasPostNotes ? (

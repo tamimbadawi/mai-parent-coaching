@@ -85,8 +85,8 @@ export const SessionBeforeStep: React.FC<SessionBeforeStepProps> = ({
             <h3 className="font-serif text-sm font-bold text-charcoal">
               Family Clinical Context & Working Plan
             </h3>
-            <p className="text-[11px] text-warm-gray">
-              {household ? `${household.family_name || 'Family'} Case Overview` : 'No connected household record'}
+            <p className="text-[11px] text-sage-dark font-medium">
+              Your recap before the call — the client doesn't see this.
             </p>
           </div>
         </div>
