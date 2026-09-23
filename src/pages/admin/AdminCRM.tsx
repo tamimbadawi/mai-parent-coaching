@@ -29,7 +29,7 @@ import { UserComposerModal } from './components/UserComposerModal';
 import type { CustomerJourneyState } from '../../types';
 import { COUNTRIES } from '../../data/countries';
 
-type FilterTab = 'all' | 'clients' | 'admins' | 'track_a' | 'track_b' | 'attention' | 'active_coaching' | 'opted_out_paused';
+type FilterTab = 'all' | 'clients' | 'admins' | 'track_a' | 'track_b' | 'attention' | 'active_coaching';
 
 export const AdminCRM = (): JSX.Element => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -143,9 +143,6 @@ export const AdminCRM = (): JSX.Element => {
         c.lifecycle_stage === 'track_b_quiet'
     ).length;
     const activeCoaching = clientUsers.filter((c) => c.upcoming_sessions_count > 0).length;
-    const optedOutOrPaused = clientUsers.filter(
-      (c) => c.engagement_status === 'opted_out' || c.engagement_status === 'paused'
-    ).length;
 
     return {
       total,
@@ -155,7 +152,6 @@ export const AdminCRM = (): JSX.Element => {
       trackB,
       attention,
       activeCoaching,
-      optedOutOrPaused,
       admins: totalAdmins,
     };
   }, [clients]);
@@ -196,12 +192,6 @@ export const AdminCRM = (): JSX.Element => {
       }
       if (activeTab === 'active_coaching') {
         return client.role === 'student' && client.upcoming_sessions_count > 0;
-      }
-      if (activeTab === 'opted_out_paused') {
-        return (
-          client.role === 'student' &&
-          (client.engagement_status === 'opted_out' || client.engagement_status === 'paused')
-        );
       }
 
       return true;
@@ -502,8 +492,8 @@ export const AdminCRM = (): JSX.Element => {
           <ContentLibraryStudio />
         ) : (
           <>
-            {/* Top Summary 5-Stat Cards (Compact horizontal layout matching user suggestion) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+            {/* Top Summary 4-Stat Cards (Compact horizontal layout matching user suggestion) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
               {/* Card 1: Total Users (Everyone) */}
               <div className="rounded-2xl border border-beige/80 bg-white px-3.5 py-2.5 shadow-2xs transition hover:border-beige flex items-center gap-2.5 min-w-0">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#edf5f3] text-[#4d8b82]">
@@ -576,25 +566,6 @@ export const AdminCRM = (): JSX.Element => {
                   </p>
                   <p className="text-[11px] text-warm-gray truncate leading-tight mt-0.5">
                     Re-engagement or taper
-                  </p>
-                </div>
-              </div>
-
-              {/* Card 5: Opted Out / Paused */}
-              <div className="rounded-2xl border border-beige/80 bg-white px-3.5 py-2.5 shadow-2xs transition hover:border-beige flex items-center gap-2.5 min-w-0">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fff1f2] text-[#f43f5e]">
-                  <AlertCircle className="h-4 w-4" />
-                </div>
-                <div className="h-8 w-px bg-beige/80 shrink-0" />
-                <span className="font-serif text-2xl lg:text-3xl text-charcoal font-normal shrink-0">
-                  {stats.optedOutOrPaused}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-charcoal/80 truncate">
-                    OPTED OUT / PAUSED
-                  </p>
-                  <p className="text-[11px] text-warm-gray truncate leading-tight mt-0.5">
-                    Non-active outreach
                   </p>
                 </div>
               </div>
@@ -694,17 +665,6 @@ export const AdminCRM = (): JSX.Element => {
                       }`}
                     >
                       Upcoming Booked
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('opted_out_paused')}
-                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                        activeTab === 'opted_out_paused'
-                          ? 'bg-white text-rose-700 shadow-2xs font-semibold'
-                          : 'text-warm-gray hover:text-charcoal'
-                      }`}
-                    >
-                      Opted Out / Paused ({stats.optedOutOrPaused})
                     </button>
                   </div>
 
