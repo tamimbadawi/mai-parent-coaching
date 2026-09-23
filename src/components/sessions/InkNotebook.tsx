@@ -9,7 +9,6 @@ import {
   Check,
   Loader2,
   AlertCircle,
-  FileText,
   Sparkles,
   Eraser,
   PenLine,
@@ -208,6 +207,7 @@ export const InkNotebook: React.FC<InkNotebookProps> = ({
             ? { ...p, strokes: newStrokes, updatedAt: new Date().toISOString() }
             : p
         );
+        latestPagesRef.current = next;
         scheduleAutosave(next);
         return next;
       });
@@ -377,7 +377,8 @@ export const InkNotebook: React.FC<InkNotebookProps> = ({
     setIsConverting(true);
     setConvertSuccess(false);
     try {
-      await onConvertToText(currentPage);
+      const pageToConvert = latestPagesRef.current[currentPageIndex] || currentPage;
+      await onConvertToText(pageToConvert);
       setConvertSuccess(true);
       setTimeout(() => setConvertSuccess(false), 3000);
     } catch (err) {

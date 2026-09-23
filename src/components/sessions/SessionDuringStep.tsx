@@ -25,7 +25,8 @@ interface SessionDuringStepProps {
   initialHandwrittenNotes: string;
   initialInkPages?: InkPage[];
   sessionNumber?: number;
-  onSaveHandwrittenNotes: (text: string, inkPages?: InkPage[]) => Promise<boolean>;
+  onSaveHandwrittenText: (text: string) => Promise<boolean>;
+  onSaveInkPages: (pages: InkPage[]) => Promise<boolean>;
   driveWebViewUrl?: string | null;
   onSaveDriveLink: (url: string) => Promise<boolean>;
   onClearDriveLink: () => Promise<boolean>;
@@ -37,7 +38,8 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
   initialHandwrittenNotes,
   initialInkPages,
   sessionNumber,
-  onSaveHandwrittenNotes,
+  onSaveHandwrittenText,
+  onSaveInkPages,
   driveWebViewUrl,
   onSaveDriveLink,
   onClearDriveLink,
@@ -46,11 +48,17 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
 }) => {
   // Handwritten notes state
   const [draftHandwritten, setDraftHandwritten] = useState(initialHandwrittenNotes);
+  const draftHandwrittenRef = useRef(initialHandwrittenNotes);
+  draftHandwrittenRef.current = draftHandwritten;
+
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [saveNotesSuccess, setSaveNotesSuccess] = useState(false);
 
   // Ink Notebook state
   const [inkPages, setInkPages] = useState<InkPage[]>(initialInkPages || []);
+  const inkPagesRef = useRef<InkPage[]>(initialInkPages || []);
+  inkPagesRef.current = inkPages;
+
   const [isNotebookOpen, setIsNotebookOpen] = useState(false);
   const [activeNotebookPageIndex, setActiveNotebookPageIndex] = useState(0);
   const [convertingPageIndex, setConvertingPageIndex] = useState<number | null>(null);
@@ -58,6 +66,7 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
 
   useEffect(() => {
     setInkPages(initialInkPages || []);
+    inkPagesRef.current = initialInkPages || [];
   }, [initialInkPages]);
 
   // Photo OCR state
@@ -84,6 +93,7 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
 
   useEffect(() => {
     setDraftHandwritten(initialHandwrittenNotes);
+    draftHandwrittenRef.current = initialHandwrittenNotes;
     setSaveNotesSuccess(false);
   }, [initialHandwrittenNotes]);
 
@@ -104,7 +114,7 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
     setIsSavingNotes(true);
     setSaveNotesSuccess(false);
     try {
-      const ok = await onSaveHandwrittenNotes(draftHandwritten, inkPages);
+      const ok = await onSaveHandwrittenText(draftHandwrittenRef.current);
       if (ok) {
         setSaveNotesSuccess(true);
         setTimeout(() => setSaveNotesSuccess(false), 2500);
@@ -160,16 +170,17 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
         year: 'numeric',
       });
       const appendHeader = `— From photo, ${dateStr} —`;
-      const trimmed = draftHandwritten.trim();
+      const trimmed = draftHandwrittenRef.current.trim();
       const updatedNotes = trimmed
         ? `${trimmed}\n\n${appendHeader}\n${transcribedText}`
         : `${appendHeader}\n${transcribedText}`;
 
       setDraftHandwritten(updatedNotes);
+      draftHandwrittenRef.current = updatedNotes;
 
-      // 4. Autosave immediately to handwritten_notes row in database
+      // 4. Autosave text immediately to handwritten_notes row in database
       setIsSavingNotes(true);
-      const saveOk = await onSaveHandwrittenNotes(updatedNotes, inkPages);
+      const saveOk = await onSaveHandwrittenText(updatedNotes);
       setIsSavingNotes(false);
 
       if (saveOk) {
@@ -206,16 +217,17 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
         year: 'numeric',
       });
       const appendHeader = `— From ink page ${page.pageNumber}, ${dateStr} —`;
-      const trimmed = draftHandwritten.trim();
+      const trimmed = draftHandwrittenRef.current.trim();
       const updatedNotes = trimmed
         ? `${trimmed}\n\n${appendHeader}\n${transcribedText}`
         : `${appendHeader}\n${transcribedText}`;
 
       setDraftHandwritten(updatedNotes);
+      draftHandwrittenRef.current = updatedNotes;
 
-      // Autosave immediately preserving existing ink pages
+      // Autosave text immediately preserving ink pages untouched
       setIsSavingNotes(true);
-      const saveOk = await onSaveHandwrittenNotes(updatedNotes, inkPages);
+      const saveOk = await onSaveHandwrittenText(updatedNotes);
       setIsSavingNotes(false);
 
       if (saveOk) {
@@ -236,14 +248,15 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
   };
 
   const handleConvertAllInkPages = async () => {
-    if (inkPages.length === 0) return;
+    const currentPages = inkPagesRef.current;
+    if (currentPages.length === 0) return;
     setIsConvertingAll(true);
     setIsOcrProcessing(true);
     setOcrError(null);
     setOcrSuccessMsg(null);
 
     try {
-      const pagesWithStrokes = inkPages.filter((p) => p.strokes && p.strokes.length > 0);
+      const pagesWithStrokes = currentPages.filter((p) => p.strokes && p.strokes.length > 0);
       if (pagesWithStrokes.length === 0) {
         setOcrError('No ink strokes found across notebook pages.');
         return;
@@ -261,15 +274,16 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
         accumulatedAppend += `\n\n— From ink page ${p.pageNumber}, ${dateStr} —\n${text}`;
       }
 
-      const trimmed = draftHandwritten.trim();
+      const trimmed = draftHandwrittenRef.current.trim();
       const updatedNotes = trimmed
         ? `${trimmed}${accumulatedAppend}`
         : accumulatedAppend.trimStart();
 
       setDraftHandwritten(updatedNotes);
+      draftHandwrittenRef.current = updatedNotes;
 
       setIsSavingNotes(true);
-      const saveOk = await onSaveHandwrittenNotes(updatedNotes, inkPages);
+      const saveOk = await onSaveHandwrittenText(updatedNotes);
       setIsSavingNotes(false);
 
       if (saveOk) {
@@ -599,10 +613,12 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
             sessionNumber={sessionNumber}
             onSave={async (updatedPages) => {
               setInkPages(updatedPages);
-              return onSaveHandwrittenNotes(draftHandwritten, updatedPages);
+              inkPagesRef.current = updatedPages;
+              return onSaveInkPages(updatedPages);
             }}
             onClose={(updatedPages) => {
               setInkPages(updatedPages);
+              inkPagesRef.current = updatedPages;
               setIsNotebookOpen(false);
             }}
             onConvertToText={handleConvertSingleInkPage}

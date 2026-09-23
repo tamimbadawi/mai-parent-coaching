@@ -632,12 +632,10 @@ export const AdminSessions: React.FC = () => {
     return true;
   };
 
-  // 2. Save Handwritten Notes & Ink Pages (session_content -> handwritten_notes)
-  const handleSaveHandwrittenNotes = async (text: string, inkPages?: InkPage[]): Promise<boolean> => {
+  // 2a. Save Handwritten Notes Text (session_content.content only)
+  const handleSaveHandwrittenText = async (text: string): Promise<boolean> => {
     if (!activeSession) return false;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeSession.id);
-
-    const targetInkPages = inkPages !== undefined ? inkPages : activeSession.inkPages || [];
 
     setClients((prev) =>
       prev.map((c) =>
@@ -646,7 +644,7 @@ export const AdminSessions: React.FC = () => {
               ...c,
               sessions: c.sessions.map((s) =>
                 s.id === activeSession.id
-                  ? { ...s, handwrittenNotes: text, inkPages: targetInkPages }
+                  ? { ...s, handwrittenNotes: text }
                   : s
               ),
             }
@@ -657,29 +655,194 @@ export const AdminSessions: React.FC = () => {
     if (!isUuid) return true;
 
     setSaveStatus('saving');
-    const { error } = await supabase
-      .from('session_content')
-      .upsert(
-        {
-          session_id: activeSession.id,
-          content_type: 'handwritten_notes',
-          content: text,
-          source_metadata: { ink_pages: targetInkPages },
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'session_id,content_type' }
-      );
+    try {
+      const { data: existing, error: fetchError } = await supabase
+        .from('session_content')
+        .select('id')
+        .eq('session_id', activeSession.id)
+        .eq('content_type', 'handwritten_notes')
+        .maybeSingle();
 
-    if (error) {
-      console.error('Failed to save handwritten notes:', error);
+      if (fetchError) {
+        console.error('Failed to query handwritten notes row:', fetchError);
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+        return false;
+      }
+
+      let saveError;
+      if (existing) {
+        const { error } = await supabase
+          .from('session_content')
+          .update({
+            content: text,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id);
+        saveError = error;
+      } else {
+        const { error: insertError } = await supabase
+          .from('session_content')
+          .insert({
+            session_id: activeSession.id,
+            content_type: 'handwritten_notes',
+            content: text,
+            source_metadata: {},
+            updated_at: new Date().toISOString(),
+          });
+        if (insertError) {
+          const { data: retryExisting } = await supabase
+            .from('session_content')
+            .select('id')
+            .eq('session_id', activeSession.id)
+            .eq('content_type', 'handwritten_notes')
+            .maybeSingle();
+
+          if (retryExisting) {
+            const { error: updateError } = await supabase
+              .from('session_content')
+              .update({
+                content: text,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', retryExisting.id);
+            saveError = updateError;
+          } else {
+            saveError = insertError;
+          }
+        }
+      }
+
+      if (saveError) {
+        console.error('Failed to save handwritten text:', saveError);
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+        return false;
+      }
+
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      return true;
+    } catch (err) {
+      console.error('Error saving handwritten text:', err);
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 3000);
       return false;
     }
+  };
 
-    setSaveStatus('saved');
-    setTimeout(() => setSaveStatus('idle'), 3000);
-    return true;
+  // 2b. Save Ink Pages (session_content.source_metadata.ink_pages only)
+  const handleSaveInkPages = async (pages: InkPage[]): Promise<boolean> => {
+    if (!activeSession) return false;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeSession.id);
+
+    setClients((prev) =>
+      prev.map((c) =>
+        c.clientId === activeClient.clientId
+          ? {
+              ...c,
+              sessions: c.sessions.map((s) =>
+                s.id === activeSession.id
+                  ? { ...s, inkPages: pages }
+                  : s
+              ),
+            }
+          : c
+      )
+    );
+
+    if (!isUuid) return true;
+
+    setSaveStatus('saving');
+    try {
+      const { data: existing, error: fetchError } = await supabase
+        .from('session_content')
+        .select('id, source_metadata')
+        .eq('session_id', activeSession.id)
+        .eq('content_type', 'handwritten_notes')
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Failed to query handwritten notes row for ink:', fetchError);
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+        return false;
+      }
+
+      let saveError;
+      if (existing) {
+        const currentMeta =
+          existing.source_metadata &&
+          typeof existing.source_metadata === 'object' &&
+          !Array.isArray(existing.source_metadata)
+            ? (existing.source_metadata as Record<string, unknown>)
+            : {};
+        const updatedMeta = { ...currentMeta, ink_pages: pages };
+
+        const { error } = await supabase
+          .from('session_content')
+          .update({
+            source_metadata: updatedMeta,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id);
+        saveError = error;
+      } else {
+        const { error: insertError } = await supabase
+          .from('session_content')
+          .insert({
+            session_id: activeSession.id,
+            content_type: 'handwritten_notes',
+            content: '',
+            source_metadata: { ink_pages: pages },
+            updated_at: new Date().toISOString(),
+          });
+        if (insertError) {
+          const { data: retryExisting } = await supabase
+            .from('session_content')
+            .select('id, source_metadata')
+            .eq('session_id', activeSession.id)
+            .eq('content_type', 'handwritten_notes')
+            .maybeSingle();
+
+          if (retryExisting) {
+            const currentMeta =
+              retryExisting.source_metadata &&
+              typeof retryExisting.source_metadata === 'object' &&
+              !Array.isArray(retryExisting.source_metadata)
+                ? (retryExisting.source_metadata as Record<string, unknown>)
+                : {};
+            const updatedMeta = { ...currentMeta, ink_pages: pages };
+            const { error: updateError } = await supabase
+              .from('session_content')
+              .update({
+                source_metadata: updatedMeta,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', retryExisting.id);
+            saveError = updateError;
+          } else {
+            saveError = insertError;
+          }
+        }
+      }
+
+      if (saveError) {
+        console.error('Failed to save ink pages:', saveError);
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+        return false;
+      }
+
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      return true;
+    } catch (err) {
+      console.error('Error saving ink pages:', err);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      return false;
+    }
   };
 
   // 3. Save Write-Up (session_content -> post_session_notes)
@@ -1285,7 +1448,8 @@ export const AdminSessions: React.FC = () => {
               sessionActionItems={householdData.actionItems.filter((a) => a.session_id === activeSession.id)}
               sessionMemberNotes={householdData.notes.filter((n) => n.session_id === activeSession.id)}
               onSavePrepNotes={handleSavePrepNotes}
-              onSaveHandwrittenNotes={handleSaveHandwrittenNotes}
+              onSaveHandwrittenText={handleSaveHandwrittenText}
+              onSaveInkPages={handleSaveInkPages}
               onSaveDriveLink={handleSaveDriveLink}
               onClearDriveLink={handleClearDriveLink}
               onSavePostNotes={handleSavePostNotes}
