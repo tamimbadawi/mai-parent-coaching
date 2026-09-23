@@ -43,6 +43,8 @@ export interface SessionTranscript {
   
   // Structured clinical insights
   clinicalSummary: string; // Markdown formatted summary / Post-session write-up
+  preSessionRecap?: string; // Pre-session preparation notes
+  hasRealPostNotes?: boolean; // Whether real post-session notes exist in database
   handwrittenNotes?: string; // Handwritten / quick observational clinical notes
   keyInsights: string[];
   actionItems: ActionItem[];
@@ -78,5 +80,7 @@ export interface ClientSessionSummary {
   childAge?: string;
   householdId?: string;
   totalSessions: number;
+  isDemo?: boolean;
   sessions: SessionTranscript[];
 }
+

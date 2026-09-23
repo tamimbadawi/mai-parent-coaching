@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Users, Calendar, User, CheckCircle2, Loader2, AlertCircle, Home, ExternalLink } from 'lucide-react';
+import { Users, Calendar, User, CheckCircle2, Loader2, AlertCircle, Home } from 'lucide-react';
+import { isToday, isFuture, parseISO } from 'date-fns';
 import AdminLayout from './AdminLayout';
 import { TranscriptViewer } from '../../components/sessions/TranscriptViewer';
 import { SessionChatPanel } from '../../components/sessions/SessionChatPanel';
@@ -8,19 +9,37 @@ import { ClientDossierModal } from './components/ClientDossierModal';
 import { useSessionChat } from '../../hooks/useSessionChat';
 import { MOCK_CLIENT_SESSIONS } from '../../data/mockSessions';
 import { supabase } from '../../lib/supabase';
-import type { ClientSessionSummary, SessionTranscript, TranscriptUtterance } from '../../types/session';
+import type { ClientSessionSummary, SessionTranscript, TranscriptUtterance, EmotionalObservation } from '../../types/session';
 import type { CustomerJourneyState } from '../../types';
+import type { WorkflowStep } from '../../components/sessions/SessionWorkflowTabs';
+import type { Household, HouseholdMember, MemberActionItem, MemberNote, SessionAttendee, MemberNoteType } from '../../types/family';
 
 export const AdminSessions: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  // Start empty rather than seeded with mock data — real Supabase data (which already
-  // incorporates the mock content as a fallback) replaces this almost immediately, and
-  // rendering the mock set first just causes a visible flash/swap on every page load.
   const [clients, setClients] = useState<ClientSessionSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  // Floating CRM Dossier modal (opened in place, no page navigation)
+  // Active household lazy data (fetched only when active household changes, 3 queries in Promise.all)
+  const [householdData, setHouseholdData] = useState<{
+    householdId: string | null;
+    household: Household | null;
+    members: HouseholdMember[];
+    actionItems: MemberActionItem[];
+    notes: MemberNote[];
+    attendees: SessionAttendee[];
+  }>({
+    householdId: null,
+    household: null,
+    members: [],
+    actionItems: [],
+    notes: [],
+    attendees: [],
+  });
+
+  const loadedHouseholdIdRef = useRef<string | null>(null);
+
+  // Floating CRM Dossier modal
   const [showDossierModal, setShowDossierModal] = useState(false);
   const [dossierClient, setDossierClient] = useState<CustomerJourneyState | null>(null);
 
@@ -36,6 +55,41 @@ export const AdminSessions: React.FC = () => {
   const initialSessionId =
     searchParams.get('session') || activeClient?.sessions[0]?.id || '';
   const [selectedSessionId, setSelectedSessionId] = useState<string>(initialSessionId);
+
+  // Workflow step (Before · Session · After)
+  const [activeStep, setActiveStep] = useState<WorkflowStep>('before');
+  const lastSessionIdRef = useRef<string | null>(null);
+
+  // Find active session
+  const activeSession = useMemo(() => {
+    return (
+      activeClient?.sessions.find((s) => s.id === selectedSessionId) ||
+      activeClient?.sessions[0]
+    );
+  }, [activeClient, selectedSessionId]);
+
+  // Default step: only set when a session is first opened; never override Mai's manual selection on re-render/save
+  useEffect(() => {
+    if (!activeSession) return;
+    if (activeSession.id !== lastSessionIdRef.current) {
+      lastSessionIdRef.current = activeSession.id;
+      try {
+        const parsedDate = typeof activeSession.sessionDate === 'string'
+          ? parseISO(activeSession.sessionDate)
+          : new Date(activeSession.sessionDate);
+
+        if (isToday(parsedDate)) {
+          setActiveStep('session');
+        } else if (isFuture(parsedDate)) {
+          setActiveStep('before');
+        } else {
+          setActiveStep('after');
+        }
+      } catch {
+        setActiveStep('after');
+      }
+    }
+  }, [activeSession?.id, activeSession?.sessionDate]);
 
   // Sync state if URL search params change externally
   useEffect(() => {
@@ -60,10 +114,10 @@ export const AdminSessions: React.FC = () => {
   }, [searchParams, clients, selectedClientId, selectedSessionId, activeClient]);
 
   // Load real clients, households, case_sessions, and bookings from Supabase
+  // Note: DO NOT fetch member_action_items, member_notes, or session_attendees here!
   const loadRealClientSessions = useCallback(async () => {
     setLoading(true);
     try {
-      // 1-4. Fetch profiles, households, case_sessions, and bookings in parallel
       const [
         { data: profilesData },
         { data: householdsData },
@@ -146,8 +200,9 @@ export const AdminSessions: React.FC = () => {
         if (household) {
           const matchedSessions = dbSessions.filter((s) => s.household_id === household.id);
           matchedSessions.forEach((dbSess, idx) => {
-            const seedSession = seed?.sessions.find((s) => s.id === dbSess.id) || seed?.sessions[idx];
-
+            const prepNotes = dbSess.session_content?.find(
+              (c: { content_type: string }) => c.content_type === 'pre_session_recap'
+            );
             const postNotes = dbSess.session_content?.find(
               (c: { content_type: string }) => c.content_type === 'post_session_notes'
             );
@@ -159,7 +214,7 @@ export const AdminSessions: React.FC = () => {
             );
 
             // Parse live transcript into utterances if available
-            let parsedTranscript: TranscriptUtterance[] = seedSession?.rawTranscript || [];
+            let parsedTranscript: TranscriptUtterance[] = [];
             if (liveTranscript?.content) {
               const lines = liveTranscript.content.split('\n').filter((l: string) => l.trim());
               const utterances: TranscriptUtterance[] = [];
@@ -181,15 +236,9 @@ export const AdminSessions: React.FC = () => {
 
             const clinicalSummary =
               postNotes?.content ||
-              seedSession?.clinicalSummary ||
-              `### Session #${idx + 1} Consultation Notes\n\n**Date**: ${new Date(dbSess.session_date).toLocaleDateString()}\n**Status**: ${dbSess.status}\n\n${household.presenting_issue ? `**Presenting Focus**: ${household.presenting_issue}\n\n` : ''}${household.working_plan ? `**Working Plan**: ${household.working_plan}\n\n` : ''}No detailed clinical notes transcribed yet. Use the editor below to document observations and action commitments.`;
+              `### Session #${idx + 1} Consultation Notes\n\n**Date**: ${new Date(dbSess.session_date).toLocaleDateString()}\n**Status**: ${dbSess.status}\n\n${household.presenting_issue ? `**Presenting Focus**: ${household.presenting_issue}\n\n` : ''}${household.working_plan ? `**Working Plan**: ${household.working_plan}\n\n` : ''}No detailed clinical write-up transcribed yet. Use the editor below to document observations and action commitments.`;
 
-            const handwrittenNotes =
-              handNotes?.content ||
-              seedSession?.handwrittenNotes ||
-              '';
-
-            let keyInsights = seedSession?.keyInsights || (household.presenting_issue ? [household.presenting_issue] : ['Focus on consistent co-regulation routines.']);
+            let keyInsights: string[] = household.presenting_issue ? [household.presenting_issue] : [];
             if (postNotes?.source_metadata && typeof postNotes.source_metadata === 'object') {
               const meta = postNotes.source_metadata as Record<string, unknown>;
               if (Array.isArray(meta.keyInsights) && meta.keyInsights.length > 0) {
@@ -197,38 +246,30 @@ export const AdminSessions: React.FC = () => {
               }
             }
 
-            const actionItems = seedSession?.actionItems || (household.next_step ? [
-              {
-                id: `act-${dbSess.id}-1`,
-                text: household.next_step,
-                category: 'parent' as const,
-                completed: false,
-                priority: 'high' as const,
-              },
-            ] : []);
-
             clientSessions.push({
               id: dbSess.id,
               bookingId: dbSess.booking_id || undefined,
               clientId: profile.id,
-              clientName: profile.full_name || seed?.clientName || 'Parent',
-              clientEmail: profile.email || seed?.clientEmail || '',
+              clientName: profile.full_name || 'Parent',
+              clientEmail: profile.email || '',
               sessionNumber: idx + 1,
               sessionDate: dbSess.session_date,
-              durationMinutes: dbSess.duration_minutes || seedSession?.durationMinutes || 50,
-              googleMeetUrl: dbSess.google_meet_url || seedSession?.googleMeetUrl,
-              driveWebViewUrl: dbSess.drive_web_view_url || seedSession?.driveWebViewUrl,
-              focusAreas: seedSession?.focusAreas || (household.presenting_issue ? [household.presenting_issue.slice(0, 40)] : ['Parent Coaching']),
+              durationMinutes: dbSess.duration_minutes || 50,
+              googleMeetUrl: dbSess.google_meet_url || undefined,
+              driveWebViewUrl: dbSess.drive_web_view_url || null,
+              focusAreas: household.presenting_issue ? [household.presenting_issue.slice(0, 40)] : ['Parent Coaching'],
               clinicalSummary,
-              handwrittenNotes,
+              preSessionRecap: prepNotes?.content || '',
+              hasRealPostNotes: Boolean(postNotes?.content),
+              handwrittenNotes: handNotes?.content || '',
               keyInsights,
-              actionItems,
-              emotionalObservations: seedSession?.emotionalObservations || {
+              actionItems: [],
+              emotionalObservations: {
                 parentalStressLevel: 'moderate',
                 nervousSystemState: 'fluctuating',
                 identifiedTriggers: ['Transition windows', 'Evening exhaustion'],
                 strengthsNoted: ['Deep dedication to child well-being', 'High receptivity to coaching'],
-                childDynamicsSummary: childName ? `${childName} is responsive to calm co-regulation and consistent routines.` : undefined,
+                childDynamicsSummary: childName ? `${childName} is responsive to calm co-regulation.` : undefined,
               },
               rawTranscript: parsedTranscript,
               status: (dbSess.status === 'completed' ? 'completed' : 'processing') as 'completed' | 'processing' | 'failed',
@@ -256,21 +297,14 @@ export const AdminSessions: React.FC = () => {
                 sessionDate: `${b.appointment_date}T${b.appointment_time ? b.appointment_time + ':00Z' : '10:00:00Z'}`,
                 durationMinutes: 50,
                 googleMeetUrl: b.google_meet_url || undefined,
+                driveWebViewUrl: null,
                 focusAreas: b.notes ? [b.notes.slice(0, 40)] : ['Initial Consultation'],
-                clinicalSummary: `### Booking Consultation #${bIdx + 1}\n\n**Date**: ${b.appointment_date} (${b.appointment_time || '10:00 AM'})\n**Status**: ${b.status}\n${b.notes ? `\n**Client Notes**: ${b.notes}\n` : ''}\n### Key Focus\n- Establish baseline connection and nervous system safety.\n- Understand child triggers and transition patterns.\n- Introduce practical somatic anchors.`,
-                keyInsights: [
-                  'Session scheduled via booking calendar.',
-                  'Focus on assessing family dynamics and emotional triggers.',
-                ],
-                actionItems: [
-                  {
-                    id: `act-book-${b.id}-1`,
-                    text: 'Conduct initial consultation and map out child emotional triggers.',
-                    category: 'coach',
-                    completed: b.status === 'completed',
-                    priority: 'high',
-                  },
-                ],
+                clinicalSummary: `### Booking Consultation #${bIdx + 1}\n\n**Date**: ${b.appointment_date} (${b.appointment_time || '10:00 AM'})\n**Status**: ${b.status}\n${b.notes ? `\n**Client Notes**: ${b.notes}\n` : ''}\n### Key Focus\n- Establish baseline connection and nervous system safety.\n- Understand child triggers and transition patterns.`,
+                preSessionRecap: '',
+                hasRealPostNotes: false,
+                handwrittenNotes: '',
+                keyInsights: ['Session scheduled via booking calendar.'],
+                actionItems: [],
                 emotionalObservations: {
                   parentalStressLevel: 'moderate',
                   nervousSystemState: 'regulated_ventral',
@@ -286,72 +320,57 @@ export const AdminSessions: React.FC = () => {
           }
         }
 
-        // C. If still no sessions, check if seed has sessions, or create a ready-to-use intake slot
+        // C. If still no sessions, create a ready-to-use intake slot
         if (clientSessions.length === 0) {
-          if (seed && seed.sessions.length > 0) {
-            // Re-bind seed sessions to this real profile ID
-            seed.sessions.forEach((s, sIdx) => {
-              clientSessions.push({
-                ...s,
-                clientId: profile.id,
-                clientName: profile.full_name || seed.clientName,
-                clientEmail: profile.email || seed.clientEmail,
-                sessionNumber: sIdx + 1,
-              });
-            });
-          } else {
-            // Provide an initial intake slot so Mai can write notes for ANY registered client
-            clientSessions.push({
-              id: `intake-${profile.id}`,
-              clientId: profile.id,
-              clientName: profile.full_name || 'Parent',
-              clientEmail: profile.email || '',
-              sessionNumber: 1,
-              sessionDate: new Date().toISOString(),
-              durationMinutes: 50,
-              focusAreas: ['Initial Assessment & Parent Consultation'],
-              clinicalSummary: `### Intake & Clinical Assessment\n\nClient account registered. No clinical sessions logged yet.\n\n### Clinical Observations\nUse the tabs below to record:\n1. Executive clinical summary and progress milestones\n2. Practical action commitments (parent and coach tasks)\n3. Nervous system state and behavioral triggers\n4. Dialogue transcript or session audio insights`,
-              keyInsights: ['Initial intake ready for documentation.'],
-              actionItems: [
-                {
-                  id: `act-init-${profile.id}`,
-                  text: 'Complete baseline family intake and agree on initial regulation goals.',
-                  category: 'coach',
-                  completed: false,
-                  priority: 'high',
-                },
-              ],
-              emotionalObservations: {
-                parentalStressLevel: 'moderate',
-                nervousSystemState: 'fluctuating',
-                identifiedTriggers: ['Awaiting intake documentation'],
-                strengthsNoted: ['Initiated parent coaching support'],
-              },
-              rawTranscript: [],
-              status: 'processing',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
-          }
+          clientSessions.push({
+            id: `intake-${profile.id}`,
+            clientId: profile.id,
+            clientName: profile.full_name || 'Parent',
+            clientEmail: profile.email || '',
+            sessionNumber: 1,
+            sessionDate: new Date().toISOString(),
+            durationMinutes: 50,
+            focusAreas: ['Initial Assessment & Parent Consultation'],
+            clinicalSummary: `### Intake & Clinical Assessment\n\nClient account registered. No clinical sessions logged yet.`,
+            preSessionRecap: '',
+            hasRealPostNotes: false,
+            handwrittenNotes: '',
+            keyInsights: ['Initial intake ready for documentation.'],
+            actionItems: [],
+            emotionalObservations: {
+              parentalStressLevel: 'moderate',
+              nervousSystemState: 'fluctuating',
+              identifiedTriggers: ['Awaiting intake documentation'],
+              strengthsNoted: ['Initiated parent coaching support'],
+            },
+            rawTranscript: [],
+            status: 'processing',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
         }
 
         unifiedClients.push({
           clientId: profile.id,
-          clientName: profile.full_name || seed?.clientName || (profile.email ? profile.email.split('@')[0] : 'Parent'),
+          clientName: profile.full_name || (profile.email ? profile.email.split('@')[0] : 'Parent'),
           clientEmail: profile.email || '',
-          phone: profile.phone || seed?.phone || undefined,
+          phone: profile.phone || undefined,
           childName,
           childAge,
           householdId: household?.id,
           totalSessions: clientSessions.length,
+          isDemo: false,
           sessions: clientSessions,
         });
       }
 
-      // Preserve any mock clients that might not be in Supabase profiles yet (fallback)
+      // Preserve any mock clients that don't exist in Supabase profiles yet, flagged as Demo
       for (const m of MOCK_CLIENT_SESSIONS) {
         if (!unifiedClients.some((c) => c.clientId === m.clientId || (c.clientEmail && c.clientEmail.toLowerCase() === m.clientEmail.toLowerCase()))) {
-          unifiedClients.push(m);
+          unifiedClients.push({
+            ...m,
+            isDemo: true,
+          });
         }
       }
 
@@ -382,8 +401,6 @@ export const AdminSessions: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to load real client sessions from Supabase:', err);
-      // Fall back to mock data rather than leaving the page stuck on its loading state.
-      setClients((prev) => (prev.length > 0 ? prev : MOCK_CLIENT_SESSIONS));
     } finally {
       setLoading(false);
     }
@@ -392,6 +409,96 @@ export const AdminSessions: React.FC = () => {
   useEffect(() => {
     void loadRealClientSessions();
   }, [loadRealClientSessions]);
+
+  // Lazy load active household data (members, action items, notes, attendees)
+  // Executes exactly 3 queries in Promise.all for the active household; 0 requests when switching sessions of same client.
+  const fetchHouseholdData = useCallback(async (hId: string) => {
+    loadedHouseholdIdRef.current = hId;
+    try {
+      // 1. Get household with members
+      const { data: hData } = await supabase
+        .from('households')
+        .select('id, primary_contact_profile_id, family_name, presenting_issue, working_plan, next_step, status, created_at, updated_at, household_members(*)')
+        .eq('id', hId)
+        .maybeSingle();
+
+      if (!hData) return;
+
+      const members: HouseholdMember[] = (hData.household_members as any[]) || [];
+      const memberIds = members.map((m) => m.id);
+
+      // 2. Fetch member_action_items, member_notes, and session_attendees in Promise.all (3 queries)
+      const [actionsRes, notesRes, attendeesRes] = await Promise.all([
+        memberIds.length > 0
+          ? supabase
+              .from('member_action_items')
+              .select('*')
+              .in('household_member_id', memberIds)
+              .order('created_at', { ascending: false })
+          : Promise.resolve({ data: [] }),
+        memberIds.length > 0
+          ? supabase
+              .from('member_notes')
+              .select('*')
+              .in('household_member_id', memberIds)
+              .order('created_at', { ascending: false })
+          : Promise.resolve({ data: [] }),
+        supabase
+          .from('case_sessions')
+          .select('id')
+          .eq('household_id', hId)
+          .then(async ({ data: sessList }) => {
+            const sIds = (sessList || []).map((s) => s.id);
+            if (sIds.length === 0) return { data: [] };
+            return supabase
+              .from('session_attendees')
+              .select('*')
+              .in('session_id', sIds);
+          }),
+      ]);
+
+      setHouseholdData({
+        householdId: hId,
+        household: {
+          id: hData.id,
+          primary_contact_profile_id: hData.primary_contact_profile_id,
+          family_name: hData.family_name,
+          presenting_issue: hData.presenting_issue,
+          working_plan: hData.working_plan,
+          next_step: hData.next_step,
+          status: hData.status,
+          created_at: hData.created_at,
+          updated_at: hData.updated_at,
+        },
+        members,
+        actionItems: (actionsRes.data as MemberActionItem[]) || [],
+        notes: (notesRes.data as MemberNote[]) || [],
+        attendees: (attendeesRes.data as SessionAttendee[]) || [],
+      });
+    } catch (err) {
+      console.error('Failed to load active household data:', err);
+    }
+  }, []);
+
+  // Trigger lazy household fetch only when the active household changes
+  useEffect(() => {
+    if (!activeClient?.householdId) {
+      setHouseholdData({
+        householdId: null,
+        household: null,
+        members: [],
+        actionItems: [],
+        notes: [],
+        attendees: [],
+      });
+      loadedHouseholdIdRef.current = null;
+      return;
+    }
+
+    if (activeClient.householdId !== loadedHouseholdIdRef.current) {
+      void fetchHouseholdData(activeClient.householdId);
+    }
+  }, [activeClient?.householdId, fetchHouseholdData]);
 
   // When client changes, auto-select their first session
   const handleSelectClient = (clientId: string) => {
@@ -411,7 +518,7 @@ export const AdminSessions: React.FC = () => {
     setSearchParams({ client: selectedClientId, session: sessionId });
   };
 
-  // Open the CRM Dossier in place, without navigating away from Session Notes
+  // Open the CRM Dossier in place
   const openClientDossier = async (client: ClientSessionSummary) => {
     setShowDossierModal(true);
     const { data } = await supabase
@@ -425,7 +532,6 @@ export const AdminSessions: React.FC = () => {
       return;
     }
 
-    // Fallback: no CRM journey row yet, build a minimal one from what Session Notes already knows
     setDossierClient({
       client_id: client.clientId,
       parent_name: client.clientName,
@@ -452,151 +558,371 @@ export const AdminSessions: React.FC = () => {
     });
   };
 
-  // Find active session
-  const activeSession = useMemo(() => {
-    return (
-      activeClient?.sessions.find((s) => s.id === selectedSessionId) ||
-      activeClient?.sessions[0]
-    );
-  }, [activeClient, selectedSessionId]);
+  // Previous session calculation (the session immediately preceding activeSession)
+  const previousSession = useMemo(() => {
+    if (!activeClient || !activeSession) return null;
+    const currentIdx = activeClient.sessions.findIndex((s) => s.id === activeSession.id);
+    if (currentIdx > 0) {
+      return activeClient.sessions[currentIdx - 1];
+    }
+    return null;
+  }, [activeClient, activeSession]);
 
-  // Handler to update session across all 4 editable tabs and persist to Supabase
-  const handleUpdateSession = async (updatedSession: SessionTranscript) => {
-    // 1. Optimistic local update
-    setClients((prevClients) =>
-      prevClients.map((client) => {
-        if (client.clientId !== activeClient.clientId) return client;
-        return {
-          ...client,
-          sessions: client.sessions.map((sess) =>
-            sess.id === updatedSession.id ? updatedSession : sess
-          ),
-        };
-      })
+  /* ------------------------------------------------------------------ */
+  /* PER-SECTION SAVE HANDLERS (Saves only its own database row)       */
+  /* ------------------------------------------------------------------ */
+
+  // 1. Save Prep Notes (session_content -> pre_session_recap)
+  const handleSavePrepNotes = async (text: string): Promise<boolean> => {
+    if (!activeSession) return false;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeSession.id);
+
+    setClients((prev) =>
+      prev.map((c) =>
+        c.clientId === activeClient.clientId
+          ? {
+              ...c,
+              sessions: c.sessions.map((s) =>
+                s.id === activeSession.id ? { ...s, preSessionRecap: text } : s
+              ),
+            }
+          : c
+      )
     );
 
-    // 2. Persist to Supabase if session has a valid database UUID
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(updatedSession.id);
-    if (!isUuid) return;
+    if (!isUuid) return true;
 
     setSaveStatus('saving');
-    try {
-      // Update case_session duration, status & recording link
-      await supabase
-        .from('case_sessions')
-        .update({
-          duration_minutes: updatedSession.durationMinutes,
-          status: updatedSession.status === 'completed' ? 'completed' : 'scheduled',
-          drive_web_view_url: updatedSession.driveWebViewUrl ?? null,
+    const { error } = await supabase
+      .from('session_content')
+      .upsert(
+        {
+          session_id: activeSession.id,
+          content_type: 'pre_session_recap',
+          content: text,
+          source_metadata: {},
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', updatedSession.id);
+        },
+        { onConflict: 'session_id,content_type' }
+      );
 
-      // Upsert post_session_notes
-      await supabase
-        .from('session_content')
-        .upsert(
-          {
-            session_id: updatedSession.id,
-            content_type: 'post_session_notes',
-            content: updatedSession.clinicalSummary,
-            source_metadata: {
-              keyInsights: updatedSession.keyInsights,
-              actionItems: updatedSession.actionItems,
-              emotionalObservations: updatedSession.emotionalObservations,
-            },
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'session_id,content_type' }
-        );
-
-      // Upsert live_transcript if modified
-      if (updatedSession.rawTranscript && updatedSession.rawTranscript.length > 0) {
-        const transcriptText = updatedSession.rawTranscript
-          .map((u) => `[${u.timestamp}] ${u.speaker}: ${u.text}`)
-          .join('\n');
-
-        await supabase
-          .from('session_content')
-          .upsert(
-            {
-              session_id: updatedSession.id,
-              content_type: 'live_transcript',
-              content: transcriptText,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'session_id,content_type' }
-          );
-      }
-
-      // Upsert handwritten_notes if present
-      if (updatedSession.handwrittenNotes !== undefined) {
-        await supabase
-          .from('session_content')
-          .upsert(
-            {
-              session_id: updatedSession.id,
-              content_type: 'handwritten_notes',
-              content: updatedSession.handwrittenNotes,
-              source_metadata: {},
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'session_id,content_type' }
-          );
-      }
-
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    } catch (saveErr) {
-      console.error('Failed to persist session updates to Supabase:', saveErr);
+    if (error) {
+      console.error('Failed to save pre-session recap:', error);
       setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 4000);
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      return false;
+    }
+
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+    return true;
+  };
+
+  // 2. Save Handwritten Notes (session_content -> handwritten_notes)
+  const handleSaveHandwrittenNotes = async (text: string): Promise<boolean> => {
+    if (!activeSession) return false;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeSession.id);
+
+    setClients((prev) =>
+      prev.map((c) =>
+        c.clientId === activeClient.clientId
+          ? {
+              ...c,
+              sessions: c.sessions.map((s) =>
+                s.id === activeSession.id ? { ...s, handwrittenNotes: text } : s
+              ),
+            }
+          : c
+      )
+    );
+
+    if (!isUuid) return true;
+
+    setSaveStatus('saving');
+    const { error } = await supabase
+      .from('session_content')
+      .upsert(
+        {
+          session_id: activeSession.id,
+          content_type: 'handwritten_notes',
+          content: text,
+          source_metadata: {},
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'session_id,content_type' }
+      );
+
+    if (error) {
+      console.error('Failed to save handwritten notes:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      return false;
+    }
+
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+    return true;
+  };
+
+  // 3. Save Write-Up (session_content -> post_session_notes)
+  const handleSavePostNotes = async (
+    writeUp: string,
+    metadata: { keyInsights: string[]; emotionalObservations: EmotionalObservation }
+  ): Promise<boolean> => {
+    if (!activeSession) return false;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeSession.id);
+
+    setClients((prev) =>
+      prev.map((c) =>
+        c.clientId === activeClient.clientId
+          ? {
+              ...c,
+              sessions: c.sessions.map((s) =>
+                s.id === activeSession.id
+                  ? {
+                      ...s,
+                      clinicalSummary: writeUp,
+                      keyInsights: metadata.keyInsights,
+                      emotionalObservations: metadata.emotionalObservations,
+                      hasRealPostNotes: true,
+                    }
+                  : s
+              ),
+            }
+          : c
+      )
+    );
+
+    if (!isUuid) return true;
+
+    setSaveStatus('saving');
+    const { error } = await supabase
+      .from('session_content')
+      .upsert(
+        {
+          session_id: activeSession.id,
+          content_type: 'post_session_notes',
+          content: writeUp,
+          source_metadata: {
+            keyInsights: metadata.keyInsights,
+            emotionalObservations: metadata.emotionalObservations,
+          },
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'session_id,content_type' }
+      );
+
+    if (error) {
+      console.error('Failed to save post-session write-up:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      return false;
+    }
+
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+    return true;
+  };
+
+  // 4. Save Drive Link (case_sessions.drive_web_view_url)
+  const handleSaveDriveLink = async (url: string): Promise<boolean> => {
+    if (!activeSession) return false;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeSession.id);
+
+    setClients((prev) =>
+      prev.map((c) =>
+        c.clientId === activeClient.clientId
+          ? {
+              ...c,
+              sessions: c.sessions.map((s) =>
+                s.id === activeSession.id ? { ...s, driveWebViewUrl: url } : s
+              ),
+            }
+          : c
+      )
+    );
+
+    if (!isUuid) return true;
+
+    setSaveStatus('saving');
+    const { error } = await supabase
+      .from('case_sessions')
+      .update({
+        drive_web_view_url: url,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', activeSession.id);
+
+    if (error) {
+      console.error('Failed to save Drive link:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      return false;
+    }
+
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+    return true;
+  };
+
+  // Clear Drive Link
+  const handleClearDriveLink = async (): Promise<boolean> => {
+    if (!activeSession) return false;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeSession.id);
+
+    setClients((prev) =>
+      prev.map((c) =>
+        c.clientId === activeClient.clientId
+          ? {
+              ...c,
+              sessions: c.sessions.map((s) =>
+                s.id === activeSession.id ? { ...s, driveWebViewUrl: null } : s
+              ),
+            }
+          : c
+      )
+    );
+
+    if (!isUuid) return true;
+
+    const { error } = await supabase
+      .from('case_sessions')
+      .update({
+        drive_web_view_url: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', activeSession.id);
+
+    return !error;
+  };
+
+  // 5. Save Transcript utterances (session_content -> live_transcript)
+  const handleSaveTranscript = async (utterances: TranscriptUtterance[]): Promise<boolean> => {
+    if (!activeSession) return false;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeSession.id);
+
+    setClients((prev) =>
+      prev.map((c) =>
+        c.clientId === activeClient.clientId
+          ? {
+              ...c,
+              sessions: c.sessions.map((s) =>
+                s.id === activeSession.id ? { ...s, rawTranscript: utterances } : s
+              ),
+            }
+          : c
+      )
+    );
+
+    if (!isUuid) return true;
+
+    const transcriptText = utterances.map((u) => `[${u.timestamp}] ${u.speaker}: ${u.text}`).join('\n');
+
+    const { error } = await supabase
+      .from('session_content')
+      .upsert(
+        {
+          session_id: activeSession.id,
+          content_type: 'live_transcript',
+          content: transcriptText,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'session_id,content_type' }
+      );
+
+    return !error;
+  };
+
+  // 6. Action items handlers (saves directly into member_action_items table)
+  const handleToggleActionItem = async (id: string, newStatus: 'open' | 'done') => {
+    setHouseholdData((prev) => ({
+      ...prev,
+      actionItems: prev.actionItems.map((a) => (a.id === id ? { ...a, status: newStatus } : a)),
+    }));
+
+    const { error } = await supabase
+      .from('member_action_items')
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Failed to toggle action item status:', error);
+    }
+    if (householdData.householdId) {
+      await fetchHouseholdData(householdData.householdId);
     }
   };
 
-  // Google Drive link editing state
-  const [driveInput, setDriveInput] = useState('');
-  const [driveError, setDriveError] = useState<string | null>(null);
-  const [isSavingDrive, setIsSavingDrive] = useState(false);
+  const handleCreateActionItem = async (item: {
+    memberId: string;
+    task: string;
+    priority: 'normal' | 'high';
+    dueDate?: string | null;
+  }): Promise<boolean> => {
+    const isUuid = activeSession && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeSession.id);
+    const sessionId = isUuid ? activeSession.id : null;
 
-  // Sync drive link input when active session changes
-  useEffect(() => {
-    setDriveInput(activeSession?.driveWebViewUrl || '');
-    setDriveError(null);
-  }, [activeSession?.id, activeSession?.driveWebViewUrl]);
+    const { error } = await supabase.from('member_action_items').insert({
+      household_member_id: item.memberId,
+      session_id: sessionId,
+      task: item.task,
+      priority: item.priority,
+      due_date: item.dueDate || null,
+      status: 'open',
+      source: 'coach',
+    });
 
-  const handleSaveDriveLink = async () => {
-    if (!activeSession) return;
-    const trimmed = driveInput.trim();
-    if (!trimmed.startsWith('https://drive.google.com/')) {
-      setDriveError('Link must start with https://drive.google.com/');
-      return;
+    if (error) {
+      console.error('Failed to create member action item:', error);
+      return false;
     }
-    setDriveError(null);
-    setIsSavingDrive(true);
-    try {
-      await handleUpdateSession({
-        ...activeSession,
-        driveWebViewUrl: trimmed,
-      });
-    } finally {
-      setIsSavingDrive(false);
+
+    if (householdData.householdId) {
+      await fetchHouseholdData(householdData.householdId);
+    }
+    return true;
+  };
+
+  const handleDeleteActionItem = async (id: string) => {
+    setHouseholdData((prev) => ({
+      ...prev,
+      actionItems: prev.actionItems.filter((a) => a.id !== id),
+    }));
+
+    const { error } = await supabase.from('member_action_items').delete().eq('id', id);
+    if (error) {
+      console.error('Failed to delete member action item:', error);
+    }
+    if (householdData.householdId) {
+      await fetchHouseholdData(householdData.householdId);
     }
   };
 
-  const handleClearDriveLink = async () => {
-    if (!activeSession) return;
-    setDriveInput('');
-    setDriveError(null);
-    setIsSavingDrive(true);
-    try {
-      await handleUpdateSession({
-        ...activeSession,
-        driveWebViewUrl: null,
-      });
-    } finally {
-      setIsSavingDrive(false);
+  // 7. Member notes handler (saves directly into member_notes table)
+  const handleCreateMemberNote = async (note: {
+    memberId: string;
+    noteType: MemberNoteType;
+    body: string;
+  }): Promise<boolean> => {
+    const isUuid = activeSession && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeSession.id);
+    const sessionId = isUuid ? activeSession.id : null;
+
+    const { error } = await supabase.from('member_notes').insert({
+      household_member_id: note.memberId,
+      session_id: sessionId,
+      note_type: note.noteType,
+      body: note.body,
+    });
+
+    if (error) {
+      console.error('Failed to create member note:', error);
+      return false;
     }
+
+    if (householdData.householdId) {
+      await fetchHouseholdData(householdData.householdId);
+    }
+    return true;
   };
 
   // Conversational Chat Hook
@@ -632,216 +958,176 @@ export const AdminSessions: React.FC = () => {
       fillHeight
       title="Session Notes"
       subtitle="Structured clinical insights, action items, and conversational consultation."
-          action={
-            <div className="flex items-center gap-2 flex-nowrap shrink-0">
-              {/* Status Indicator (Syncing / Saved / Error) */}
-              {loading && (
-                <div className="hidden sm:flex items-center gap-1.5 px-2.5 h-10 text-[11px] font-medium text-warm-gray bg-white rounded-xl border border-beige/80 shrink-0">
-                  <Loader2 className="w-3 h-3 animate-spin text-sage-dark" />
-                  <span>Syncing...</span>
-                </div>
-              )}
-              {!loading && saveStatus === 'saving' && (
-                <div className="flex items-center gap-1.5 px-2.5 h-10 text-[11px] font-medium text-warm-gray bg-white rounded-xl border border-beige/80 animate-pulse shrink-0">
-                  <Loader2 className="w-3 h-3 animate-spin text-sage-dark" />
-                  <span>Saving...</span>
-                </div>
-              )}
-              {!loading && saveStatus === 'saved' && (
-                <div className="flex items-center gap-1.5 px-2.5 h-10 text-[11px] font-medium text-emerald-700 bg-emerald-50 rounded-xl border border-emerald-200 animate-in fade-in shrink-0">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                  <span>Saved</span>
-                </div>
-              )}
-              {!loading && saveStatus === 'error' && (
-                <div className="flex items-center gap-1.5 px-2.5 h-10 text-[11px] font-medium text-rose-700 bg-rose-50 rounded-xl border border-rose-200 shrink-0">
-                  <AlertCircle className="w-3 h-3 text-rose-600" />
-                  <span>Local Save</span>
-                </div>
-              )}
+      action={
+        <div className="flex items-center gap-2 flex-nowrap shrink-0">
+          {/* Status Indicator (Syncing / Saved / Error) */}
+          {loading && (
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 h-10 text-[11px] font-medium text-warm-gray bg-white rounded-xl border border-beige/80 shrink-0">
+              <Loader2 className="w-3 h-3 animate-spin text-sage-dark" />
+              <span>Syncing...</span>
+            </div>
+          )}
+          {!loading && saveStatus === 'saving' && (
+            <div className="flex items-center gap-1.5 px-2.5 h-10 text-[11px] font-medium text-warm-gray bg-white rounded-xl border border-beige/80 animate-pulse shrink-0">
+              <Loader2 className="w-3 h-3 animate-spin text-sage-dark" />
+              <span>Saving...</span>
+            </div>
+          )}
+          {!loading && saveStatus === 'saved' && (
+            <div className="flex items-center gap-1.5 px-2.5 h-10 text-[11px] font-medium text-emerald-700 bg-emerald-50 rounded-xl border border-emerald-200 animate-in fade-in shrink-0">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+              <span>Saved</span>
+            </div>
+          )}
+          {!loading && saveStatus === 'error' && (
+            <div className="flex items-center gap-1.5 px-2.5 h-10 text-[11px] font-medium text-rose-700 bg-rose-50 rounded-xl border border-rose-200 shrink-0">
+              <AlertCircle className="w-3 h-3 text-rose-600" />
+              <span>Error</span>
+            </div>
+          )}
 
-              {/* 1. Client Selector Dropdown */}
-              <div className="h-10 flex items-center gap-2 bg-[#faf8f4] px-2.5 rounded-xl border border-beige/80 shadow-2xs shrink-0">
-                <div className="w-6 h-6 rounded-lg bg-sage/20 border border-sage/40 flex items-center justify-center text-sage-dark shrink-0">
-                  <Users className="w-3 h-3" />
-                </div>
+          {/* 1. Client Selector Dropdown */}
+          <div className="h-10 flex items-center gap-2 bg-[#faf8f4] px-2.5 rounded-xl border border-beige/80 shadow-2xs shrink-0">
+            <div className="w-6 h-6 rounded-lg bg-sage/20 border border-sage/40 flex items-center justify-center text-sage-dark shrink-0">
+              <Users className="w-3 h-3" />
+            </div>
 
-                <div className="flex flex-col text-left justify-center">
-                  <span className="text-[9px] font-semibold text-charcoal/50 uppercase tracking-wider leading-none">
-                    Client ({clients.length})
-                  </span>
-                  <select
-                    value={selectedClientId}
-                    onChange={(e) => handleSelectClient(e.target.value)}
-                    className="font-serif text-xs font-semibold text-charcoal bg-transparent border-0 focus:outline-hidden cursor-pointer hover:text-sage-dark transition-colors py-0 pl-0 pr-3 max-w-[130px] sm:max-w-[170px] truncate leading-tight"
-                  >
-                    {clients.map((c) => (
-                      <option key={c.clientId} value={c.clientId}>
-                        {c.clientName} {c.totalSessions > 0 ? `(${c.totalSessions})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {activeClient.childName && (
-                  <span className="hidden lg:inline-flex items-center gap-1 text-[10px] font-medium bg-white text-charcoal/70 border border-beige/80 px-1.5 py-0.5 rounded-md shrink-0">
-                    <User className="w-2.5 h-2.5 text-sage-dark" />
-                    <span className="max-w-[80px] truncate">{activeClient.childName}</span>
-                  </span>
-                )}
-              </div>
-
-              {/* 2. Session Selector Dropdown */}
-              <div className="h-10 flex items-center gap-2 bg-[#faf8f4] px-2.5 rounded-xl border border-beige/80 shadow-2xs shrink-0">
-                <div className="w-6 h-6 rounded-lg bg-charcoal/10 border border-charcoal/20 flex items-center justify-center text-charcoal shrink-0">
-                  <Calendar className="w-3 h-3" />
-                </div>
-
-                <div className="flex flex-col text-left justify-center">
-                  <span className="text-[9px] font-semibold text-charcoal/50 uppercase tracking-wider leading-none">
-                    Session
-                  </span>
-                  <select
-                    value={selectedSessionId}
-                    onChange={(e) => handleSelectSession(e.target.value)}
-                    className="text-xs font-semibold text-charcoal bg-transparent border-0 focus:outline-hidden cursor-pointer hover:text-sage-dark transition-colors py-0 pl-0 pr-3 max-w-[140px] sm:max-w-[190px] truncate leading-tight"
-                  >
-                    {activeClient.sessions.map((sess) => {
-                      const sDate = new Date(sess.sessionDate).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                      });
-                      return (
-                        <option key={sess.id} value={sess.id}>
-                          #{sess.sessionNumber} — {sDate} ({sess.durationMinutes}m)
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              </div>
-
-              {/* 3. Open Users CRM Dossier in place (no page navigation) */}
-              <button
-                type="button"
-                onClick={() => void openClientDossier(activeClient)}
-                className="h-10 inline-flex items-center gap-1.5 px-3 text-xs font-semibold text-charcoal bg-[#faf8f4] hover:bg-white hover:text-sage-dark hover:border-sage/60 rounded-xl border border-beige/80 transition shadow-2xs shrink-0"
-                title="View Client in CRM"
+            <div className="flex flex-col text-left justify-center">
+              <span className="text-[9px] font-semibold text-charcoal/50 uppercase tracking-wider leading-none">
+                Client ({clients.length})
+              </span>
+              <select
+                value={selectedClientId}
+                onChange={(e) => handleSelectClient(e.target.value)}
+                className="font-serif text-xs font-semibold text-charcoal bg-transparent border-0 focus:outline-hidden cursor-pointer hover:text-sage-dark transition-colors py-0 pl-0 pr-3 max-w-[130px] sm:max-w-[170px] truncate leading-tight"
               >
-                <Users className="w-3.5 h-3.5 text-sage-dark" />
-                <span>CRM Dossier</span>
-              </button>
-
-              {/* 4. Direct Link to this client's Family Case, when one exists */}
-              {activeClient.householdId && (
-                <Link
-                  to={`/admin/families/${activeClient.householdId}`}
-                  className="h-10 inline-flex items-center gap-1.5 px-3 text-xs font-semibold text-charcoal bg-[#faf8f4] hover:bg-white hover:text-sage-dark hover:border-sage/60 rounded-xl border border-beige/80 transition shadow-2xs shrink-0"
-                  title="View Family Case"
-                >
-                  <Home className="w-3.5 h-3.5 text-sage-dark" />
-                  <span>Family Case</span>
-                </Link>
-              )}
-            </div>
-          }
-        >
-          {/* Full-height page body (AdminLayout fillHeight): panels take the remaining space,
-              recording strip pinned to the bottom, aligned with the sidebar's bottom edge. */}
-          <div className="flex flex-col gap-3 lg:flex-1 lg:min-h-0">
-          {/* Main Content Grid directly under Header: Left 7/12 (Notes) + Right 5/12 (Assistant) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start lg:flex-1 lg:min-h-0">
-            <div className="lg:col-span-7 h-full min-h-0 min-w-0 flex flex-col overflow-hidden">
-              <TranscriptViewer
-                session={activeSession}
-                onUpdateSession={handleUpdateSession}
-              />
+                {clients.map((c) => (
+                  <option key={c.clientId} value={c.clientId}>
+                    {c.clientName}
+                    {c.isDemo ? ' (Demo)' : ''} {c.totalSessions > 0 ? `(${c.totalSessions})` : ''}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div className="lg:col-span-5 h-full min-h-0 min-w-0 flex flex-col sticky top-2 overflow-hidden">
-              <SessionChatPanel
-                messages={messages}
-                isGenerating={isGenerating}
-                error={error}
-                isMockMode={isMockMode}
-                clientName={activeClient.clientName}
-                onSendMessage={sendMessage}
-                onClearChat={clearChat}
-                onToggleMockMode={setIsMockMode}
-              />
-            </div>
-          </div>
-
-          {/* Voice recording link: compact strip under the notes + intelligence panels */}
-          <div className="shrink-0 rounded-2xl border border-beige bg-white px-3 py-2 shadow-2xs">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <div className="flex items-center gap-2 min-w-0 sm:flex-1">
-                <ExternalLink className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                <span className="text-xs font-semibold text-charcoal shrink-0">Voice Recording</span>
-                {activeSession.driveWebViewUrl ? (
-                  <a
-                    href={activeSession.driveWebViewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 border border-emerald-200 hover:underline shrink-0"
-                  >
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Open in Google Drive
-                  </a>
-                ) : (
-                  <span className="text-[11px] text-warm-gray truncate">Not linked</span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1.5 w-full sm:w-auto">
-                <input
-                  type="url"
-                  aria-label="Google Drive recording link"
-                  value={driveInput}
-                  onChange={(e) => {
-                    setDriveInput(e.target.value);
-                    if (driveError) setDriveError(null);
-                  }}
-                  placeholder="Paste Google Drive link..."
-                  className="w-full sm:w-64 text-xs rounded-lg border border-beige bg-[#faf8f4] px-2.5 py-1 text-charcoal placeholder:text-warm-gray/60 focus:bg-white focus:border-sage focus:outline-hidden transition"
-                />
-                <button
-                  type="button"
-                  onClick={handleSaveDriveLink}
-                  disabled={isSavingDrive}
-                  className="px-2.5 py-1 text-xs font-medium rounded-lg bg-sage text-white hover:bg-sage-dark transition shrink-0 disabled:opacity-50"
-                >
-                  {isSavingDrive ? 'Saving...' : 'Save'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClearDriveLink}
-                  disabled={isSavingDrive || (!driveInput && !activeSession.driveWebViewUrl)}
-                  className="px-2 py-1 text-xs font-medium rounded-lg border border-beige bg-white text-warm-gray hover:text-rose-600 hover:border-rose-200 transition shrink-0 disabled:opacity-40 disabled:hover:text-warm-gray disabled:hover:border-beige"
-                  title="Clear Drive link"
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-            {driveError && (
-              <p className="mt-1 text-[11px] font-medium text-rose-600">{driveError}</p>
+            {activeClient.childName && (
+              <span className="hidden lg:inline-flex items-center gap-1 text-[10px] font-medium bg-white text-charcoal/70 border border-beige/80 px-1.5 py-0.5 rounded-md shrink-0">
+                <User className="w-2.5 h-2.5 text-sage-dark" />
+                <span className="max-w-[80px] truncate">{activeClient.childName}</span>
+              </span>
             )}
           </div>
 
+          {/* 2. Session Selector Dropdown */}
+          <div className="h-10 flex items-center gap-2 bg-[#faf8f4] px-2.5 rounded-xl border border-beige/80 shadow-2xs shrink-0">
+            <div className="w-6 h-6 rounded-lg bg-charcoal/10 border border-charcoal/20 flex items-center justify-center text-charcoal shrink-0">
+              <Calendar className="w-3 h-3" />
+            </div>
+
+            <div className="flex flex-col text-left justify-center">
+              <span className="text-[9px] font-semibold text-charcoal/50 uppercase tracking-wider leading-none">
+                Session
+              </span>
+              <select
+                value={selectedSessionId}
+                onChange={(e) => handleSelectSession(e.target.value)}
+                className="text-xs font-semibold text-charcoal bg-transparent border-0 focus:outline-hidden cursor-pointer hover:text-sage-dark transition-colors py-0 pl-0 pr-3 max-w-[140px] sm:max-w-[190px] truncate leading-tight"
+              >
+                {activeClient.sessions.map((sess) => {
+                  const sDate = new Date(sess.sessionDate).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  });
+                  return (
+                    <option key={sess.id} value={sess.id}>
+                      #{sess.sessionNumber} — {sDate} ({sess.durationMinutes}m)
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
           </div>
 
-          {/* Floating CRM Dossier Modal — opened in place, no page navigation */}
-          {showDossierModal && dossierClient ? (
-            <ClientDossierModal
-              client={dossierClient}
-              sessions={activeClient?.sessions}
-              onClose={() => setShowDossierModal(false)}
-              onClientUpdated={(updated) => {
-                setDossierClient((prev) => (prev ? { ...prev, ...updated } : null));
-              }}
+          {/* 3. Open Users CRM Dossier in place (no page navigation) */}
+          <button
+            type="button"
+            onClick={() => void openClientDossier(activeClient)}
+            className="h-10 inline-flex items-center gap-1.5 px-3 text-xs font-semibold text-charcoal bg-[#faf8f4] hover:bg-white hover:text-sage-dark hover:border-sage/60 rounded-xl border border-beige/80 transition shadow-2xs shrink-0 cursor-pointer"
+            title="View Client in CRM"
+          >
+            <Users className="w-3.5 h-3.5 text-sage-dark" />
+            <span>CRM Dossier</span>
+          </button>
+
+          {/* 4. Direct Link to Family Case */}
+          {activeClient.householdId && (
+            <Link
+              to={`/admin/families/${activeClient.householdId}`}
+              className="h-10 inline-flex items-center gap-1.5 px-3 text-xs font-semibold text-charcoal bg-[#faf8f4] hover:bg-white hover:text-sage-dark hover:border-sage/60 rounded-xl border border-beige/80 transition shadow-2xs shrink-0"
+              title="View Family Case"
+            >
+              <Home className="w-3.5 h-3.5 text-sage-dark" />
+              <span>Family Case</span>
+            </Link>
+          )}
+        </div>
+      }
+    >
+      {/* Full-height page body: Left 7/12 (Before / Session / After) + Right 5/12 (Assistant) */}
+      <div className="flex flex-col gap-3 lg:flex-1 lg:min-h-0">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start lg:flex-1 lg:min-h-0">
+          <div className="lg:col-span-7 h-full min-h-0 min-w-0 flex flex-col overflow-hidden">
+            <TranscriptViewer
+              session={activeSession}
+              activeStep={activeStep}
+              onSelectStep={setActiveStep}
+              household={householdData.household}
+              householdMembers={householdData.members}
+              openActionItems={householdData.actionItems.filter((a) => a.status === 'open')}
+              householdMemberNotes={householdData.notes}
+              previousSession={previousSession}
+              sessionActionItems={householdData.actionItems.filter((a) => a.session_id === activeSession.id)}
+              sessionMemberNotes={householdData.notes.filter((n) => n.session_id === activeSession.id)}
+              onSavePrepNotes={handleSavePrepNotes}
+              onSaveHandwrittenNotes={handleSaveHandwrittenNotes}
+              onSaveDriveLink={handleSaveDriveLink}
+              onClearDriveLink={handleClearDriveLink}
+              onSavePostNotes={handleSavePostNotes}
+              onSaveTranscript={handleSaveTranscript}
+              onToggleActionItem={handleToggleActionItem}
+              onCreateActionItem={handleCreateActionItem}
+              onDeleteActionItem={handleDeleteActionItem}
+              onCreateMemberNote={handleCreateMemberNote}
             />
-          ) : null}
-        </AdminLayout>
+          </div>
+
+          <div className="lg:col-span-5 h-full min-h-0 min-w-0 flex flex-col sticky top-2 overflow-hidden">
+            <SessionChatPanel
+              messages={messages}
+              isGenerating={isGenerating}
+              error={error}
+              isMockMode={isMockMode}
+              clientName={activeClient.clientName}
+              onSendMessage={sendMessage}
+              onClearChat={clearChat}
+              onToggleMockMode={setIsMockMode}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Floating CRM Dossier Modal */}
+      {showDossierModal && dossierClient ? (
+        <ClientDossierModal
+          client={dossierClient}
+          sessions={activeClient?.sessions}
+          onClose={() => setShowDossierModal(false)}
+          onClientUpdated={(updated) => {
+            setDossierClient((prev) => (prev ? { ...prev, ...updated } : null));
+          }}
+        />
+      ) : null}
+    </AdminLayout>
   );
 };
 

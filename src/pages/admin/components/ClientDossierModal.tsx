@@ -31,7 +31,6 @@ import { supabase } from '../../../lib/supabase';
 import type { CustomerJourneyState, CRMContentItem, CRMLifecycleStage } from '../../../types';
 import { roleLabel, currentAge, type Household, type HouseholdMember } from '../../../types/family';
 import type { SessionTranscript } from '../../../types/session';
-import { MOCK_CLIENT_SESSIONS } from '../../../data/mockSessions';
 import { COUNTRIES } from '../../../data/countries';
 import InternalWhatsAppMessengerModal from './InternalWhatsAppMessengerModal';
 
@@ -335,7 +334,6 @@ export const ClientDossierModal = ({
       }
 
       // 4. Fetch Household & Case Sessions
-      let foundCaseSessions = false;
       if (client.client_id) {
         const { data: householdData } = await supabase
           .from('households')
@@ -374,7 +372,6 @@ export const ClientDossierModal = ({
             .order('session_date', { ascending: false });
 
           if (caseSessions && caseSessions.length > 0) {
-            foundCaseSessions = true;
             caseSessions.forEach((cs, csIdx) => {
               const postNotes = cs.session_content?.find(
                 (c: { content_type: string; content: string | null }) => c.content_type === 'post_session_notes'
@@ -423,45 +420,6 @@ export const ClientDossierModal = ({
         }
       } else {
         setHouseholdInfo(null);
-      }
-
-      // 5. Fallback for demo sessions when no case_sessions exist in DB
-      if (!foundCaseSessions) {
-        const fallbackSessions =
-          sessions && sessions.length > 0
-            ? sessions
-            : MOCK_CLIENT_SESSIONS.find(
-                (m) =>
-                  m.clientId === client.client_id ||
-                  (m.clientEmail && m.clientEmail.toLowerCase() === (client.email || '').toLowerCase())
-              )?.sessions || [];
-
-        if (fallbackSessions.length > 0) {
-          fallbackSessions.forEach((cs, csIdx) => {
-            const driveUrl = cs.driveWebViewUrl || null;
-            events.push({
-              id: `case-session-${cs.id}`,
-              category: 'session',
-              timestamp: cs.sessionDate,
-              title: `Case Session #${cs.sessionNumber || (fallbackSessions.length - csIdx)}`,
-              subtitle: `${new Date(cs.sessionDate).toLocaleDateString()} · Consultation`,
-              description: cs.clinicalSummary,
-              status: cs.status,
-              badge: {
-                text: cs.status === 'completed' ? 'Session • Completed' : 'Session • Scheduled',
-                tone: cs.status === 'completed' ? 'sage' : 'sky',
-              },
-              details: {
-                session_id: cs.id,
-                google_meet_url: cs.googleMeetUrl,
-                drive_recording_url: driveUrl,
-                has_transcript: Boolean(cs.rawTranscript && cs.rawTranscript.length > 0),
-                has_notes: Boolean(cs.clinicalSummary),
-              },
-              link: driveUrl || cs.googleMeetUrl || undefined,
-            });
-          });
-        }
       }
 
       // Sort chronological descending

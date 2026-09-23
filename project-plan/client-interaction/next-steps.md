@@ -51,11 +51,11 @@ Rules out the whole approach cheaply before UI work.
 - [x] Client card: the existing "Open in Google Drive" button shows when the link is set.
 
 ## Stage 3b — Session page: Before → Session → After (decisions.md §9)
-- [ ] Replace the Notes / Action Plan / Dynamics / Transcript tabs with three steps: Before, Session, After. Default step chosen by session date.
-- [ ] Before: auto recap from existing data + "My prep notes" (`pre_session_recap`).
-- [ ] Session: handwritten notes (typed + photo upload that appends), Drive link, transcript.
-- [ ] After: write-up, insights, dynamics, per-member action items (`member_action_items`), quick member notes.
-- [ ] Real save status (check Supabase errors); no demo/mock fallback text on real DB sessions.
+- [x] Replace the Notes / Action Plan / Dynamics / Transcript tabs with three steps: Before, Session, After. Default step chosen by session date.
+- [x] Before: auto recap from existing data + "My prep notes" (`pre_session_recap`).
+- [x] Session: handwritten notes (typed + photo upload that appends via Gemini OCR), Drive link, transcript.
+- [x] After: write-up, insights, dynamics, per-member action items (`member_action_items`), quick member notes.
+- [x] Real save status (check Supabase errors); no demo/mock fallback text on real DB sessions; demo clients labeled with `(Demo)`.
 
 ## Stage 4 — Transcribe button
 - [ ] Edge Function `session-transcribe` (admin-only, same auth pattern as `gemini-generate`): Mai uploads the recording file for a session → Gemini → transcript JSON (decisions.md §5) saved into `session_content` `live_transcript`. The prompt includes the attendee names.
