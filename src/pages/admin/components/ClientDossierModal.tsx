@@ -24,15 +24,22 @@ import {
   Inbox,
   ArrowRight,
   ShieldAlert,
+  FileText,
+  Users,
+  Flame,
+  ListTodo,
+  Tag,
+  UserRound,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import type { CustomerJourneyState, CRMContentItem, CRMLifecycleStage, CRMTrack } from '../../../types';
+import { roleLabel, currentAge, type Household, type HouseholdMember } from '../../../types/family';
 import { COUNTRIES } from '../../../data/countries';
 import InternalWhatsAppMessengerModal from './InternalWhatsAppMessengerModal';
 
 export interface TimelineEvent {
   id: string;
-  category: 'whatsapp' | 'booking' | 'contact' | 'crm';
+  category: 'whatsapp' | 'booking' | 'contact' | 'crm' | 'session';
   timestamp: string;
   title: string;
   subtitle?: string;
@@ -120,9 +127,14 @@ export const ClientDossierModal = ({
 }: ClientDossierModalProps): JSX.Element => {
   const [client, setClient] = useState<CustomerJourneyState>(initialClient);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
-  const [timelineFilter, setTimelineFilter] = useState<'all' | 'whatsapp' | 'booking' | 'contact'>('all');
+  const [timelineFilter, setTimelineFilter] = useState<'all' | 'sessions' | 'whatsapp' | 'contact' | 'family'>('all');
   const [loadingTimeline, setLoadingTimeline] = useState(true);
   const [timelineError, setTimelineError] = useState<string | null>(null);
+  const [householdInfo, setHouseholdInfo] = useState<{
+    household: Household | null;
+    members: HouseholdMember[];
+    openActionCounts: Record<string, number>;
+  } | null>(null);
 
   // Content pieces for manual dispatch
   const [libraryPieces, setLibraryPieces] = useState<CRMContentItem[]>([]);
@@ -329,6 +341,89 @@ export const ClientDossierModal = ({
         }
       }
 
+      // 4. Fetch Household & Case Sessions
+      if (client.client_id) {
+        const { data: householdData } = await supabase
+          .from('households')
+          .select('*, household_members(*)')
+          .eq('primary_contact_profile_id', client.client_id)
+          .maybeSingle();
+
+        if (householdData) {
+          const membersList: HouseholdMember[] = householdData.household_members || [];
+          const memberIds = membersList.map((m) => m.id);
+          const openActionCountsByMember: Record<string, number> = {};
+
+          if (memberIds.length > 0) {
+            const { data: actionItems } = await supabase
+              .from('member_action_items')
+              .select('household_member_id')
+              .in('household_member_id', memberIds)
+              .eq('status', 'open');
+
+            for (const act of actionItems || []) {
+              openActionCountsByMember[act.household_member_id] =
+                (openActionCountsByMember[act.household_member_id] || 0) + 1;
+            }
+          }
+
+          setHouseholdInfo({
+            household: householdData as Household,
+            members: membersList,
+            openActionCounts: openActionCountsByMember,
+          });
+
+          const { data: caseSessions } = await supabase
+            .from('case_sessions')
+            .select('*, session_content(id, content_type, content, source_metadata), session_attendees(household_member_id)')
+            .eq('household_id', householdData.id)
+            .order('session_date', { ascending: false });
+
+          if (caseSessions) {
+            caseSessions.forEach((cs, csIdx) => {
+              const postNotes = cs.session_content?.find((c: any) => c.content_type === 'post_session_notes');
+              const liveTranscript = cs.session_content?.find((c: any) => c.content_type === 'live_transcript');
+              const driveUrl = cs.google_drive_web_view_url || cs.drive_web_view_url || (liveTranscript?.source_metadata as any)?.drive_web_view_url || null;
+
+              const attendeeIds = (cs.session_attendees || []).map((a: any) => a.household_member_id);
+              const attendeeNames = membersList
+                .filter((m) => attendeeIds.includes(m.id))
+                .map((m) => m.full_name);
+
+              events.push({
+                id: `case-session-${cs.id}`,
+                category: 'session',
+                timestamp: cs.session_date,
+                title: `Case Session #${caseSessions.length - csIdx}`,
+                subtitle: `${new Date(cs.session_date).toLocaleDateString()} · ${
+                  attendeeNames.length > 0 ? `Attendees: ${attendeeNames.join(', ')}` : 'Household Coaching'
+                }`,
+                description: postNotes?.content || (liveTranscript?.content ? 'Live Arabic session transcript recorded.' : undefined),
+                status: cs.status,
+                badge: {
+                  text: cs.status === 'completed' ? 'Session • Completed' : 'Session • Scheduled',
+                  tone: cs.status === 'completed' ? 'sage' : 'sky',
+                },
+                details: {
+                  session_id: cs.id,
+                  household_id: cs.household_id,
+                  google_meet_url: cs.google_meet_url,
+                  drive_recording_url: driveUrl,
+                  has_transcript: Boolean(liveTranscript?.content),
+                  has_notes: Boolean(postNotes?.content),
+                  attendee_names: attendeeNames,
+                },
+                link: driveUrl || cs.google_meet_url || undefined,
+              });
+            });
+          }
+        } else {
+          setHouseholdInfo(null);
+        }
+      } else {
+        setHouseholdInfo(null);
+      }
+
       // Sort chronological descending
       events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
@@ -347,6 +442,7 @@ export const ClientDossierModal = ({
   // Filtered timeline
   const filteredTimeline = useMemo(() => {
     if (timelineFilter === 'all') return timeline;
+    if (timelineFilter === 'sessions') return timeline.filter((e) => e.category === 'booking' || e.category === 'session');
     return timeline.filter((e) => e.category === timelineFilter);
   }, [timeline, timelineFilter]);
 
@@ -816,16 +912,16 @@ export const ClientDossierModal = ({
               <div>
                 <h3 className="font-serif text-lg font-medium text-charcoal">Unified Touchpoint History</h3>
                 <p className="text-xs text-warm-gray">
-                  Consolidated chronological stream of bookings, WhatsApp messages, and website inquiries
+                  Consolidated chronological stream of bookings, sessions, recordings, WhatsApp messages, and website inquiries
                 </p>
               </div>
 
               {/* Sub-filter tabs */}
-              <div className="flex items-center gap-1 rounded-xl bg-[#faf8f4] p-1 border border-beige/60 text-xs">
+              <div className="flex items-center gap-1 rounded-xl bg-[#faf8f4] p-1 border border-beige/60 text-xs overflow-x-auto">
                 <button
                   type="button"
                   onClick={() => setTimelineFilter('all')}
-                  className={`rounded-lg px-2.5 py-1 font-medium transition ${
+                  className={`rounded-lg px-2.5 py-1 font-medium transition whitespace-nowrap ${
                     timelineFilter === 'all' ? 'bg-white text-charcoal shadow-2xs' : 'text-warm-gray hover:text-charcoal'
                   }`}
                 >
@@ -833,8 +929,17 @@ export const ClientDossierModal = ({
                 </button>
                 <button
                   type="button"
+                  onClick={() => setTimelineFilter('sessions')}
+                  className={`rounded-lg px-2.5 py-1 font-medium transition whitespace-nowrap ${
+                    timelineFilter === 'sessions' ? 'bg-white text-charcoal shadow-2xs' : 'text-warm-gray hover:text-charcoal'
+                  }`}
+                >
+                  Sessions & Recordings ({timeline.filter((e) => e.category === 'booking' || e.category === 'session').length})
+                </button>
+                <button
+                  type="button"
                   onClick={() => setTimelineFilter('whatsapp')}
-                  className={`rounded-lg px-2.5 py-1 font-medium transition ${
+                  className={`rounded-lg px-2.5 py-1 font-medium transition whitespace-nowrap ${
                     timelineFilter === 'whatsapp' ? 'bg-white text-charcoal shadow-2xs' : 'text-warm-gray hover:text-charcoal'
                   }`}
                 >
@@ -842,26 +947,26 @@ export const ClientDossierModal = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTimelineFilter('booking')}
-                  className={`rounded-lg px-2.5 py-1 font-medium transition ${
-                    timelineFilter === 'booking' ? 'bg-white text-charcoal shadow-2xs' : 'text-warm-gray hover:text-charcoal'
-                  }`}
-                >
-                  Sessions ({timeline.filter((e) => e.category === 'booking').length})
-                </button>
-                <button
-                  type="button"
                   onClick={() => setTimelineFilter('contact')}
-                  className={`rounded-lg px-2.5 py-1 font-medium transition ${
+                  className={`rounded-lg px-2.5 py-1 font-medium transition whitespace-nowrap ${
                     timelineFilter === 'contact' ? 'bg-white text-charcoal shadow-2xs' : 'text-warm-gray hover:text-charcoal'
                   }`}
                 >
-                  Forms ({timeline.filter((e) => e.category === 'contact').length})
+                  Inquiries ({timeline.filter((e) => e.category === 'contact').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTimelineFilter('family')}
+                  className={`rounded-lg px-2.5 py-1 font-medium transition whitespace-nowrap ${
+                    timelineFilter === 'family' ? 'bg-white text-charcoal shadow-2xs' : 'text-warm-gray hover:text-charcoal'
+                  }`}
+                >
+                  Family Unit ({householdInfo?.members ? householdInfo.members.length : 0})
                 </button>
                 <button
                   type="button"
                   onClick={() => void loadTimeline()}
-                  className="rounded-lg p-1 text-warm-gray hover:text-charcoal hover:bg-white"
+                  className="rounded-lg p-1 text-warm-gray hover:text-charcoal hover:bg-white shrink-0"
                   title="Refresh Timeline"
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${loadingTimeline ? 'animate-spin' : ''}`} />
@@ -869,8 +974,187 @@ export const ClientDossierModal = ({
               </div>
             </div>
 
-            {/* Timeline Stream */}
-            {loadingTimeline ? (
+            {/* View Body */}
+            {timelineFilter === 'family' ? (
+              /* Family Unit & Personas Hub */
+              <div className="space-y-4">
+                {householdInfo?.household ? (
+                  <>
+                    <div className="rounded-xl border border-beige/80 bg-[#faf8f4] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-sage-dark" />
+                          <h4 className="font-serif text-base font-medium text-charcoal">
+                            {householdInfo.household.family_name} Household
+                          </h4>
+                          <span
+                            className={`rounded-md px-2 py-0.5 text-[10px] font-medium border ${
+                              householdInfo.household.status === 'active'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-gray-100 text-charcoal border-gray-200'
+                            }`}
+                          >
+                            {householdInfo.household.status?.toUpperCase() || 'ACTIVE'}
+                          </span>
+                        </div>
+                        {householdInfo.household.intake_notes ? (
+                          <p className="mt-1 text-xs text-warm-gray line-clamp-2">
+                            {householdInfo.household.intake_notes}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <a
+                        href={`/admin/families/${householdInfo.household.id}`}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-beige bg-white px-3 py-2 text-xs font-medium text-charcoal hover:border-sage hover:text-sage-dark transition shadow-2xs shrink-0"
+                      >
+                        Open Household Dossier
+                        <ArrowRight className="h-3 w-3" />
+                      </a>
+                    </div>
+
+                    {/* Member Personas Cards */}
+                    <div className="space-y-3">
+                      <h5 className="text-xs font-semibold uppercase tracking-wider text-warm-gray">
+                        Family Members & Psychological Personas ({householdInfo.members.length})
+                      </h5>
+
+                      {householdInfo.members.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-beige bg-[#faf8f4] py-8 text-center text-xs text-warm-gray">
+                          No members registered in this household yet.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {householdInfo.members.map((member) => {
+                            const openTasks = householdInfo.openActionCounts[member.id] || 0;
+                            const age = currentAge(member.birth_date);
+
+                            return (
+                              <div
+                                key={member.id}
+                                className="rounded-xl border border-beige/80 bg-white p-4 shadow-2xs hover:border-sage/60 transition flex flex-col justify-between space-y-3"
+                              >
+                                <div>
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div>
+                                      <div className="flex items-center gap-1.5">
+                                        <h6 className="text-sm font-medium text-charcoal">{member.full_name}</h6>
+                                        <span className="rounded-md bg-beige/60 px-1.5 py-0.5 text-[10px] text-warm-gray font-medium">
+                                          {roleLabel(member.family_role)}
+                                        </span>
+                                      </div>
+                                      {age !== null ? (
+                                        <p className="text-[11px] text-warm-gray mt-0.5">{age} years old</p>
+                                      ) : null}
+                                    </div>
+
+                                    {/* Concern level pill */}
+                                    {member.concern_level && member.concern_level !== 'low' ? (
+                                      <span
+                                        className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium border ${
+                                          member.concern_level === 'critical'
+                                            ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                            : member.concern_level === 'high'
+                                            ? 'bg-orange-50 text-orange-700 border-orange-200'
+                                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                                        }`}
+                                      >
+                                        <Flame className="h-3 w-3" />
+                                        {member.concern_level.toUpperCase()}
+                                      </span>
+                                    ) : null}
+                                  </div>
+
+                                  {/* Dynamic role */}
+                                  {member.family_dynamic_role ? (
+                                    <div className="mt-2 flex items-center gap-1 text-[11px] text-warm-gray">
+                                      <Tag className="h-3 w-3 text-sage-dark shrink-0" />
+                                      <span className="font-medium text-charcoal">{member.family_dynamic_role}</span>
+                                    </div>
+                                  ) : null}
+
+                                  {/* Persona summary */}
+                                  {member.persona_summary ? (
+                                    <p className="mt-2 text-xs text-charcoal/80 bg-[#faf8f4] p-2.5 rounded-lg border border-beige/60 leading-relaxed line-clamp-3">
+                                      {member.persona_summary}
+                                    </p>
+                                  ) : null}
+
+                                  {/* Triggers & Strengths */}
+                                  <div className="mt-2 space-y-1">
+                                    {member.known_triggers && member.known_triggers.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1 items-center">
+                                        <span className="text-[10px] text-rose-700 font-medium">Triggers:</span>
+                                        {member.known_triggers.slice(0, 3).map((t, idx) => (
+                                          <span
+                                            key={idx}
+                                            className="rounded bg-rose-50 text-rose-700 px-1.5 py-0.5 text-[10px] border border-rose-200"
+                                          >
+                                            {t}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : null}
+
+                                    {member.strengths && member.strengths.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1 items-center">
+                                        <span className="text-[10px] text-emerald-700 font-medium">Strengths:</span>
+                                        {member.strengths.slice(0, 3).map((s, idx) => (
+                                          <span
+                                            key={idx}
+                                            className="rounded bg-emerald-50 text-emerald-700 px-1.5 py-0.5 text-[10px] border border-emerald-200"
+                                          >
+                                            {s}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-between border-t border-beige/50 pt-2 text-xs">
+                                  <span
+                                    className={`inline-flex items-center gap-1 text-[11px] font-medium ${
+                                      openTasks > 0 ? 'text-amber-700' : 'text-warm-gray'
+                                    }`}
+                                  >
+                                    <ListTodo className="h-3 w-3" />
+                                    {openTasks} open requirement{openTasks === 1 ? '' : 's'}
+                                  </span>
+
+                                  <a
+                                    href={`/admin/families/${householdInfo.household.id}?member=${member.id}`}
+                                    className="inline-flex items-center gap-1 text-[11px] font-medium text-sage-dark hover:underline"
+                                  >
+                                    Clinical Study
+                                    <ArrowRight className="h-3 w-3" />
+                                  </a>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-beige bg-[#faf8f4] py-12 text-center">
+                    <Users className="mx-auto h-8 w-8 text-warm-gray/60 mb-2" />
+                    <h5 className="font-medium text-sm text-charcoal">No Household Linked</h5>
+                    <p className="mt-1 text-xs text-warm-gray max-w-sm mx-auto">
+                      This client is not yet linked to a household in Family Cases. You can establish a household to record family personas, longitudinal notes, and member action items.
+                    </p>
+                    <a
+                      href="/admin/families"
+                      className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-sage px-3 py-1.5 text-xs font-medium text-white hover:bg-sage-dark transition shadow-2xs"
+                    >
+                      Go to Family Cases
+                      <ArrowRight className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
+              </div>
+            ) : loadingTimeline ? (
               <div className="flex items-center justify-center py-12 text-sm text-warm-gray">
                 <Loader2 className="h-5 w-5 animate-spin text-sage-dark mr-2" />
                 Aggregating historical touchpoints...
@@ -900,7 +1184,9 @@ export const ClientDossierModal = ({
                       {/* Timeline node icon */}
                       <div
                         className={`absolute -left-6 top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white shadow-xs ${
-                          item.category === 'booking'
+                          item.category === 'session'
+                            ? 'bg-purple-100 text-purple-700'
+                            : item.category === 'booking'
                             ? 'bg-sky-100 text-sky-700'
                             : item.badge?.tone === 'teal'
                             ? 'bg-teal-100 text-teal-700'
@@ -911,7 +1197,9 @@ export const ClientDossierModal = ({
                             : 'bg-beige text-charcoal'
                         }`}
                       >
-                        {item.category === 'booking' ? (
+                        {item.category === 'session' ? (
+                          <FileText className="h-3 w-3" />
+                        ) : item.category === 'booking' ? (
                           <Calendar className="h-3 w-3" />
                         ) : item.badge?.tone === 'teal' ? (
                           <MessageSquare className="h-3 w-3" />
@@ -941,6 +1229,33 @@ export const ClientDossierModal = ({
 
                           <span className="text-[11px] text-warm-gray font-mono">{dateStr}</span>
                         </div>
+
+                        {/* Attendee chips */}
+                        {item.details?.attendee_names && item.details.attendee_names.length > 0 ? (
+                          <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] text-warm-gray flex items-center gap-1">
+                              <Users className="h-3 w-3" /> Attendees:
+                            </span>
+                            {item.details.attendee_names.map((name: string) => (
+                              <span
+                                key={name}
+                                className="rounded-md bg-white px-2 py-0.5 text-[10px] font-medium text-charcoal border border-beige"
+                              >
+                                {name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+
+                        {/* Transcript indicator */}
+                        {item.details?.has_transcript ? (
+                          <div className="mt-2">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 border border-emerald-200">
+                              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                              Live Arabic Transcript Recorded
+                            </span>
+                          </div>
+                        ) : null}
 
                         {/* Description / Content Body */}
                         {item.description ? (
@@ -972,8 +1287,32 @@ export const ClientDossierModal = ({
                           </div>
                         ) : null}
 
-                        {/* Metadata links */}
-                        {item.link ? (
+                        {/* Session Actions or Booking Link */}
+                        {item.category === 'session' ? (
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            {item.details?.drive_recording_url ? (
+                              <a
+                                href={item.details.drive_recording_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50/70 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100 transition"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5 text-emerald-600" />
+                                Open Voice Recording in Google Drive
+                              </a>
+                            ) : null}
+
+                            {item.details?.session_id ? (
+                              <a
+                                href={`/admin/sessions?client=${client.client_id}&session=${item.details.session_id}`}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-beige bg-white px-2.5 py-1 text-xs font-medium text-charcoal hover:border-sage hover:text-sage-dark transition shadow-2xs"
+                              >
+                                <FileText className="h-3.5 w-3.5 text-sage" />
+                                Session Workspace & Notes
+                              </a>
+                            ) : null}
+                          </div>
+                        ) : item.link ? (
                           <div className="mt-2.5">
                             <a
                               href={item.link}

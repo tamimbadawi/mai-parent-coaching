@@ -41,10 +41,10 @@ Rules out the whole approach cheaply before UI work.
 - [x] Verification script: `scripts/verify-family-persona-and-notes-rls.js` confirms admin full CRUD + strict student deny on all tables.
 
 ## Stage 2 — Unified client card
-- [ ] `ClientDossierModal.tsx`: add case sessions (via the client's household), attendees, recording link, transcript status.
-- [ ] Timeline filters: All / Sessions & Recordings / WhatsApp / Inquiries / Family.
-- [ ] Family section with member personas + open action items; deep links to `HouseholdDossier` and the session workspace.
-- [ ] Loading / empty / error states.
+- [x] `ClientDossierModal.tsx`: add case sessions (via the client's household), attendees, recording link, transcript status.
+- [x] Timeline filters: All / Sessions & Recordings / WhatsApp / Inquiries / Family.
+- [x] Family section with member personas + open action items; deep links to `HouseholdDossier` and the session workspace.
+- [x] Loading / empty / error states.
 
 ## Stage 3 — Recording link & consent
 - [ ] Migration: recording/transcription columns on `case_sessions`, `recording_consent` on `bookings`.
