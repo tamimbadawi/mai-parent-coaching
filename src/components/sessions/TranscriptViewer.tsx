@@ -30,7 +30,7 @@ interface TranscriptViewerProps {
 
   // Per-section save handlers
   onSavePrepNotes: (text: string) => Promise<boolean>;
-  onSaveHandwrittenNotes: (text: string) => Promise<boolean>;
+  onSaveHandwrittenNotes: (text: string, inkPages?: import('../../types/ink').InkPage[]) => Promise<boolean>;
   onSaveDriveLink: (url: string) => Promise<boolean>;
   onClearDriveLink: () => Promise<boolean>;
   onSavePostNotes: (
@@ -111,6 +111,8 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
         {activeStep === 'session' && (
           <SessionDuringStep
             initialHandwrittenNotes={session.handwrittenNotes || ''}
+            initialInkPages={session.inkPages || []}
+            sessionNumber={session.sessionNumber}
             onSaveHandwrittenNotes={onSaveHandwrittenNotes}
             driveWebViewUrl={session.driveWebViewUrl}
             onSaveDriveLink={onSaveDriveLink}

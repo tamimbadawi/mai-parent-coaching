@@ -11,13 +11,21 @@ import {
   Save,
   Check,
   Plus,
+  PenLine,
+  Sparkles,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { TranscriptUtterance } from '../../types/session';
+import type { InkPage } from '../../types/ink';
+import { InkNotebook } from './InkNotebook';
+import { InkPageThumbnail } from './InkPageThumbnail';
+import { transcribeInkPage } from '../../lib/inkOcr';
 
 interface SessionDuringStepProps {
   initialHandwrittenNotes: string;
-  onSaveHandwrittenNotes: (text: string) => Promise<boolean>;
+  initialInkPages?: InkPage[];
+  sessionNumber?: number;
+  onSaveHandwrittenNotes: (text: string, inkPages?: InkPage[]) => Promise<boolean>;
   driveWebViewUrl?: string | null;
   onSaveDriveLink: (url: string) => Promise<boolean>;
   onClearDriveLink: () => Promise<boolean>;
@@ -27,6 +35,8 @@ interface SessionDuringStepProps {
 
 export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
   initialHandwrittenNotes,
+  initialInkPages,
+  sessionNumber,
   onSaveHandwrittenNotes,
   driveWebViewUrl,
   onSaveDriveLink,
@@ -38,6 +48,17 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
   const [draftHandwritten, setDraftHandwritten] = useState(initialHandwrittenNotes);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [saveNotesSuccess, setSaveNotesSuccess] = useState(false);
+
+  // Ink Notebook state
+  const [inkPages, setInkPages] = useState<InkPage[]>(initialInkPages || []);
+  const [isNotebookOpen, setIsNotebookOpen] = useState(false);
+  const [activeNotebookPageIndex, setActiveNotebookPageIndex] = useState(0);
+  const [convertingPageIndex, setConvertingPageIndex] = useState<number | null>(null);
+  const [isConvertingAll, setIsConvertingAll] = useState(false);
+
+  useEffect(() => {
+    setInkPages(initialInkPages || []);
+  }, [initialInkPages]);
 
   // Photo OCR state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -83,7 +104,7 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
     setIsSavingNotes(true);
     setSaveNotesSuccess(false);
     try {
-      const ok = await onSaveHandwrittenNotes(draftHandwritten);
+      const ok = await onSaveHandwrittenNotes(draftHandwritten, inkPages);
       if (ok) {
         setSaveNotesSuccess(true);
         setTimeout(() => setSaveNotesSuccess(false), 2500);
@@ -148,7 +169,7 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
 
       // 4. Autosave immediately to handwritten_notes row in database
       setIsSavingNotes(true);
-      const saveOk = await onSaveHandwrittenNotes(updatedNotes);
+      const saveOk = await onSaveHandwrittenNotes(updatedNotes, inkPages);
       setIsSavingNotes(false);
 
       if (saveOk) {
@@ -163,6 +184,107 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
       console.error('OCR processing error:', err);
       setOcrError(err.message || 'Failed to transcribe photo. Please try again.');
     } finally {
+      setIsOcrProcessing(false);
+    }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Ink Page OCR Conversion                                            */
+  /* ------------------------------------------------------------------ */
+  const handleConvertSingleInkPage = async (page: InkPage, index?: number) => {
+    if (!page.strokes || page.strokes.length === 0) return;
+    if (index !== undefined) setConvertingPageIndex(index);
+    setIsOcrProcessing(true);
+    setOcrError(null);
+    setOcrSuccessMsg(null);
+
+    try {
+      const transcribedText = await transcribeInkPage(page);
+      const dateStr = new Date().toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      const appendHeader = `— From ink page ${page.pageNumber}, ${dateStr} —`;
+      const trimmed = draftHandwritten.trim();
+      const updatedNotes = trimmed
+        ? `${trimmed}\n\n${appendHeader}\n${transcribedText}`
+        : `${appendHeader}\n${transcribedText}`;
+
+      setDraftHandwritten(updatedNotes);
+
+      // Autosave immediately preserving existing ink pages
+      setIsSavingNotes(true);
+      const saveOk = await onSaveHandwrittenNotes(updatedNotes, inkPages);
+      setIsSavingNotes(false);
+
+      if (saveOk) {
+        setSaveNotesSuccess(true);
+        setTimeout(() => setSaveNotesSuccess(false), 3000);
+        setOcrSuccessMsg(`Ink page ${page.pageNumber} transcribed and saved to notes!`);
+        setTimeout(() => setOcrSuccessMsg(null), 4000);
+      } else {
+        setOcrError('Ink page transcribed, but saving failed. Please click Save Notes.');
+      }
+    } catch (err: any) {
+      console.error('Ink OCR error:', err);
+      setOcrError(err.message || `Failed to transcribe ink page ${page.pageNumber}.`);
+    } finally {
+      setIsOcrProcessing(false);
+      setConvertingPageIndex(null);
+    }
+  };
+
+  const handleConvertAllInkPages = async () => {
+    if (inkPages.length === 0) return;
+    setIsConvertingAll(true);
+    setIsOcrProcessing(true);
+    setOcrError(null);
+    setOcrSuccessMsg(null);
+
+    try {
+      const pagesWithStrokes = inkPages.filter((p) => p.strokes && p.strokes.length > 0);
+      if (pagesWithStrokes.length === 0) {
+        setOcrError('No ink strokes found across notebook pages.');
+        return;
+      }
+
+      const dateStr = new Date().toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+
+      let accumulatedAppend = '';
+      for (const p of pagesWithStrokes) {
+        const text = await transcribeInkPage(p);
+        accumulatedAppend += `\n\n— From ink page ${p.pageNumber}, ${dateStr} —\n${text}`;
+      }
+
+      const trimmed = draftHandwritten.trim();
+      const updatedNotes = trimmed
+        ? `${trimmed}${accumulatedAppend}`
+        : accumulatedAppend.trimStart();
+
+      setDraftHandwritten(updatedNotes);
+
+      setIsSavingNotes(true);
+      const saveOk = await onSaveHandwrittenNotes(updatedNotes, inkPages);
+      setIsSavingNotes(false);
+
+      if (saveOk) {
+        setSaveNotesSuccess(true);
+        setTimeout(() => setSaveNotesSuccess(false), 3000);
+        setOcrSuccessMsg('All ink pages transcribed and saved to notes!');
+        setTimeout(() => setOcrSuccessMsg(null), 4000);
+      } else {
+        setOcrError('Ink pages transcribed, but saving failed. Please click Save Notes.');
+      }
+    } catch (err: any) {
+      console.error('Batch ink OCR error:', err);
+      setOcrError(err.message || 'Failed to transcribe ink pages.');
+    } finally {
+      setIsConvertingAll(false);
       setIsOcrProcessing(false);
     }
   };
@@ -302,6 +424,20 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Write Notes (Pen Notebook) Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveNotebookPageIndex(Math.max(0, inkPages.length - 1));
+                setIsNotebookOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-sage/60 bg-sage/10 hover:bg-sage/20 text-charcoal hover:text-sage-dark transition cursor-pointer shadow-2xs"
+              title="Open full-screen pen notebook for stylus/mouse drawing"
+            >
+              <PenLine className="w-3.5 h-3.5 text-sage-dark" />
+              <span>✍️ Write notes</span>
+            </button>
+
             {/* Upload Photo Button */}
             <input
               ref={fileInputRef}
@@ -376,6 +512,77 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
           </div>
         )}
 
+        {/* Ink Notebook Pages Gallery (when ink pages exist) */}
+        {inkPages.length > 0 && (
+          <div className="mb-4 p-3.5 rounded-xl border border-beige/80 bg-[#FAF8F4]/80 space-y-2.5">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-charcoal">
+                <PenLine className="w-3.5 h-3.5 text-sage-dark" />
+                <span>Ink Notebook Pages ({inkPages.length})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isConvertingAll || isOcrProcessing}
+                  onClick={handleConvertAllInkPages}
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-charcoal hover:text-sage-dark px-2.5 py-1 rounded-lg border border-beige bg-white hover:border-sage transition cursor-pointer disabled:opacity-50 shadow-2xs"
+                  title="Transcribe all ink pages to text via Gemini OCR"
+                >
+                  {isConvertingAll ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin text-sage-dark" />
+                      <span>Transcribing All Pages...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3 text-sage-dark" />
+                      <span>Convert All to Text</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveNotebookPageIndex(inkPages.length - 1);
+                    setIsNotebookOpen(true);
+                  }}
+                  className="text-[11px] font-semibold text-sage-dark hover:underline cursor-pointer"
+                >
+                  Resume Writing →
+                </button>
+              </div>
+            </div>
+
+            {/* Horizontal Scrollable Thumbnails Strip */}
+            <div className="flex items-center gap-3 overflow-x-auto pb-1 pt-0.5 custom-scrollbar">
+              {inkPages.map((page, index) => (
+                <InkPageThumbnail
+                  key={page.id}
+                  page={page}
+                  isConverting={convertingPageIndex === index}
+                  onClick={() => {
+                    setActiveNotebookPageIndex(index);
+                    setIsNotebookOpen(true);
+                  }}
+                  onConvert={() => handleConvertSingleInkPage(page, index)}
+                />
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveNotebookPageIndex(inkPages.length);
+                  setIsNotebookOpen(true);
+                }}
+                className="w-24 h-34 rounded-xl border border-dashed border-beige/90 bg-white/70 hover:bg-white hover:border-sage text-warm-gray hover:text-sage-dark transition flex flex-col items-center justify-center gap-1 shrink-0 cursor-pointer shadow-2xs"
+                title="Open notebook and start a new page"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="text-[10px] font-medium">Add Page</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         <textarea
           rows={8}
           value={draftHandwritten}
@@ -383,6 +590,24 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
           placeholder="Capture real-time clinical observations, phrases spoken by parent or child, behavioral shifts, or upload a photo of your paper notebook to transcribe..."
           className="w-full text-xs rounded-xl border border-beige bg-[#faf8f4] p-3 text-charcoal placeholder:text-warm-gray/60 focus:bg-white focus:border-sage focus:outline-hidden transition leading-relaxed font-sans"
         />
+
+        {/* Full-Screen Pen Ink Notebook Overlay */}
+        {isNotebookOpen && (
+          <InkNotebook
+            initialPages={inkPages}
+            initialPageIndex={activeNotebookPageIndex}
+            sessionNumber={sessionNumber}
+            onSave={async (updatedPages) => {
+              setInkPages(updatedPages);
+              return onSaveHandwrittenNotes(draftHandwritten, updatedPages);
+            }}
+            onClose={(updatedPages) => {
+              setInkPages(updatedPages);
+              setIsNotebookOpen(false);
+            }}
+            onConvertToText={handleConvertSingleInkPage}
+          />
+        )}
       </div>
 
       {/* 2. Embedded Voice Recording Link Strip */}

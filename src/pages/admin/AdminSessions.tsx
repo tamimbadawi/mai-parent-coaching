@@ -13,6 +13,7 @@ import type { ClientSessionSummary, SessionTranscript, TranscriptUtterance, Emot
 import type { CustomerJourneyState } from '../../types';
 import type { WorkflowStep } from '../../components/sessions/SessionWorkflowTabs';
 import type { Household, HouseholdMember, MemberActionItem, MemberNote, SessionAttendee, MemberNoteType, CaseSession } from '../../types/family';
+import type { InkPage } from '../../types/ink';
 
 export const AdminSessions: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -265,6 +266,7 @@ export const AdminSessions: React.FC = () => {
               preSessionRecap: prepNotes?.content || '',
               hasRealPostNotes: Boolean(postNotes?.content),
               handwrittenNotes: handNotes?.content || '',
+              inkPages: ((handNotes?.source_metadata as Record<string, unknown>)?.ink_pages as InkPage[]) || [],
               keyInsights,
               actionItems: [],
               emotionalObservations: {
@@ -621,10 +623,12 @@ export const AdminSessions: React.FC = () => {
     return true;
   };
 
-  // 2. Save Handwritten Notes (session_content -> handwritten_notes)
-  const handleSaveHandwrittenNotes = async (text: string): Promise<boolean> => {
+  // 2. Save Handwritten Notes & Ink Pages (session_content -> handwritten_notes)
+  const handleSaveHandwrittenNotes = async (text: string, inkPages?: InkPage[]): Promise<boolean> => {
     if (!activeSession) return false;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeSession.id);
+
+    const targetInkPages = inkPages !== undefined ? inkPages : activeSession.inkPages || [];
 
     setClients((prev) =>
       prev.map((c) =>
@@ -632,7 +636,9 @@ export const AdminSessions: React.FC = () => {
           ? {
               ...c,
               sessions: c.sessions.map((s) =>
-                s.id === activeSession.id ? { ...s, handwrittenNotes: text } : s
+                s.id === activeSession.id
+                  ? { ...s, handwrittenNotes: text, inkPages: targetInkPages }
+                  : s
               ),
             }
           : c
@@ -649,7 +655,7 @@ export const AdminSessions: React.FC = () => {
           session_id: activeSession.id,
           content_type: 'handwritten_notes',
           content: text,
-          source_metadata: {},
+          source_metadata: { ink_pages: targetInkPages },
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'session_id,content_type' }

@@ -46,6 +46,7 @@ export interface SessionTranscript {
   preSessionRecap?: string; // Pre-session preparation notes
   hasRealPostNotes?: boolean; // Whether real post-session notes exist in database
   handwrittenNotes?: string; // Handwritten / quick observational clinical notes
+  inkPages?: import('./ink').InkPage[]; // Pen ink notebook pages stored in source_metadata.ink_pages
   keyInsights: string[];
   actionItems: ActionItem[];
   emotionalObservations: EmotionalObservation;
