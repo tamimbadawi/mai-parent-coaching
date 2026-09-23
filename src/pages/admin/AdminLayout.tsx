@@ -38,9 +38,11 @@ interface AdminLayoutProps {
   subtitle?: React.ReactNode;
   action?: React.ReactNode;
   headerContent?: React.ReactNode;
+  /** Desktop only: lock the workspace to the sidebar's height so the page can fill it exactly (no page scroll). */
+  fillHeight?: boolean;
 }
 
-const AdminLayout = ({ children, title, subtitle, action, headerContent }: AdminLayoutProps): JSX.Element => {
+const AdminLayout = ({ children, title, subtitle, action, headerContent, fillHeight = false }: AdminLayoutProps): JSX.Element => {
   const { pathname } = useLocation();
   const { profile, signOut } = useAuth();
   const [notificationCount, setNotificationCount] = useState<number>(0);
@@ -224,7 +226,7 @@ const AdminLayout = ({ children, title, subtitle, action, headerContent }: Admin
       </aside>
 
       {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`flex-1 flex flex-col min-w-0 ${fillHeight ? 'lg:h-[calc(100vh-1.5rem)] lg:sticky lg:top-3' : ''}`}>
         {/* Workspace Top Bar */}
         <header className="sticky top-0 z-20 border border-beige/80 rounded-2xl lg:rounded-3xl bg-white/85 backdrop-blur-md px-5 py-2.5 sm:px-6 sm:py-3 shadow-xs shrink-0">
           <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between max-w-[1440px] mx-auto w-full">
@@ -256,7 +258,7 @@ const AdminLayout = ({ children, title, subtitle, action, headerContent }: Admin
         </header>
 
         {/* Page Content Body */}
-        <main className="flex-1 pt-2.5 pb-2.5 px-1 sm:px-3 max-w-[1440px] w-full mx-auto min-h-0">
+        <main className={`flex-1 pt-2.5 pb-2.5 px-1 sm:px-3 max-w-[1440px] w-full mx-auto min-h-0 ${fillHeight ? 'lg:flex lg:flex-col lg:pb-0' : ''}`}>
           {children}
         </main>
       </div>

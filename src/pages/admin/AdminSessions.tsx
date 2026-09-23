@@ -634,6 +634,7 @@ export const AdminSessions: React.FC = () => {
     <SuperAdminGate>
       {() => (
         <AdminLayout
+          fillHeight
           title="Session Notes"
           subtitle="Structured clinical insights, action items, and conversational consultation."
           action={
@@ -750,84 +751,11 @@ export const AdminSessions: React.FC = () => {
             </div>
           }
         >
-          {/* Google Drive Link Bar */}
-          <div className="mb-3 rounded-2xl border border-beige bg-white p-3 shadow-2xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center shrink-0">
-                  <ExternalLink className="w-4 h-4 text-emerald-700" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-charcoal">Voice Recording (Google Drive)</span>
-                    {activeSession.driveWebViewUrl ? (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 border border-emerald-200">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Linked
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-warm-gray">Not linked</span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-warm-gray truncate">
-                    {activeSession.driveWebViewUrl ? (
-                      <a
-                        href={activeSession.driveWebViewUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-emerald-700 hover:underline inline-flex items-center gap-1 font-mono text-[10px]"
-                      >
-                        {activeSession.driveWebViewUrl}
-                        <ExternalLink className="w-2.5 h-2.5" />
-                      </a>
-                    ) : (
-                      'Paste the Google Drive link to the session voice recording'
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              {/* Input & Action buttons */}
-              <div className="flex flex-col items-start sm:items-end gap-1 shrink-0">
-                <div className="flex items-center gap-1.5 w-full sm:w-auto">
-                  <input
-                    type="url"
-                    value={driveInput}
-                    onChange={(e) => {
-                      setDriveInput(e.target.value);
-                      if (driveError) setDriveError(null);
-                    }}
-                    placeholder="https://drive.google.com/..."
-                    className="w-full sm:w-72 text-xs rounded-xl border border-beige bg-[#faf8f4] px-3 py-1.5 text-charcoal placeholder:text-warm-gray/60 focus:bg-white focus:border-sage focus:outline-hidden transition"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSaveDriveLink}
-                    disabled={isSavingDrive}
-                    className="px-3 py-1.5 text-xs font-medium rounded-xl bg-sage text-white hover:bg-sage-dark transition shrink-0 disabled:opacity-50"
-                  >
-                    {isSavingDrive ? 'Saving...' : 'Save'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleClearDriveLink}
-                    disabled={isSavingDrive || (!driveInput && !activeSession.driveWebViewUrl)}
-                    className="px-2.5 py-1.5 text-xs font-medium rounded-xl border border-beige bg-white text-warm-gray hover:text-rose-600 hover:border-rose-200 transition shrink-0 disabled:opacity-40 disabled:hover:text-warm-gray disabled:hover:border-beige"
-                    title="Clear Drive link"
-                  >
-                    Clear
-                  </button>
-                </div>
-                {driveError && (
-                  <span className="text-[11px] font-medium text-rose-600">
-                    {driveError}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
+          {/* Full-height page body (AdminLayout fillHeight): panels take the remaining space,
+              recording strip pinned to the bottom, aligned with the sidebar's bottom edge. */}
+          <div className="flex flex-col gap-3 lg:flex-1 lg:min-h-0">
           {/* Main Content Grid directly under Header: Left 7/12 (Notes) + Right 5/12 (Assistant) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start lg:h-[calc(100vh-175px)] lg:max-h-[calc(100vh-175px)]">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start lg:flex-1 lg:min-h-0">
             <div className="lg:col-span-7 h-full min-h-0 min-w-0 flex flex-col overflow-hidden">
               <TranscriptViewer
                 session={activeSession}
@@ -847,6 +775,64 @@ export const AdminSessions: React.FC = () => {
                 onToggleMockMode={setIsMockMode}
               />
             </div>
+          </div>
+
+          {/* Voice recording link: compact strip under the notes + intelligence panels */}
+          <div className="shrink-0 rounded-2xl border border-beige bg-white px-3 py-2 shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0 sm:flex-1">
+                <ExternalLink className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                <span className="text-xs font-semibold text-charcoal shrink-0">Voice Recording</span>
+                {activeSession.driveWebViewUrl ? (
+                  <a
+                    href={activeSession.driveWebViewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 border border-emerald-200 hover:underline shrink-0"
+                  >
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Open in Google Drive
+                  </a>
+                ) : (
+                  <span className="text-[11px] text-warm-gray truncate">Not linked</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                <input
+                  type="url"
+                  aria-label="Google Drive recording link"
+                  value={driveInput}
+                  onChange={(e) => {
+                    setDriveInput(e.target.value);
+                    if (driveError) setDriveError(null);
+                  }}
+                  placeholder="Paste Google Drive link..."
+                  className="w-full sm:w-64 text-xs rounded-lg border border-beige bg-[#faf8f4] px-2.5 py-1 text-charcoal placeholder:text-warm-gray/60 focus:bg-white focus:border-sage focus:outline-hidden transition"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveDriveLink}
+                  disabled={isSavingDrive}
+                  className="px-2.5 py-1 text-xs font-medium rounded-lg bg-sage text-white hover:bg-sage-dark transition shrink-0 disabled:opacity-50"
+                >
+                  {isSavingDrive ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearDriveLink}
+                  disabled={isSavingDrive || (!driveInput && !activeSession.driveWebViewUrl)}
+                  className="px-2 py-1 text-xs font-medium rounded-lg border border-beige bg-white text-warm-gray hover:text-rose-600 hover:border-rose-200 transition shrink-0 disabled:opacity-40 disabled:hover:text-warm-gray disabled:hover:border-beige"
+                  title="Clear Drive link"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+            {driveError && (
+              <p className="mt-1 text-[11px] font-medium text-rose-600">{driveError}</p>
+            )}
+          </div>
+
           </div>
 
           {/* Floating CRM Dossier Modal — opened in place, no page navigation */}

@@ -5,7 +5,6 @@ import Footer from './components/layout/Footer';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import { DesignProvider } from './context/DesignContext';
-import DesignToggle from './components/common/DesignToggle';
 import Home from './pages/Home';
 import HomePreview from './pages/HomePreview';
 import About from './pages/About';
@@ -110,7 +109,6 @@ function AppShell() {
         </Routes>
       </main>
       {isAdminRoute || isDashboardRoute ? null : <Footer />}
-      <DesignToggle />
     </div>
   );
 }
