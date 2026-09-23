@@ -261,7 +261,7 @@ const AdminDashboard = (): JSX.Element => {
 
           {/* Card 3: Registered Clients */}
           <Link
-            to="/admin/users"
+            to="/admin/crm"
             className="group rounded-2xl border border-beige/80 bg-white p-5 shadow-xs transition-colors hover:border-beige block"
           >
             <div className="flex items-center justify-between">
@@ -544,7 +544,7 @@ const AdminDashboard = (): JSX.Element => {
               </Link>
 
               <Link
-                to="/admin/users"
+                to="/admin/crm"
                 className="flex items-start justify-between rounded-xl border border-beige/70 bg-[#faf8f4]/50 p-3.5 transition hover:bg-white hover:border-beige group"
               >
                 <div>

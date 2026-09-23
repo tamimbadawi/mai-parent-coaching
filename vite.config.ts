@@ -9,7 +9,17 @@ export default defineConfig({
   },
   server: {
     watch: {
-      ignored: ['**/public/fonts/**', '**/.git/**'],
+      ignored: [
+        '**/public/fonts/**',
+        '**/.git/**',
+        '**/Mockup/**',
+        '**/project-plan/**',
+        '**/.claude/**',
+        '**/*.zip',
+        '**/*.mp3',
+        '**/*.mp4',
+        '**/.wwebjs_auth/**',
+      ],
     },
   },
 });

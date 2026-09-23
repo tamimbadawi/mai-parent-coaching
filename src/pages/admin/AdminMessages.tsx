@@ -53,7 +53,10 @@ const AdminMessages = (): JSX.Element => {
   }, []);
 
   return (
-    <AdminLayout title="Contact Messages">
+    <AdminLayout
+      title="Inbox"
+      subtitle="New website inquiries waiting to be matched to a client. Once someone becomes a client, their messages live in their Client CRM dossier instead."
+    >
       {messages.length === 0 ? (
         <EmptyPanel title="No contact messages yet" description="New inquiries, collaboration requests, and support notes will arrive here in a reviewable inbox." />
       ) : (

@@ -565,6 +565,13 @@ export const ClientDossierModal = ({
                   <Sparkles className="h-3.5 w-3.5 text-sage-dark" />
                   <span>View Family Case</span>
                 </Link>
+                <Link
+                  to={`/admin/sessions?client=${client.client_id}`}
+                  className="inline-flex items-center gap-1.5 font-medium text-sage-dark hover:text-charcoal hover:underline cursor-pointer"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-sage-dark" />
+                  <span>Session Notes</span>
+                </Link>
               </div>
             </div>
           </div>

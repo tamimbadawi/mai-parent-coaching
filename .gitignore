@@ -46,3 +46,9 @@ test-supabase-connection.js
 .bolt
 
 .vercel
+
+# Mockup test media
+Mockup/
+
+# Tool directories
+.claude/

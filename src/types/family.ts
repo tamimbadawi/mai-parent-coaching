@@ -34,6 +34,8 @@ export interface CaseSession {
   duration_minutes: number | null;
   google_meet_url: string | null;
   status: CaseSessionStatus;
+  session_content?: SessionContent[];
+  session_attendees?: { household_member_id: string }[];
   created_at: string;
   updated_at: string;
 }
@@ -88,3 +90,11 @@ export const CONTENT_TYPE_LABELS: Record<SessionContentType, string> = {
   handwritten_notes: 'Handwritten Notes',
   post_session_notes: 'Post-Session Write-up',
 };
+
+export interface MemberStudyResult {
+  text: string;
+  frameworkConfigured: boolean;
+  sessionsAnalyzed: number;
+  memberName?: string;
+  timestamp?: string;
+}

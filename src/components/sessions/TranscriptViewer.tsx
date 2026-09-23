@@ -43,9 +43,11 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
   const [activeTab, setActiveTab] = useState<TabKey>('notes');
   const [rawSearchQuery, setRawSearchQuery] = useState('');
 
-  // Tab 1: Clinical Summary editing states
+  // Tab 1: Clinical Summary and Handwritten Notes editing states
   const [isEditingSummary, setIsEditingSummary] = useState(false);
   const [draftSummary, setDraftSummary] = useState(session.clinicalSummary);
+  const [isEditingHandwritten, setIsEditingHandwritten] = useState(false);
+  const [draftHandwritten, setDraftHandwritten] = useState(session.handwrittenNotes || '');
   const [newInsightText, setNewInsightText] = useState('');
   const [showAddInsight, setShowAddInsight] = useState(false);
 
@@ -77,14 +79,16 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
   // Sync draft when session changes
   React.useEffect(() => {
     setDraftSummary(session.clinicalSummary);
+    setDraftHandwritten(session.handwrittenNotes || '');
     setDraftChildProfile(session.emotionalObservations.childDynamicsSummary || '');
     setIsEditingSummary(false);
+    setIsEditingHandwritten(false);
     setShowAddAction(false);
     setShowAddUtterance(false);
-  }, [session.id]);
+  }, [session.id, session.clinicalSummary, session.handwrittenNotes]);
 
   /* ---------------------------------------------------- */
-  /* TAB 1 HANDLERS: CLINICAL SUMMARY                     */
+  /* TAB 1 HANDLERS: CLINICAL SUMMARY & HANDWRITTEN NOTES  */
   /* ---------------------------------------------------- */
   const handleSaveSummary = () => {
     onUpdateSession({
@@ -93,6 +97,15 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
       updatedAt: new Date().toISOString(),
     });
     setIsEditingSummary(false);
+  };
+
+  const handleSaveHandwritten = () => {
+    onUpdateSession({
+      ...session,
+      handwrittenNotes: draftHandwritten,
+      updatedAt: new Date().toISOString(),
+    });
+    setIsEditingHandwritten(false);
   };
 
   const handleAddInsight = (e: React.FormEvent) => {
@@ -333,14 +346,14 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
         <div className="flex items-center gap-1 min-w-0 overflow-hidden">
           <button
             onClick={() => setActiveTab('notes')}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-t-xl text-xs font-medium transition-all whitespace-nowrap border-b-2 ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-t-xl text-xs font-medium transition-all whitespace-nowrap border-b-2 ${
               activeTab === 'notes'
                 ? 'bg-white text-charcoal border-sage-dark shadow-2xs'
                 : 'text-charcoal/60 hover:text-charcoal border-transparent'
             }`}
           >
             <FileText className="w-3.5 h-3.5 text-sage-dark shrink-0" />
-            <span>Clinical Summary</span>
+            <span>Session Notes</span>
           </button>
 
           <button
@@ -388,28 +401,6 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
 
         {/* Action button for active tab */}
         <div className="flex items-center gap-1.5 pb-1 shrink-0">
-          {activeTab === 'notes' && (
-            <button
-              onClick={() => {
-                if (isEditingSummary) handleSaveSummary();
-                else setIsEditingSummary(true);
-              }}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-ivory border border-beige/80 text-charcoal/80 hover:text-charcoal hover:bg-white transition-colors"
-            >
-              {isEditingSummary ? (
-                <>
-                  <Save className="w-3 h-3 text-emerald-600" />
-                  <span>Save</span>
-                </>
-              ) : (
-                <>
-                  <Edit3 className="w-3 h-3 text-sage-dark" />
-                  <span>Edit</span>
-                </>
-              )}
-            </button>
-          )}
-
           {activeTab === 'actions' && (
             <button
               onClick={() => setShowAddAction(!showAddAction)}
@@ -435,12 +426,175 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
       {/* Tab Content Body */}
       <div className="p-3.5 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0 text-charcoal space-y-4">
         {/* ==================================================== */}
-        {/* TAB 1: CLINICAL SUMMARY                              */}
+        {/* TAB 1: SESSION NOTES (WRITE-UP & HANDWRITTEN)         */}
         {/* ==================================================== */}
         {activeTab === 'notes' && (
-          <div className="space-y-5 animate-in fade-in duration-200">
-            {/* Key Takeaway Highlights */}
-            <div className="bg-sage/10 rounded-xl p-4 border border-sage/30">
+          <div className="space-y-4 animate-in fade-in duration-200">
+            {/* 1. Post-Session Write-up Card */}
+            <div className="rounded-2xl border border-beige/80 bg-white p-4 space-y-3 shadow-2xs">
+              <div className="flex items-center justify-between border-b border-beige/60 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block text-[10px] font-semibold uppercase tracking-wider text-sage-dark bg-sage/15 rounded px-2 py-0.5">
+                    Post-Session Write-up
+                  </span>
+                  <span className="text-[11px] text-warm-gray hidden sm:inline">Structured clinical synthesis</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isEditingSummary) handleSaveSummary();
+                    else setIsEditingSummary(true);
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#faf8f4] border border-beige/80 text-charcoal/80 hover:text-charcoal transition shadow-2xs"
+                >
+                  {isEditingSummary ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Done</span>
+                    </>
+                  ) : (
+                    <>
+                      <Edit3 className="w-3 h-3 text-sage-dark" />
+                      <span>Edit Write-up</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {isEditingSummary ? (
+                <div className="space-y-2.5">
+                  <textarea
+                    value={draftSummary}
+                    onChange={(e) => setDraftSummary(e.target.value)}
+                    rows={12}
+                    className="w-full p-3.5 rounded-xl text-xs sm:text-sm font-mono leading-relaxed bg-[#faf8f4] border border-beige/90 focus:outline-hidden focus:border-sage-dark resize-y"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraftSummary(session.clinicalSummary);
+                        setIsEditingSummary(false);
+                      }}
+                      className="px-2.5 py-1 text-xs text-warm-gray hover:text-charcoal"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveSummary}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700"
+                    >
+                      <Check className="w-3.5 h-3.5" /> Save Changes
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="prose prose-stone max-w-none text-charcoal/90 text-xs sm:text-sm leading-relaxed space-y-2.5 pl-1">
+                  <ReactMarkdown
+                    components={{
+                      h3: ({ node, ...props }) => (
+                        <h3
+                          className="font-serif text-sm sm:text-base font-semibold text-charcoal mt-3 mb-1.5 border-b border-beige/60 pb-1"
+                          {...props}
+                        />
+                      ),
+                      p: ({ node, ...props }) => (
+                        <p className="leading-relaxed text-charcoal/85 mb-2" {...props} />
+                      ),
+                      ul: ({ node, ...props }) => (
+                        <ul className="list-disc pl-4 space-y-1 text-charcoal/85 my-1.5" {...props} />
+                      ),
+                      ol: ({ node, ...props }) => (
+                        <ol className="list-decimal pl-4 space-y-1 text-charcoal/85 my-1.5" {...props} />
+                      ),
+                      li: ({ node, ...props }) => (
+                        <li className="text-charcoal/85" {...props} />
+                      ),
+                      strong: ({ node, ...props }) => (
+                        <strong className="font-semibold text-charcoal" {...props} />
+                      ),
+                    }}
+                  >
+                    {session.clinicalSummary}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Handwritten Notes Card */}
+            <div className="rounded-2xl border border-beige/80 bg-[#faf8f4] p-4 space-y-3 shadow-2xs">
+              <div className="flex items-center justify-between border-b border-beige/60 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block text-[10px] font-semibold uppercase tracking-wider text-sage-dark bg-sage/15 rounded px-2 py-0.5">
+                    Handwritten Notes
+                  </span>
+                  <span className="text-[11px] text-warm-gray hidden sm:inline">Raw in-session notes & live scribbles</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isEditingHandwritten) handleSaveHandwritten();
+                    else setIsEditingHandwritten(true);
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-white border border-beige/80 text-charcoal/80 hover:text-charcoal transition shadow-2xs"
+                >
+                  {isEditingHandwritten ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Done</span>
+                    </>
+                  ) : (
+                    <>
+                      <Edit3 className="w-3 h-3 text-sage-dark" />
+                      <span>Edit Notes</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {isEditingHandwritten ? (
+                <div className="space-y-2.5">
+                  <textarea
+                    value={draftHandwritten}
+                    onChange={(e) => setDraftHandwritten(e.target.value)}
+                    rows={4}
+                    placeholder="Enter quick handwritten observations, verbatim quotes, or raw notes taken during or after session..."
+                    className="w-full p-3.5 rounded-xl text-xs sm:text-sm font-sans leading-relaxed bg-white border border-beige/90 focus:outline-hidden focus:border-sage-dark resize-y"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraftHandwritten(session.handwrittenNotes || '');
+                        setIsEditingHandwritten(false);
+                      }}
+                      className="px-2.5 py-1 text-xs text-warm-gray hover:text-charcoal"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveHandwritten}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700"
+                    >
+                      <Check className="w-3.5 h-3.5" /> Save Notes
+                    </button>
+                  </div>
+                </div>
+              ) : session.handwrittenNotes ? (
+                <p className="text-xs sm:text-sm text-charcoal leading-relaxed whitespace-pre-wrap pl-1 font-sans">
+                  {session.handwrittenNotes}
+                </p>
+              ) : (
+                <p className="text-xs text-warm-gray italic pl-1">
+                  No handwritten notes recorded for this session yet. Click Edit Notes to record quick in-session scribbles or raw observations.
+                </p>
+              )}
+            </div>
+
+            {/* 3. Key Clinical Insights */}
+            <div className="bg-sage/10 rounded-2xl p-4 border border-sage/30">
               <div className="flex items-center justify-between gap-2 mb-2.5">
                 <div className="flex items-center gap-2 text-sage-dark font-medium text-xs sm:text-sm">
                   <Sparkles className="w-4 h-4" />
@@ -496,60 +650,6 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
                 ))}
               </ul>
             </div>
-
-            {/* Markdown Body or Edit Textarea */}
-            {isEditingSummary ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-charcoal/70 uppercase tracking-wider">
-                    Edit Markdown Clinical Notes
-                  </span>
-                  <button
-                    onClick={handleSaveSummary}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Save Changes</span>
-                  </button>
-                </div>
-                <textarea
-                  value={draftSummary}
-                  onChange={(e) => setDraftSummary(e.target.value)}
-                  rows={14}
-                  className="w-full p-4 rounded-xl text-xs sm:text-sm font-mono leading-relaxed bg-[#faf8f4] border border-beige/90 focus:outline-hidden focus:border-sage-dark"
-                />
-              </div>
-            ) : (
-              <div className="prose prose-stone max-w-none text-charcoal/90 text-xs sm:text-sm leading-relaxed space-y-3">
-                <ReactMarkdown
-                  components={{
-                    h3: ({ node, ...props }) => (
-                      <h3
-                        className="font-serif text-base sm:text-lg font-semibold text-charcoal mt-4 mb-2 border-b border-beige/60 pb-1"
-                        {...props}
-                      />
-                    ),
-                    p: ({ node, ...props }) => (
-                      <p className="leading-relaxed text-charcoal/85 mb-2.5" {...props} />
-                    ),
-                    ul: ({ node, ...props }) => (
-                      <ul className="list-disc pl-4 space-y-1 text-charcoal/85 my-2" {...props} />
-                    ),
-                    ol: ({ node, ...props }) => (
-                      <ol className="list-decimal pl-4 space-y-1 text-charcoal/85 my-2" {...props} />
-                    ),
-                    li: ({ node, ...props }) => (
-                      <li className="text-charcoal/85" {...props} />
-                    ),
-                    strong: ({ node, ...props }) => (
-                      <strong className="font-semibold text-charcoal" {...props} />
-                    ),
-                  }}
-                >
-                  {session.clinicalSummary}
-                </ReactMarkdown>
-              </div>
-            )}
           </div>
         )}
 

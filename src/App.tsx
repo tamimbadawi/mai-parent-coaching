@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -36,7 +36,6 @@ import MySessions from './pages/dashboard/MySessions';
 import MyCourses from './pages/dashboard/MyCourses';
 import ProfileSettings from './pages/dashboard/ProfileSettings';
 import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminUsers from './pages/admin/AdminUsers';
 import AdminMessages from './pages/admin/AdminMessages';
 import AdminCourses from './pages/admin/AdminCourses';
 import AdminBlog from './pages/admin/AdminBlog';
@@ -97,7 +96,7 @@ function AppShell() {
           <Route path="/dashboard/courses" element={<ProtectedRoute><MyCourses /></ProtectedRoute>} />
           <Route path="/dashboard/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><AdminUsers /></ProtectedRoute>} />
+          <Route path="/admin/users" element={<Navigate to="/admin/crm" replace />} />
           <Route path="/admin/messages" element={<ProtectedRoute requiredRole="admin"><AdminMessages /></ProtectedRoute>} />
           <Route path="/admin/courses" element={<ProtectedRoute requiredRole="admin"><AdminCourses /></ProtectedRoute>} />
           <Route path="/admin/blog" element={<ProtectedRoute requiredRole="admin"><AdminBlog /></ProtectedRoute>} />
@@ -107,7 +106,6 @@ function AppShell() {
           <Route path="/admin/crm" element={<ProtectedRoute requiredRole="admin"><AdminCRM /></ProtectedRoute>} />
           <Route path="/admin/families" element={<ProtectedRoute requiredRole="admin"><AdminFamilies /></ProtectedRoute>} />
           <Route path="/admin/families/:householdId" element={<ProtectedRoute requiredRole="admin"><HouseholdDossier /></ProtectedRoute>} />
-          <Route path="/admin/families/:householdId/sessions/:sessionId" element={<ProtectedRoute requiredRole="admin"><AdminSessions /></ProtectedRoute>} />
           <Route path="/admin/sessions" element={<ProtectedRoute requiredRole="admin"><AdminSessions /></ProtectedRoute>} />
         </Routes>
       </main>

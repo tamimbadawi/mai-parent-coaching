@@ -15,7 +15,6 @@ import {
   MessageCircle,
   HeartHandshake,
   Sparkles,
-  Home,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -35,12 +34,13 @@ interface NavGroup {
 
 interface AdminLayoutProps {
   children: React.ReactNode;
-  title: string;
+  title: React.ReactNode;
   subtitle?: React.ReactNode;
   action?: React.ReactNode;
+  headerContent?: React.ReactNode;
 }
 
-const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): JSX.Element => {
+const AdminLayout = ({ children, title, subtitle, action, headerContent }: AdminLayoutProps): JSX.Element => {
   const { pathname } = useLocation();
   const { profile, signOut } = useAuth();
   const [notificationCount, setNotificationCount] = useState<number>(0);
@@ -70,11 +70,9 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
       items: [
         { to: '/admin', label: 'Overview', icon: LayoutDashboard },
         { to: '/admin/bookings', label: 'Bookings', icon: CalendarDays },
-        { to: '/admin/users', label: 'Clients & Users', icon: Users },
         { to: '/admin/crm', label: 'Client CRM', icon: HeartHandshake },
-        { to: '/admin/families', label: 'Family Cases', icon: Home },
         { to: '/admin/sessions', label: 'Session Notes', icon: Sparkles, badge: 'Super' },
-        { to: '/admin/messages', label: 'Messages', icon: MessageSquare },
+        { to: '/admin/messages', label: 'Inbox', icon: MessageSquare },
         { to: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
       ],
     },
@@ -127,25 +125,44 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
           ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:shadow-md'}
         `}
       >
-        {/* Zone 1: Pinned Brand Header (Centered: Clicking Mai Elbadawy goes to website) */}
-        <div className="shrink-0 px-4 py-4 border-b border-stone-800/80 text-center">
-          <Link
-            to="/"
-            className="group flex flex-col items-center justify-center text-center mx-auto"
-            title="Go to website"
-          >
-            <div className="inline-flex items-center justify-center gap-1.5">
-              <span className="font-serif text-xl tracking-tight text-white leading-snug group-hover:text-sage transition-colors">
-                Mai <span className="text-sage font-normal group-hover:text-white transition-colors">Elbadawy</span>
-              </span>
-              <ArrowUpRight className="h-3.5 w-3.5 text-stone-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+        {/* Zone 1: Pinned Brand Header with Alerts Bell beside Mai Elbadawy */}
+        <div className="shrink-0 px-3.5 py-3.5 border-b border-stone-800/80">
+          <div className="flex items-center justify-between gap-2">
+            <Link
+              to="/"
+              className="group flex flex-col text-left min-w-0"
+              title="Go to website"
+            >
+              <div className="inline-flex items-center gap-1">
+                <span className="font-serif text-lg tracking-tight text-white leading-tight group-hover:text-sage transition-colors truncate">
+                  Mai <span className="text-sage font-normal group-hover:text-white transition-colors">Elbadawy</span>
+                </span>
+                <ArrowUpRight className="h-3 w-3 text-stone-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+              </div>
+              <div className="mt-0.5 flex items-center">
+                <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-stone-400 group-hover:bg-sage/20 group-hover:text-sage transition-colors">
+                  Admin Dashboard
+                </span>
+              </div>
+            </Link>
+
+            {/* Alerts Bell beside Mai Elbadawy */}
+            <div className="relative shrink-0">
+              <Link
+                to="/admin/messages"
+                className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-stone-300 hover:bg-white/10 hover:text-white transition border border-stone-800/80"
+                title={notificationCount > 0 ? `${notificationCount} unread alerts` : 'Alerts'}
+                aria-label="Alerts"
+              >
+                <Bell className="h-4 w-4 text-stone-300" />
+                {notificationCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-bold text-black ring-2 ring-[#1f1c1d]">
+                    {notificationCount}
+                  </span>
+                )}
+              </Link>
             </div>
-            <div className="mt-1.5 flex items-center justify-center">
-              <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-stone-300 group-hover:bg-sage/20 group-hover:text-sage transition-colors">
-                Admin Dashboard
-              </span>
-            </div>
-          </Link>
+          </div>
         </div>
 
         {/* Zone 2: Navigation Menu (Fits comfortably without scrolling) */}
@@ -209,12 +226,16 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
       {/* Main Workspace Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Workspace Top Bar */}
-        <header className="sticky top-0 z-20 border border-beige/80 rounded-2xl lg:rounded-3xl bg-white/85 backdrop-blur-md px-5 py-3 sm:px-6 sm:py-3.5 shadow-xs shrink-0">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between max-w-[1440px] mx-auto w-full">
+        <header className="sticky top-0 z-20 border border-beige/80 rounded-2xl lg:rounded-3xl bg-white/85 backdrop-blur-md px-5 py-2.5 sm:px-6 sm:py-3 shadow-xs shrink-0">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between max-w-[1440px] mx-auto w-full">
             <div>
-              <h1 className="font-serif text-2xl sm:text-3xl text-charcoal tracking-tight font-normal">
-                {title}
-              </h1>
+              {typeof title === 'string' ? (
+                <h1 className="font-serif text-2xl sm:text-3xl text-charcoal tracking-tight font-normal">
+                  {title}
+                </h1>
+              ) : (
+                title
+              )}
               {subtitle && (
                 <p className="mt-0.5 text-xs sm:text-sm text-warm-gray leading-relaxed">
                   {subtitle}
@@ -224,14 +245,14 @@ const AdminLayout = ({ children, title, subtitle, action }: AdminLayoutProps): J
 
             <div className="flex items-center gap-3">
               {action}
-              {notificationCount > 0 && (
-                <div className="flex items-center gap-1.5 rounded-full border border-beige bg-cream px-3.5 py-1.5 text-xs font-medium text-warm-gray">
-                  <Bell className="h-3.5 w-3.5 text-sage-dark" />
-                  <span>{notificationCount} alerts</span>
-                </div>
-              )}
             </div>
           </div>
+
+          {headerContent && (
+            <div className="mt-2.5 pt-2 border-t border-beige/60 max-w-[1440px] mx-auto w-full">
+              {headerContent}
+            </div>
+          )}
         </header>
 
         {/* Page Content Body */}

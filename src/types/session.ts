@@ -41,7 +41,8 @@ export interface SessionTranscript {
   focusAreas: string[];
   
   // Structured clinical insights
-  clinicalSummary: string; // Markdown formatted summary
+  clinicalSummary: string; // Markdown formatted summary / Post-session write-up
+  handwrittenNotes?: string; // Handwritten / quick observational clinical notes
   keyInsights: string[];
   actionItems: ActionItem[];
   emotionalObservations: EmotionalObservation;
@@ -74,6 +75,7 @@ export interface ClientSessionSummary {
   phone?: string;
   childName?: string;
   childAge?: string;
+  householdId?: string;
   totalSessions: number;
   sessions: SessionTranscript[];
 }

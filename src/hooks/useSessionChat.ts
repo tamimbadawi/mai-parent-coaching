@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { ChatMessage, SessionTranscript } from '../types/session';
 
 interface UseSessionChatOptions {
-  session: SessionTranscript;
+  session: SessionTranscript | undefined;
   allClientSessions?: SessionTranscript[];
 }
 
@@ -14,6 +14,12 @@ export function useSessionChat({ session, allClientSessions = [] }: UseSessionCh
 
   // Initialize/reset chat when session changes
   useEffect(() => {
+    if (!session) {
+      setMessages([]);
+      setError(null);
+      return;
+    }
+
     const welcomeMessage: ChatMessage = {
       id: `welcome-${session.id}`,
       sessionId: session.id,
@@ -36,10 +42,11 @@ You can ask me to:
 
     setMessages([welcomeMessage]);
     setError(null);
-  }, [session.id]);
+  }, [session?.id]);
 
   // Context-aware simulated intelligence engine
   const generateMockGeminiResponse = (userPrompt: string): { content: string; followUps?: string[] } => {
+    if (!session) return { content: 'No session is loaded yet.' };
     const q = userPrompt.toLowerCase();
 
     // 1. WhatsApp follow-up draft
@@ -152,7 +159,7 @@ Would you like me to formulate a specific psychoeducational reflection, analyze 
   // Send message handler
   const sendMessage = useCallback(
     async (text: string) => {
-      if (!text.trim() || isGenerating) return;
+      if (!text.trim() || isGenerating || !session) return;
 
       const userMessage: ChatMessage = {
         id: `user-${Date.now()}`,
