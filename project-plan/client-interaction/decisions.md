@@ -133,3 +133,12 @@ The session page is organised around Mai's three moments, not by content type. R
 - **Action items live only in `member_action_items`** (with `session_id`), never inside `post_session_notes.source_metadata`. This is what lets "Write-up" feed the next session's "Prep" and the member persona.
 - Existing action items in `source_metadata` are demo/seed data; no migration of them needed unless real ones exist.
 
+
+---
+
+## 10. AI features are a future feature — except photo-of-notes (user, 2026-09-23)
+
+- **Hidden for now (future feature):** Session Intelligence chat panel (`session-chat`), member "Observational Study" tab (`family-member-study`), session transcription + summary (see §4 / next-steps.md). Code and Edge Functions stay in the repo; only the UI entry points are hidden.
+- **Kept:** "Upload Photo of Notes" → Gemini Flash-Lite OCR in the Session step. One small request per photo (~500 free requests/day on Flash-Lite).
+- **Privacy on the free tier:** the user explicitly accepts sending real client note photos to the free Gemini tier for this feature. Do not re-raise it; the §4 "non-client audio only" guardrail still applies to *audio transcription* if/when it resumes.
+- With the chat panel gone, the Session Notes page is redesigned (right-hand "Family at a glance" panel in the slot the chat used).

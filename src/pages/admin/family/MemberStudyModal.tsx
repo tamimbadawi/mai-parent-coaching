@@ -83,6 +83,8 @@ export const MemberStudyModal = ({
   onAttendanceChanged,
 }: MemberStudyModalProps): JSX.Element => {
   const [activeTab, setActiveTab] = useState<'persona' | 'notes' | 'actions' | 'study' | 'attendance'>('persona');
+  // AI Observational Study hidden per project-plan/client-interaction/decisions.md §10
+  const SHOW_STUDY_TAB = false;
   const [attendedSessionIds, setAttendedSessionIds] = useState<string[]>([]);
 
   // Persona State
@@ -623,18 +625,20 @@ export const MemberStudyModal = ({
               </span>
             )}
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('study')}
-            className={`py-3 px-3 text-xs font-semibold border-b-2 transition flex items-center gap-1.5 whitespace-nowrap ${
-              activeTab === 'study'
-                ? 'border-sage-dark text-charcoal'
-                : 'border-transparent text-warm-gray hover:text-charcoal'
-            }`}
-          >
-            <Sparkles className="h-3.5 w-3.5 text-sage-dark" />
-            Observational Study
-          </button>
+          {SHOW_STUDY_TAB && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('study')}
+              className={`py-3 px-3 text-xs font-semibold border-b-2 transition flex items-center gap-1.5 whitespace-nowrap ${
+                activeTab === 'study'
+                  ? 'border-sage-dark text-charcoal'
+                  : 'border-transparent text-warm-gray hover:text-charcoal'
+              }`}
+            >
+              <Sparkles className="h-3.5 w-3.5 text-sage-dark" />
+              Observational Study
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setActiveTab('attendance')}
@@ -1166,9 +1170,9 @@ export const MemberStudyModal = ({
           )}
 
           {/* ==================================================== */}
-          {/* TAB 4: OBSERVATIONAL STUDY (AI)                      */}
+          {/* TAB 4: OBSERVATIONAL STUDY (AI - HIDDEN FOR NOW)    */}
           {/* ==================================================== */}
-          {activeTab === 'study' && (
+          {SHOW_STUDY_TAB && activeTab === 'study' && (
             <div className="space-y-6">
               {/* Study Control Banner */}
               <div className="rounded-2xl border border-beige bg-[#faf8f4] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">

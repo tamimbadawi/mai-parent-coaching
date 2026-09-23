@@ -4,15 +4,15 @@ import { Users, Calendar, User, CheckCircle2, Loader2, AlertCircle, Home } from 
 import { isToday, isFuture, parseISO } from 'date-fns';
 import AdminLayout from './AdminLayout';
 import { TranscriptViewer } from '../../components/sessions/TranscriptViewer';
-import { SessionChatPanel } from '../../components/sessions/SessionChatPanel';
+import { FamilyGlancePanel } from '../../components/sessions/FamilyGlancePanel';
+import { MemberStudyModal } from './family/MemberStudyModal';
 import { ClientDossierModal } from './components/ClientDossierModal';
-import { useSessionChat } from '../../hooks/useSessionChat';
 import { MOCK_CLIENT_SESSIONS } from '../../data/mockSessions';
 import { supabase } from '../../lib/supabase';
 import type { ClientSessionSummary, SessionTranscript, TranscriptUtterance, EmotionalObservation } from '../../types/session';
 import type { CustomerJourneyState } from '../../types';
 import type { WorkflowStep } from '../../components/sessions/SessionWorkflowTabs';
-import type { Household, HouseholdMember, MemberActionItem, MemberNote, SessionAttendee, MemberNoteType } from '../../types/family';
+import type { Household, HouseholdMember, MemberActionItem, MemberNote, SessionAttendee, MemberNoteType, CaseSession } from '../../types/family';
 
 export const AdminSessions: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -42,6 +42,9 @@ export const AdminSessions: React.FC = () => {
   // Floating CRM Dossier modal
   const [showDossierModal, setShowDossierModal] = useState(false);
   const [dossierClient, setDossierClient] = useState<CustomerJourneyState | null>(null);
+
+  // Floating Member Study Dossier modal
+  const [selectedStudyMember, setSelectedStudyMember] = useState<HouseholdMember | null>(null);
 
   // Client and Session state with URL synchronization
   const initialClientId = searchParams.get('client') || clients[0]?.clientId || '';
@@ -925,25 +928,44 @@ export const AdminSessions: React.FC = () => {
     return true;
   };
 
-  // Conversational Chat Hook
-  const {
-    messages,
-    isGenerating,
-    error,
-    isMockMode,
-    setIsMockMode,
-    sendMessage,
-    clearChat,
-  } = useSessionChat({
-    session: activeSession,
-    allClientSessions: activeClient?.sessions || [],
-  });
+  // Mapped sessions and fallback household for MemberStudyModal
+  const mappedCaseSessions: CaseSession[] = useMemo(() => {
+    if (!activeClient) return [];
+    return activeClient.sessions.map((s) => ({
+      id: s.id,
+      household_id: householdData.householdId || '',
+      booking_id: null,
+      session_date: s.sessionDate,
+      duration_minutes: null,
+      google_meet_url: null,
+      status: (s.status === 'in-progress' ? 'scheduled' : s.status) as any,
+      drive_web_view_url: s.driveWebViewUrl,
+      created_at: s.sessionDate,
+      updated_at: s.sessionDate,
+    }));
+  }, [activeClient, householdData.householdId]);
+
+  const effectiveHousehold: Household = useMemo(() => {
+    return (
+      householdData.household || {
+        id: householdData.householdId || activeClient?.householdId || activeClient?.clientId || 'default',
+        primary_contact_profile_id: activeClient?.clientId || '',
+        family_name: activeClient?.clientName || 'Family',
+        presenting_issue: null,
+        working_plan: null,
+        next_step: null,
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+    );
+  }, [householdData.household, householdData.householdId, activeClient]);
 
   if (!activeClient || !activeSession) {
     return (
       <AdminLayout
         title="Session Notes"
-        subtitle="Clinical notes and consultation intelligence."
+        subtitle="Clinical notes and structured consultation records."
       >
         <div className="flex flex-col items-center justify-center py-20 text-warm-gray">
           <Loader2 className="h-8 w-8 animate-spin text-sage-dark mb-3" />
@@ -957,7 +979,7 @@ export const AdminSessions: React.FC = () => {
     <AdminLayout
       fillHeight
       title="Session Notes"
-      subtitle="Structured clinical insights, action items, and conversational consultation."
+      subtitle="Structured clinical insights, action items, and family progress."
       action={
         <div className="flex items-center gap-2 flex-nowrap shrink-0">
           {/* Status Indicator (Syncing / Saved / Error) */}
@@ -1073,10 +1095,10 @@ export const AdminSessions: React.FC = () => {
         </div>
       }
     >
-      {/* Full-height page body: Left 7/12 (Before / Session / After) + Right 5/12 (Assistant) */}
+      {/* Full-height page body: Left ~2/3 (Steps) + Right ~1/3 (Family at a glance) */}
       <div className="flex flex-col gap-3 lg:flex-1 lg:min-h-0">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start lg:flex-1 lg:min-h-0">
-          <div className="lg:col-span-7 h-full min-h-0 min-w-0 flex flex-col overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch lg:flex-1 lg:min-h-0">
+          <div className="lg:col-span-8 h-full min-h-0 min-w-0 flex flex-col overflow-hidden">
             <TranscriptViewer
               session={activeSession}
               activeStep={activeStep}
@@ -1101,16 +1123,17 @@ export const AdminSessions: React.FC = () => {
             />
           </div>
 
-          <div className="lg:col-span-5 h-full min-h-0 min-w-0 flex flex-col sticky top-2 overflow-hidden">
-            <SessionChatPanel
-              messages={messages}
-              isGenerating={isGenerating}
-              error={error}
-              isMockMode={isMockMode}
+          <div className="lg:col-span-4 h-full min-h-0 min-w-0 flex flex-col overflow-hidden">
+            <FamilyGlancePanel
+              household={householdData.household}
               clientName={activeClient.clientName}
-              onSendMessage={sendMessage}
-              onClearChat={clearChat}
-              onToggleMockMode={setIsMockMode}
+              members={householdData.members}
+              openActionItems={householdData.actionItems.filter((a) => a.status === 'open')}
+              currentSession={activeSession}
+              sessions={activeClient.sessions}
+              onSelectSession={handleSelectSession}
+              onOpenMemberStudy={(member) => setSelectedStudyMember(member)}
+              onToggleActionItem={handleToggleActionItem}
             />
           </div>
         </div>
@@ -1126,6 +1149,29 @@ export const AdminSessions: React.FC = () => {
           }}
         />
       ) : null}
+
+      {/* Floating Member Study Dossier Modal */}
+      {selectedStudyMember && (
+        <MemberStudyModal
+          member={selectedStudyMember}
+          household={effectiveHousehold}
+          allHouseholdSessions={mappedCaseSessions}
+          onClose={() => setSelectedStudyMember(null)}
+          onMemberUpdated={(updated) => {
+            setSelectedStudyMember(updated);
+            setHouseholdData((prev) => ({
+              ...prev,
+              members: prev.members.map((m) => (m.id === updated.id ? updated : m)),
+            }));
+          }}
+          onStudyGenerated={() => {}}
+          onAttendanceChanged={() => {
+            if (householdData.householdId) {
+              void fetchHouseholdData(householdData.householdId);
+            }
+          }}
+        />
+      )}
     </AdminLayout>
   );
 };
