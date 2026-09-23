@@ -6,7 +6,6 @@ import {
   Mail,
   Calendar,
   CalendarDays,
-  Clock,
   MessageSquare,
   MessageCircle,
   Sparkles,
@@ -23,16 +22,13 @@ import {
   Loader2,
   Inbox,
   ArrowRight,
-  ShieldAlert,
   FileText,
   Users,
-  Flame,
   ListTodo,
   Tag,
-  UserRound,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import type { CustomerJourneyState, CRMContentItem, CRMLifecycleStage, CRMTrack } from '../../../types';
+import type { CustomerJourneyState, CRMContentItem, CRMLifecycleStage } from '../../../types';
 import { roleLabel, currentAge, type Household, type HouseholdMember } from '../../../types/family';
 import { COUNTRIES } from '../../../data/countries';
 import InternalWhatsAppMessengerModal from './InternalWhatsAppMessengerModal';
@@ -153,13 +149,6 @@ export const ClientDossierModal = ({
     if (!client.country) return null;
     return COUNTRIES.find((c) => c.iso === client.country || c.name.toLowerCase() === client.country?.toLowerCase()) ?? null;
   }, [client.country]);
-
-  // Clean WhatsApp click-to-chat URL
-  const whatsappUrl = useMemo(() => {
-    if (!client.phone) return null;
-    const cleanDigits = client.phone.replace(/\D/g, '');
-    return cleanDigits.length >= 7 ? `https://wa.me/${cleanDigits}` : null;
-  }, [client.phone]);
 
   // Load Content Library pieces for manual dispatch
   useEffect(() => {
@@ -381,11 +370,17 @@ export const ClientDossierModal = ({
 
           if (caseSessions) {
             caseSessions.forEach((cs, csIdx) => {
-              const postNotes = cs.session_content?.find((c: any) => c.content_type === 'post_session_notes');
-              const liveTranscript = cs.session_content?.find((c: any) => c.content_type === 'live_transcript');
-              const driveUrl = cs.google_drive_web_view_url || cs.drive_web_view_url || (liveTranscript?.source_metadata as any)?.drive_web_view_url || null;
+              const postNotes = cs.session_content?.find(
+                (c: { content_type: string; content: string | null }) => c.content_type === 'post_session_notes'
+              );
+              const liveTranscript = cs.session_content?.find(
+                (c: { content_type: string; content: string | null }) => c.content_type === 'live_transcript'
+              );
+              const driveUrl = cs.drive_web_view_url || null;
 
-              const attendeeIds = (cs.session_attendees || []).map((a: any) => a.household_member_id);
+              const attendeeIds = (cs.session_attendees || []).map(
+                (a: { household_member_id: string }) => a.household_member_id
+              );
               const attendeeNames = membersList
                 .filter((m) => attendeeIds.includes(m.id))
                 .map((m) => m.full_name);
@@ -457,7 +452,7 @@ export const ClientDossierModal = ({
 
   // Toggle Engagement Status (Pause / Resume)
   const handleToggleStatus = async () => {
-    const nextStatus = client.engagement_status === 'active' ? 'paused' : 'active';
+    const nextStatus: 'active' | 'paused' = client.engagement_status === 'active' ? 'paused' : 'active';
     setUpdatingStatus(true);
     setDispatchMessage(null);
 
@@ -472,7 +467,7 @@ export const ClientDossierModal = ({
 
       if (error) throw error;
 
-      const updated = {
+      const updated: CustomerJourneyState = {
         ...client,
         engagement_status: nextStatus,
         lifecycle_stage: nextStatus === 'paused' ? ('paused' as const) : client.lifecycle_stage,
@@ -997,9 +992,9 @@ export const ClientDossierModal = ({
                             {householdInfo.household.status?.toUpperCase() || 'ACTIVE'}
                           </span>
                         </div>
-                        {householdInfo.household.intake_notes ? (
+                        {householdInfo.household.presenting_issue ? (
                           <p className="mt-1 text-xs text-warm-gray line-clamp-2">
-                            {householdInfo.household.intake_notes}
+                            {householdInfo.household.presenting_issue}
                           </p>
                         ) : null}
                       </div>
@@ -1027,7 +1022,8 @@ export const ClientDossierModal = ({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {householdInfo.members.map((member) => {
                             const openTasks = householdInfo.openActionCounts[member.id] || 0;
-                            const age = currentAge(member.birth_date);
+                            const age = currentAge(member.birth_year);
+                            const householdId = householdInfo.household?.id;
 
                             return (
                               <div
@@ -1040,7 +1036,7 @@ export const ClientDossierModal = ({
                                       <div className="flex items-center gap-1.5">
                                         <h6 className="text-sm font-medium text-charcoal">{member.full_name}</h6>
                                         <span className="rounded-md bg-beige/60 px-1.5 py-0.5 text-[10px] text-warm-gray font-medium">
-                                          {roleLabel(member.family_role)}
+                                          {roleLabel(member.role)}
                                         </span>
                                       </div>
                                       {age !== null ? (
@@ -1048,19 +1044,10 @@ export const ClientDossierModal = ({
                                       ) : null}
                                     </div>
 
-                                    {/* Concern level pill */}
-                                    {member.concern_level && member.concern_level !== 'low' ? (
-                                      <span
-                                        className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium border ${
-                                          member.concern_level === 'critical'
-                                            ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                            : member.concern_level === 'high'
-                                            ? 'bg-orange-50 text-orange-700 border-orange-200'
-                                            : 'bg-amber-50 text-amber-700 border-amber-200'
-                                        }`}
-                                      >
-                                        <Flame className="h-3 w-3" />
-                                        {member.concern_level.toUpperCase()}
+                                    {/* Neutral concern level badge (per decisions.md §6 placeholder taxonomy) */}
+                                    {member.concern_level ? (
+                                      <span className="inline-flex items-center rounded-md bg-[#faf8f4] px-2 py-0.5 text-[10px] font-medium text-charcoal border border-beige">
+                                        {member.concern_level}
                                       </span>
                                     ) : null}
                                   </div>
@@ -1122,13 +1109,15 @@ export const ClientDossierModal = ({
                                     {openTasks} open requirement{openTasks === 1 ? '' : 's'}
                                   </span>
 
-                                  <a
-                                    href={`/admin/families/${householdInfo.household.id}?member=${member.id}`}
-                                    className="inline-flex items-center gap-1 text-[11px] font-medium text-sage-dark hover:underline"
-                                  >
-                                    Clinical Study
-                                    <ArrowRight className="h-3 w-3" />
-                                  </a>
+                                  {householdId ? (
+                                    <a
+                                      href={`/admin/families/${householdId}?member=${member.id}`}
+                                      className="inline-flex items-center gap-1 text-[11px] font-medium text-sage-dark hover:underline"
+                                    >
+                                      Clinical Study
+                                      <ArrowRight className="h-3 w-3" />
+                                    </a>
+                                  ) : null}
                                 </div>
                               </div>
                             );

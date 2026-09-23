@@ -5,16 +5,13 @@ import {
   Sparkles,
   Loader2,
   AlertCircle,
-  Info,
   Calendar,
   UserRound,
   Check,
   Pencil,
   Copy,
   ExternalLink,
-  BookOpen,
   CheckCircle2,
-  Clock,
   Plus,
   Trash2,
   ListTodo,
@@ -22,23 +19,19 @@ import {
   ShieldAlert,
   Heart,
   Tag,
-  Flag,
   Flame,
   CheckSquare,
   Circle,
-  HelpCircle,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import {
   currentAge,
   roleLabel,
-  CONTENT_TYPE_LABELS,
   type CaseSession,
   type Household,
   type HouseholdMember,
   type HouseholdMemberRole,
   type MemberStudyResult,
-  type SessionContent,
   type MemberNote,
   type MemberActionItem,
   type MemberNoteType,
@@ -47,6 +40,8 @@ import {
 
 const ROLE_OPTIONS: HouseholdMemberRole[] = ['mother', 'father', 'child', 'guardian', 'other'];
 
+// Placeholder suggestion lists per project-plan/client-interaction/decisions.md §6.
+// To be updated once Mai provides the official clinical taxonomy.
 const CONCERN_LEVEL_SUGGESTIONS = [
   'Primary concern',
   'Secondary concern',
@@ -55,6 +50,8 @@ const CONCERN_LEVEL_SUGGESTIONS = [
   'Observational only',
 ];
 
+// Placeholder suggestion lists per project-plan/client-interaction/decisions.md §6.
+// To be updated once Mai provides the official clinical taxonomy.
 const DYNAMIC_ROLE_SUGGESTIONS = [
   'Primary focus',
   'Core caregiver',
@@ -87,8 +84,6 @@ export const MemberStudyModal = ({
 }: MemberStudyModalProps): JSX.Element => {
   const [activeTab, setActiveTab] = useState<'persona' | 'notes' | 'actions' | 'study' | 'attendance'>('persona');
   const [attendedSessionIds, setAttendedSessionIds] = useState<string[]>([]);
-  const [sessionContents, setSessionContents] = useState<SessionContent[]>([]);
-  const [loadingInitial, setLoadingInitial] = useState(true);
 
   // Persona State
   const [personaDraft, setPersonaDraft] = useState({
@@ -110,7 +105,6 @@ export const MemberStudyModal = ({
 
   // Longitudinal Notes State (member_notes)
   const [notes, setNotes] = useState<MemberNote[]>([]);
-  const [loadingNotes, setLoadingNotes] = useState(false);
   const [newNoteBody, setNewNoteBody] = useState('');
   const [newNoteType, setNewNoteType] = useState<MemberNoteType>('observation');
   const [newNoteSessionId, setNewNoteSessionId] = useState<string>('');
@@ -119,11 +113,9 @@ export const MemberStudyModal = ({
 
   // Member Action Items ("What is required from him/her")
   const [actions, setActions] = useState<MemberActionItem[]>([]);
-  const [loadingActions, setLoadingActions] = useState(false);
   const [newActionTask, setNewActionTask] = useState('');
   const [newActionPriority, setNewActionPriority] = useState<MemberActionPriority>('normal');
   const [newActionDueDate, setNewActionDueDate] = useState('');
-  const [newActionSessionId, setNewActionSessionId] = useState('');
   const [addingAction, setAddingAction] = useState(false);
   const [actionsError, setActionsError] = useState<string | null>(null);
 
@@ -153,9 +145,8 @@ export const MemberStudyModal = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Load attended session IDs & content, plus member_notes and member_action_items
+  // Load attended session IDs, plus member_notes and member_action_items
   const loadMemberData = async () => {
-    setLoadingInitial(true);
     try {
       const [{ data: attendees, error: attErr }, { data: memberNotesData }, { data: memberActionsData }] =
         await Promise.all([
@@ -181,22 +172,8 @@ export const MemberStudyModal = ({
       setAttendedSessionIds(ids);
       setNotes((memberNotesData as MemberNote[]) || []);
       setActions((memberActionsData as MemberActionItem[]) || []);
-
-      if (ids.length > 0) {
-        const { data: contents, error: contentErr } = await supabase
-          .from('session_content')
-          .select('*')
-          .in('session_id', ids)
-          .order('created_at', { ascending: false });
-        if (contentErr) throw contentErr;
-        setSessionContents(contents ?? []);
-      } else {
-        setSessionContents([]);
-      }
     } catch (err: any) {
       console.error('Failed to load member session history:', err);
-    } finally {
-      setLoadingInitial(false);
     }
   };
 
@@ -359,7 +336,7 @@ export const MemberStudyModal = ({
           task: newActionTask.trim(),
           priority: newActionPriority,
           due_date: newActionDueDate || null,
-          session_id: newActionSessionId || null,
+          session_id: null,
           source: 'coach',
           status: 'open',
         })
@@ -470,6 +447,12 @@ export const MemberStudyModal = ({
   }, [allHouseholdSessions, attendedSessionIds]);
 
   const openActionsCount = useMemo(() => actions.filter((a) => a.status === 'open').length, [actions]);
+
+  const attendanceRate = useMemo(() => {
+    return allHouseholdSessions.length > 0
+      ? Math.round((attendedSessionIds.length / allHouseholdSessions.length) * 100)
+      : 0;
+  }, [allHouseholdSessions.length, attendedSessionIds.length]);
 
   return (
     <div
@@ -1280,9 +1263,11 @@ export const MemberStudyModal = ({
                     Toggle which family sessions {member.full_name} participated in.
                   </p>
                 </div>
-                <span className="text-xs font-medium text-warm-gray bg-cream px-2.5 py-1 rounded-lg border border-beige">
-                  {attendanceRate}% Attendance Rate
-                </span>
+                {allHouseholdSessions.length > 0 && (
+                  <span className="text-xs font-medium text-warm-gray bg-cream px-2.5 py-1 rounded-lg border border-beige">
+                    {attendanceRate}% Attendance Rate
+                  </span>
+                )}
               </div>
 
               <div className="space-y-2">

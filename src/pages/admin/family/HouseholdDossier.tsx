@@ -12,9 +12,6 @@ import {
   ChevronRight,
   Compass,
   Sparkles,
-  UserRound,
-  Phone,
-  Mail,
   FileText,
   ExternalLink,
   Flame,
@@ -24,7 +21,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import AdminLayout from '../AdminLayout';
-import { Panel, EmptyPanel, InsightChip } from '../components/AdminUI';
+import { Panel, EmptyPanel } from '../components/AdminUI';
 import { ClientDossierModal } from '../components/ClientDossierModal';
 import { MemberStudyModal } from './MemberStudyModal';
 import type { CustomerJourneyState } from '../../../types';
@@ -56,7 +53,6 @@ export const HouseholdDossier = (): JSX.Element => {
   const [household, setHousehold] = useState<Household | null>(null);
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [sessions, setSessions] = useState<CaseSession[]>([]);
-  const [attendeesBySession, setAttendeesBySession] = useState<Record<string, string[]>>({});
   const [clientProfile, setClientProfile] = useState<ClientProfile | null>(null);
   const [clientBookings, setClientBookings] = useState<BookingRow[]>([]);
   const [journey, setJourney] = useState<{ upcoming_sessions_count: number; completed_paid_sessions_count: number; days_since_last_engagement: number } | null>(null);
@@ -144,21 +140,6 @@ export const HouseholdDossier = (): JSX.Element => {
         setOpenActionCounts(counts);
       } else {
         setOpenActionCounts({});
-      }
-
-      const sessionIds = (s ?? []).map((row) => row.id);
-      if (sessionIds.length > 0) {
-        const { data: attendeeRows } = await supabase
-          .from('session_attendees')
-          .select('session_id, household_member_id')
-          .in('session_id', sessionIds);
-        const map: Record<string, string[]> = {};
-        for (const row of attendeeRows ?? []) {
-          map[row.session_id] = [...(map[row.session_id] ?? []), row.household_member_id];
-        }
-        setAttendeesBySession(map);
-      } else {
-        setAttendeesBySession({});
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load family case.');
@@ -289,18 +270,6 @@ export const HouseholdDossier = (): JSX.Element => {
       return;
     }
     navigate(`/admin/sessions?client=${household.primary_contact_profile_id}&session=${data.id}`);
-  };
-
-  const toggleAttendee = async (sessionId: string, memberId: string): Promise<void> => {
-    const current = attendeesBySession[sessionId] ?? [];
-    const attending = current.includes(memberId);
-    if (attending) {
-      await supabase.from('session_attendees').delete().eq('session_id', sessionId).eq('household_member_id', memberId);
-      setAttendeesBySession((prev) => ({ ...prev, [sessionId]: (prev[sessionId] ?? []).filter((id) => id !== memberId) }));
-    } else {
-      await supabase.from('session_attendees').insert({ session_id: sessionId, household_member_id: memberId });
-      setAttendeesBySession((prev) => ({ ...prev, [sessionId]: [...(prev[sessionId] ?? []), memberId] }));
-    }
   };
 
   const sortedMembers = useMemo(() => {
