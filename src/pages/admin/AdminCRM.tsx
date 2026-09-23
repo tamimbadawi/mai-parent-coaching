@@ -13,7 +13,6 @@ import {
   AlertCircle,
   BookOpen,
   Plus,
-  Home,
   Edit3,
   Trash2,
   MoreVertical,
@@ -28,6 +27,7 @@ import { EmptyPanel } from './components/AdminUI';
 import { ClientDossierModal } from './components/ClientDossierModal';
 import ContentLibraryStudio from './components/ContentLibraryStudio';
 import { UserComposerModal } from './components/UserComposerModal';
+import { StartFamilyCaseModal } from './family/StartFamilyCaseModal';
 import type { CustomerJourneyState } from '../../types';
 import { COUNTRIES } from '../../data/countries';
 
@@ -36,6 +36,12 @@ type FilterTab = 'all' | 'clients' | 'admins' | 'track_a' | 'track_b' | 'attenti
 export const AdminCRM = (): JSX.Element => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [clients, setClients] = useState<CustomerJourneyState[]>([]);
+  const [householdClientIds, setHouseholdClientIds] = useState<Set<string>>(new Set());
+  const [startCaseClient, setStartCaseClient] = useState<{
+    id: string;
+    full_name?: string | null;
+    email?: string | null;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -110,15 +116,20 @@ export const AdminCRM = (): JSX.Element => {
     setError(null);
 
     try {
-      const { data, error: fetchErr } = await supabase
-        .from('customer_journey_state')
-        .select('*')
-        .order('last_engagement_at', { ascending: false });
+      const [{ data, error: fetchErr }, { data: households }] = await Promise.all([
+        supabase
+          .from('customer_journey_state')
+          .select('*')
+          .order('last_engagement_at', { ascending: false }),
+        supabase.from('households').select('primary_contact_profile_id'),
+      ]);
 
       if (fetchErr) throw fetchErr;
 
       const items = (data || []) as CustomerJourneyState[];
       setClients(items);
+      const hSet = new Set((households || []).map((h) => h.primary_contact_profile_id).filter(Boolean) as string[]);
+      setHouseholdClientIds(hSet);
 
       // Check if URL contains ?client=:id
       const targetClientId = searchParams.get('client');
@@ -863,30 +874,34 @@ export const AdminCRM = (): JSX.Element => {
                             </button>
                           )}
 
-                          {/* Secondary Action: Family Case Link (Hidden for admins unless journey is expanded) */}
+                          {/* Session Notes / Family Case Action (Hidden for admins unless journey is expanded) */}
                           {showJourney && (
-                            <Link
-                              to={`/admin/families?client=${client.client_id}&name=${encodeURIComponent(
-                                client.parent_name
-                              )}&email=${encodeURIComponent(client.email)}`}
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-beige bg-[#faf8f4] text-charcoal px-3 py-2 text-xs font-medium hover:border-sage hover:text-sage-dark transition shadow-2xs"
-                              title="Open Family Case"
-                            >
-                              <Home className="h-3.5 w-3.5 text-sage-dark" />
-                              <span className="hidden sm:inline">Family Case</span>
-                            </Link>
-                          )}
-
-                          {/* Secondary Action: Session Notes Link (Hidden for admins unless journey is expanded) */}
-                          {showJourney && (
-                            <Link
-                              to={`/admin/sessions?client=${client.client_id}`}
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-beige bg-[#faf8f4] text-charcoal px-3 py-2 text-xs font-medium hover:border-sage hover:text-sage-dark transition shadow-2xs"
-                              title="Open Session Notes"
-                            >
-                              <Sparkles className="h-3.5 w-3.5 text-sage-dark" />
-                              <span className="hidden sm:inline">Session Notes</span>
-                            </Link>
+                            householdClientIds.has(client.client_id) ? (
+                              <Link
+                                to={`/admin/sessions?client=${client.client_id}`}
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-beige bg-[#faf8f4] text-charcoal px-3 py-2 text-xs font-medium hover:border-sage hover:text-sage-dark transition shadow-2xs"
+                                title="Open Session Notes & Family Case"
+                              >
+                                <Sparkles className="h-3.5 w-3.5 text-sage-dark" />
+                                <span className="hidden sm:inline">Session Notes</span>
+                              </Link>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setStartCaseClient({
+                                    id: client.client_id,
+                                    full_name: client.parent_name,
+                                    email: client.email,
+                                  })
+                                }
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-sage/40 bg-sage/10 text-sage-dark px-3 py-2 text-xs font-medium hover:bg-sage/20 transition shadow-2xs cursor-pointer"
+                                title="Start Family Case"
+                              >
+                                <Sparkles className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Start Family Case</span>
+                              </button>
+                            )
                           )}
 
                           {/* More Options Dropdown Menu for User Management (Always Kept) */}
@@ -985,6 +1000,19 @@ export const AdminCRM = (): JSX.Element => {
           void fetchJourneyStates();
         }}
       />
+
+      {/* Start Family Case Modal */}
+      {startCaseClient && (
+        <StartFamilyCaseModal
+          client={startCaseClient}
+          isOpen={Boolean(startCaseClient)}
+          onClose={() => setStartCaseClient(null)}
+          onSuccess={() => {
+            setStartCaseClient(null);
+            void fetchJourneyStates();
+          }}
+        />
+      )}
     </AdminLayout>
   );
 };

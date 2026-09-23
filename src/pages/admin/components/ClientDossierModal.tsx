@@ -32,6 +32,7 @@ import type { CustomerJourneyState, CRMContentItem, CRMLifecycleStage } from '..
 import { roleLabel, currentAge, type Household, type HouseholdMember } from '../../../types/family';
 import { COUNTRIES } from '../../../data/countries';
 import InternalWhatsAppMessengerModal from './InternalWhatsAppMessengerModal';
+import { StartFamilyCaseModal } from '../family/StartFamilyCaseModal';
 
 export interface TimelineEvent {
   id: string;
@@ -143,6 +144,7 @@ export const ClientDossierModal = ({
   const [updatingCadence, setUpdatingCadence] = useState(false);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [isMessengerOpen, setIsMessengerOpen] = useState(false);
+  const [isStartFamilyCaseOpen, setIsStartFamilyCaseOpen] = useState(false);
 
   // Country details
   const countryObj = useMemo(() => {
@@ -650,13 +652,6 @@ export const ClientDossierModal = ({
                   </button>
                 ) : null}
                 <Link
-                  to={`/admin/families?client=${client.client_id}&name=${encodeURIComponent(client.parent_name)}&email=${encodeURIComponent(client.email)}`}
-                  className="inline-flex items-center gap-1.5 font-medium text-sage-dark hover:text-charcoal hover:underline cursor-pointer"
-                >
-                  <Sparkles className="h-3.5 w-3.5 text-sage-dark" />
-                  <span>View Family Case</span>
-                </Link>
-                <Link
                   to={`/admin/sessions?client=${client.client_id}`}
                   className="inline-flex items-center gap-1.5 font-medium text-sage-dark hover:text-charcoal hover:underline cursor-pointer"
                 >
@@ -999,13 +994,13 @@ export const ClientDossierModal = ({
                         ) : null}
                       </div>
 
-                      <a
-                        href={`/admin/families/${householdInfo.household.id}`}
+                      <Link
+                        to={`/admin/sessions?client=${client.client_id}`}
                         className="inline-flex items-center gap-1.5 rounded-xl border border-beige bg-white px-3 py-2 text-xs font-medium text-charcoal hover:border-sage hover:text-sage-dark transition shadow-2xs shrink-0"
                       >
-                        Open Household Dossier
+                        Open in Session Notes
                         <ArrowRight className="h-3 w-3" />
-                      </a>
+                      </Link>
                     </div>
 
                     {/* Member Personas Cards */}
@@ -1110,13 +1105,13 @@ export const ClientDossierModal = ({
                                   </span>
 
                                   {householdId ? (
-                                    <a
-                                      href={`/admin/families/${householdId}?member=${member.id}`}
+                                    <Link
+                                      to={`/admin/sessions?client=${client.client_id}&member=${member.id}`}
                                       className="inline-flex items-center gap-1 text-[11px] font-medium text-sage-dark hover:underline"
                                     >
                                       Clinical Study
                                       <ArrowRight className="h-3 w-3" />
-                                    </a>
+                                    </Link>
                                   ) : null}
                                 </div>
                               </div>
@@ -1133,13 +1128,14 @@ export const ClientDossierModal = ({
                     <p className="mt-1 text-xs text-warm-gray max-w-sm mx-auto">
                       This client is not yet linked to a household in Family Cases. You can establish a household to record family personas, longitudinal notes, and member action items.
                     </p>
-                    <a
-                      href="/admin/families"
-                      className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-sage px-3 py-1.5 text-xs font-medium text-white hover:bg-sage-dark transition shadow-2xs"
+                    <button
+                      type="button"
+                      onClick={() => setIsStartFamilyCaseOpen(true)}
+                      className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-sage px-3 py-1.5 text-xs font-medium text-white hover:bg-sage-dark transition shadow-2xs cursor-pointer"
                     >
-                      Go to Family Cases
-                      <ArrowRight className="h-3 w-3" />
-                    </a>
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Start Family Case
+                    </button>
                   </div>
                 )}
               </div>
@@ -1345,6 +1341,23 @@ export const ClientDossierModal = ({
         client={client}
         onMessageSent={() => void loadTimeline()}
       />
+
+      {/* Start Family Case Modal */}
+      {isStartFamilyCaseOpen && (
+        <StartFamilyCaseModal
+          client={{
+            id: client.client_id,
+            full_name: client.parent_name,
+            email: client.email,
+          }}
+          isOpen={isStartFamilyCaseOpen}
+          onClose={() => setIsStartFamilyCaseOpen(false)}
+          onSuccess={() => {
+            setIsStartFamilyCaseOpen(false);
+            void loadTimeline();
+          }}
+        />
+      )}
     </div>
   );
 };

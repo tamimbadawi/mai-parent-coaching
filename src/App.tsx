@@ -42,8 +42,7 @@ import AdminBookings from './pages/admin/AdminBookings';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminWhatsApp from './pages/admin/AdminWhatsApp';
 import AdminCRM from './pages/admin/AdminCRM';
-import AdminFamilies from './pages/admin/AdminFamilies';
-import HouseholdDossier from './pages/admin/family/HouseholdDossier';
+import FamilyRedirect from './pages/admin/family/FamilyRedirect';
 import AdminSessions from './pages/admin/AdminSessions';
 
 function ScrollToTop() {
@@ -103,8 +102,8 @@ function AppShell() {
           <Route path="/admin/orders" element={<ProtectedRoute requiredRole="admin"><AdminOrders /></ProtectedRoute>} />
           <Route path="/admin/whatsapp" element={<ProtectedRoute requiredRole="admin"><AdminWhatsApp /></ProtectedRoute>} />
           <Route path="/admin/crm" element={<ProtectedRoute requiredRole="admin"><AdminCRM /></ProtectedRoute>} />
-          <Route path="/admin/families" element={<ProtectedRoute requiredRole="admin"><AdminFamilies /></ProtectedRoute>} />
-          <Route path="/admin/families/:householdId" element={<ProtectedRoute requiredRole="admin"><HouseholdDossier /></ProtectedRoute>} />
+          <Route path="/admin/families" element={<ProtectedRoute requiredRole="admin"><FamilyRedirect /></ProtectedRoute>} />
+          <Route path="/admin/families/:householdId" element={<ProtectedRoute requiredRole="admin"><FamilyRedirect /></ProtectedRoute>} />
           <Route path="/admin/sessions" element={<ProtectedRoute requiredRole="admin"><AdminSessions /></ProtectedRoute>} />
         </Routes>
       </main>

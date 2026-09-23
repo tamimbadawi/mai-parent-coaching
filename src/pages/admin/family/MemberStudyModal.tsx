@@ -68,6 +68,7 @@ interface MemberStudyModalProps {
   cachedStudy?: MemberStudyResult | null;
   onClose: () => void;
   onMemberUpdated: (updated: HouseholdMember) => void;
+  onMemberDeleted?: (memberId: string) => void;
   onStudyGenerated: (study: MemberStudyResult) => void;
   onAttendanceChanged?: () => void;
 }
@@ -79,6 +80,7 @@ export const MemberStudyModal = ({
   cachedStudy,
   onClose,
   onMemberUpdated,
+  onMemberDeleted,
   onStudyGenerated,
   onAttendanceChanged,
 }: MemberStudyModalProps): JSX.Element => {
@@ -87,8 +89,12 @@ export const MemberStudyModal = ({
   const SHOW_STUDY_TAB = false;
   const [attendedSessionIds, setAttendedSessionIds] = useState<string[]>([]);
 
-  // Persona State
+  // Persona & Core Identity State
   const [personaDraft, setPersonaDraft] = useState({
+    full_name: member.full_name,
+    role: member.role,
+    birth_year: member.birth_year ? String(member.birth_year) : '',
+    notes: member.notes || '',
     persona_summary: member.persona_summary || '',
     concern_level: member.concern_level || '',
     family_dynamic_role: member.family_dynamic_role || '',
@@ -99,6 +105,11 @@ export const MemberStudyModal = ({
   const [savingPersona, setSavingPersona] = useState(false);
   const [personaSavedToast, setPersonaSavedToast] = useState(false);
   const [personaError, setPersonaError] = useState<string | null>(null);
+
+  // Member deletion state
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [deletingMember, setDeletingMember] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Tag inputs
   const [newTraitInput, setNewTraitInput] = useState('');
@@ -213,12 +224,17 @@ export const MemberStudyModal = ({
     }
   };
 
-  // Save Persona Attributes
+  // Save Persona & Core Identity Attributes
   const handleSavePersona = async () => {
     setSavingPersona(true);
     setPersonaError(null);
     try {
+      const birthYearNum = personaDraft.birth_year ? parseInt(personaDraft.birth_year, 10) : null;
       const payload = {
+        full_name: personaDraft.full_name.trim() || member.full_name,
+        role: personaDraft.role,
+        birth_year: Number.isNaN(birthYearNum) ? null : birthYearNum,
+        notes: personaDraft.notes.trim() || null,
         persona_summary: personaDraft.persona_summary || null,
         concern_level: personaDraft.concern_level || null,
         family_dynamic_role: personaDraft.family_dynamic_role || null,
@@ -241,6 +257,20 @@ export const MemberStudyModal = ({
       setPersonaError(err.message || 'Failed to save persona.');
     } finally {
       setSavingPersona(false);
+    }
+  };
+
+  const handleDeleteMember = async () => {
+    setDeletingMember(true);
+    setDeleteError(null);
+    try {
+      const { error } = await supabase.from('household_members').delete().eq('id', member.id);
+      if (error) throw error;
+      onMemberDeleted?.(member.id);
+      onClose();
+    } catch (err: any) {
+      setDeleteError(err.message || 'Failed to remove family member.');
+      setDeletingMember(false);
     }
   };
 
@@ -673,6 +703,68 @@ export const MemberStudyModal = ({
                 </div>
               )}
 
+              {/* 0. Member Identity & Demographics */}
+              <div className="bg-[#faf8f4] border border-beige/80 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-charcoal flex items-center gap-1.5">
+                    <UserRound className="w-3.5 h-3.5 text-sage-dark" />
+                    Member Identity & Demographics
+                  </label>
+                  {personaDraft.birth_year && !Number.isNaN(parseInt(personaDraft.birth_year, 10)) && (
+                    <span className="text-[11px] font-medium text-sage-dark bg-sage/15 px-2 py-0.5 rounded-md">
+                      Age {currentAge(parseInt(personaDraft.birth_year, 10))}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-charcoal/70 uppercase tracking-wider">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={personaDraft.full_name}
+                      onChange={(e) => setPersonaDraft((d) => ({ ...d, full_name: e.target.value }))}
+                      placeholder="e.g. Layla Al-Mansoor"
+                      className="w-full text-xs p-2.5 rounded-xl bg-white border border-beige/80 focus:outline-hidden focus:border-sage-dark font-medium"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-charcoal/70 uppercase tracking-wider">
+                      Family Role
+                    </label>
+                    <select
+                      value={personaDraft.role}
+                      onChange={(e) => setPersonaDraft((d) => ({ ...d, role: e.target.value as HouseholdMemberRole }))}
+                      className="w-full text-xs p-2.5 rounded-xl bg-white border border-beige/80 focus:outline-hidden focus:border-sage-dark font-medium capitalize"
+                    >
+                      {ROLE_OPTIONS.map((r) => (
+                        <option key={r} value={r}>
+                          {roleLabel(r)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-charcoal/70 uppercase tracking-wider">
+                      Birth Year
+                    </label>
+                    <input
+                      type="number"
+                      min="1940"
+                      max={new Date().getFullYear()}
+                      value={personaDraft.birth_year}
+                      onChange={(e) => setPersonaDraft((d) => ({ ...d, birth_year: e.target.value }))}
+                      placeholder="e.g. 2018"
+                      className="w-full text-xs p-2.5 rounded-xl bg-white border border-beige/80 focus:outline-hidden focus:border-sage-dark font-medium"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* 1. Mai's Clinical Persona Summary */}
               <div className="bg-[#faf8f4] border border-beige/80 rounded-2xl p-4 space-y-2.5">
                 <div className="flex items-center justify-between">
@@ -898,11 +990,64 @@ export const MemberStudyModal = ({
                   type="button"
                   onClick={handleSavePersona}
                   disabled={savingPersona}
-                  className="inline-flex items-center gap-2 rounded-xl bg-sage-dark px-5 py-2.5 text-xs font-semibold text-white hover:bg-sage-dark/90 shadow-2xs disabled:opacity-50 transition"
+                  className="inline-flex items-center gap-2 rounded-xl bg-sage-dark px-5 py-2.5 text-xs font-semibold text-white hover:bg-sage-dark/90 shadow-2xs disabled:opacity-50 transition cursor-pointer"
                 >
                   {savingPersona ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  Save Persona Profile
+                  Save Member & Persona Profile
                 </button>
+              </div>
+
+              {/* Remove Member Section */}
+              <div className="pt-6 border-t border-beige/60">
+                <div className="bg-rose-50/40 border border-rose-200/70 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h5 className="text-xs font-bold text-rose-900 flex items-center gap-1.5">
+                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                      Remove Family Member
+                    </h5>
+                    <p className="text-[11px] text-rose-700/80 mt-0.5">
+                      Remove {member.full_name} from this family case. All associated longitudinal notes and action items will remain in the database archive.
+                    </p>
+                    {deleteError && (
+                      <p className="text-xs text-rose-800 font-medium mt-1">{deleteError}</p>
+                    )}
+                  </div>
+
+                  {isConfirmingDelete ? (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setIsConfirmingDelete(false)}
+                        disabled={deletingMember}
+                        className="px-3 py-1.5 rounded-xl border border-beige bg-white text-xs font-medium text-charcoal hover:bg-beige/30 transition cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeleteMember}
+                        disabled={deletingMember}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-700 text-white text-xs font-semibold hover:bg-rose-800 transition cursor-pointer shadow-xs disabled:opacity-50"
+                      >
+                        {deletingMember ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-3.5 h-3.5" />
+                        )}
+                        Confirm Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsConfirmingDelete(true)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-rose-200 bg-white text-rose-700 text-xs font-semibold hover:bg-rose-50 transition cursor-pointer shadow-2xs shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                      Remove Member
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}

@@ -417,10 +417,10 @@ const AdminUsers = (): JSX.Element => {
                           </Link>
                         ) : null}
                         <Link
-                          to={`/admin/families?client=${user.id}&name=${encodeURIComponent(user.full_name ?? '')}&email=${encodeURIComponent(user.email ?? '')}`}
+                          to={`/admin/sessions?client=${user.id}`}
                           className="rounded-2xl border border-beige bg-[#faf8f4] px-4 py-3 text-sm font-medium text-charcoal transition hover:border-sage hover:text-sage-dark"
                         >
-                          <span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4 text-sage-dark" /> Family Case</span>
+                          <span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4 text-sage-dark" /> Session Notes</span>
                         </Link>
                         <button
                           onClick={() => openEdit(user)}

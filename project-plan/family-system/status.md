@@ -1,9 +1,10 @@
 # Family / Household Client Management System — Status
 
-## Current Status: 🟢 Stages 0–5 Complete and Live-Verified, plus a Stage 6 correction.
+## Current Status: 🟢 Stages 0–5 Complete and Live-Verified, plus Stage 6 & 7 corrections. Family Case pages merged into Session Notes.
 
 > [!IMPORTANT]
-> - Branch: `feature/family-client-system`, correctly based on `main` (see note below — this needed a fix).
+> - Branch: `feature/client-interaction` (family cases consolidated into Session Notes).
+> - Session Notes (`/admin/sessions`) is now the single consolidated workspace for family cases. `HouseholdDossier.tsx` and `AdminFamilies.tsx` are retired and deleted. Routes `/admin/families` and `/admin/families/:householdId` redirect to `/admin/sessions`.
 > - Mai is the only administrator; all admin routes use standard `ProtectedRoute requiredRole="admin"`. There is no separate "Super Admin" tier anywhere in this module.
 > - Not yet merged to `main`. Not yet pushed to the remote branch.
 
@@ -67,3 +68,15 @@ The user pointed at the deleted `feature/session-intelligence-ui` prototype's sc
 - `scripts/verify-session-chat.js` — Stage 7 correction: real multi-turn chat, grounded in actual seeded session content, persisted correctly.
 - `scripts/seed-family-system-demo-data.js` / `scripts/remove-family-system-demo-data.js` — extensive realistic demo data (4 families, real auth accounts, bookings, sessions, rich session content) seeded into the live project, clearly tagged (`@demo-family.test` emails, `[DEMO] ` household prefix) so it can be found and removed without touching real clients.
 - `npm run build` and `npm run typecheck` both pass; the handful of typecheck errors present in the repo are pre-existing, unrelated to this module (confirmed by filtering typecheck output for this module's files — zero matches).
+
+---
+
+## Family Case Pages Merged into Session Notes (Consolidation)
+
+Session Notes (`/admin/sessions`) is now the single consolidated workspace for a family case:
+- `HouseholdDossier.tsx` and `AdminFamilies.tsx` are retired and deleted.
+- Routes `/admin/families` and `/admin/families/:householdId` redirect seamlessly to `/admin/sessions?client=<primary_contact_profile_id>` (or `/admin/sessions`).
+- Family at a glance panel in Session Notes handles editing family case fields (`presenting_issue`, `working_plan`, `next_step`, `status`) and adding members.
+- `MemberStudyModal` Persona tab supports editing core member identity (name, role, birth year) and removing members with confirmation.
+- "+ New session" button next to session dropdown allows creating blank sessions or converting unconverted bookings.
+- "Start family case" modal is available from Users CRM, Client Dossier, and Session Notes when a client has no household.

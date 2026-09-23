@@ -1,18 +1,19 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { Users, Calendar, User, CheckCircle2, Loader2, AlertCircle, Home } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Users, Calendar, User, CheckCircle2, Loader2, AlertCircle, Plus, Sparkles, X } from 'lucide-react';
 import { isToday, isFuture, parseISO } from 'date-fns';
 import AdminLayout from './AdminLayout';
 import { TranscriptViewer } from '../../components/sessions/TranscriptViewer';
 import { FamilyGlancePanel } from '../../components/sessions/FamilyGlancePanel';
 import { MemberStudyModal } from './family/MemberStudyModal';
+import { StartFamilyCaseModal } from './family/StartFamilyCaseModal';
 import { ClientDossierModal } from './components/ClientDossierModal';
 import { MOCK_CLIENT_SESSIONS } from '../../data/mockSessions';
 import { supabase } from '../../lib/supabase';
 import type { ClientSessionSummary, SessionTranscript, TranscriptUtterance, EmotionalObservation } from '../../types/session';
 import type { CustomerJourneyState } from '../../types';
 import type { WorkflowStep } from '../../components/sessions/SessionWorkflowTabs';
-import type { Household, HouseholdMember, MemberActionItem, MemberNote, SessionAttendee, MemberNoteType, CaseSession } from '../../types/family';
+import type { Household, HouseholdMember, MemberActionItem, MemberNote, SessionAttendee, MemberNoteType, CaseSession, HouseholdStatus, HouseholdMemberRole } from '../../types/family';
 import type { InkPage } from '../../types/ink';
 
 export const AdminSessions: React.FC = () => {
@@ -46,6 +47,14 @@ export const AdminSessions: React.FC = () => {
 
   // Floating Member Study Dossier modal
   const [selectedStudyMember, setSelectedStudyMember] = useState<HouseholdMember | null>(null);
+
+  // New session & Start Family Case state
+  const [isNewSessionModalOpen, setIsNewSessionModalOpen] = useState(false);
+  const [clientBookings, setClientBookings] = useState<any[]>([]);
+  const [loadingClientBookings, setLoadingClientBookings] = useState(false);
+  const [creatingSession, setCreatingSession] = useState(false);
+  const [newSessionError, setNewSessionError] = useState<string | null>(null);
+  const [isStartFamilyCaseOpen, setIsStartFamilyCaseOpen] = useState(false);
 
   // Client and Session state with URL synchronization
   const initialClientId = searchParams.get('client') || clients[0]?.clientId || '';
@@ -934,7 +943,154 @@ export const AdminSessions: React.FC = () => {
     return true;
   };
 
+  // Open New Session modal (or Start Family Case if client has no household)
+  const handleOpenNewSession = async () => {
+    if (!activeClient) return;
+    if (!activeClient.householdId) {
+      setIsStartFamilyCaseOpen(true);
+      return;
+    }
+    setIsNewSessionModalOpen(true);
+    setNewSessionError(null);
+    setLoadingClientBookings(true);
+    try {
+      const { data } = await supabase
+        .from('bookings')
+        .select('id, appointment_date, appointment_time, parent_name, email, child_name, child_age, google_meet_url, status, notes')
+        .eq('user_id', activeClient.clientId)
+        .order('appointment_date', { ascending: false });
+      setClientBookings(data || []);
+    } catch (err: any) {
+      console.error('Failed to load client bookings:', err);
+    } finally {
+      setLoadingClientBookings(false);
+    }
+  };
+
+  const handleCreateBlankSession = async () => {
+    if (!activeClient || !activeClient.householdId) return;
+    setCreatingSession(true);
+    setNewSessionError(null);
+    try {
+      const { data, error } = await supabase
+        .from('case_sessions')
+        .insert({
+          household_id: activeClient.householdId,
+          session_date: new Date().toISOString(),
+          status: 'scheduled',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (householdData.members.length > 0) {
+        await supabase.from('session_attendees').insert(
+          householdData.members.map((m) => ({
+            session_id: data.id,
+            household_member_id: m.id,
+          }))
+        );
+      }
+
+      await loadRealClientSessions();
+      setSelectedSessionId(data.id);
+      setIsNewSessionModalOpen(false);
+    } catch (err: any) {
+      setNewSessionError(err.message || 'Failed to create session.');
+    } finally {
+      setCreatingSession(false);
+    }
+  };
+
+  const handleCreateSessionFromBooking = async (booking: any) => {
+    if (!activeClient || !activeClient.householdId) return;
+    setCreatingSession(true);
+    setNewSessionError(null);
+    try {
+      const { data, error } = await supabase
+        .from('case_sessions')
+        .insert({
+          household_id: activeClient.householdId,
+          booking_id: booking.id,
+          session_date: new Date(`${booking.appointment_date}T00:00:00`).toISOString(),
+          google_meet_url: booking.google_meet_url,
+          status: booking.status === 'completed' ? 'completed' : 'scheduled',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (householdData.members.length > 0) {
+        await supabase.from('session_attendees').insert(
+          householdData.members.map((m) => ({
+            session_id: data.id,
+            household_member_id: m.id,
+          }))
+        );
+      }
+
+      await loadRealClientSessions();
+      setSelectedSessionId(data.id);
+      setIsNewSessionModalOpen(false);
+    } catch (err: any) {
+      setNewSessionError(err.message || 'Failed to create session from booking.');
+    } finally {
+      setCreatingSession(false);
+    }
+  };
+
+  const handleUpdateHousehold = async (updated: {
+    presenting_issue?: string | null;
+    working_plan?: string | null;
+    next_step?: string | null;
+    status?: HouseholdStatus;
+  }): Promise<boolean> => {
+    if (!householdData.householdId) return false;
+    const { error } = await supabase
+      .from('households')
+      .update(updated)
+      .eq('id', householdData.householdId);
+    if (error) {
+      console.error('Failed to update household:', error);
+      return false;
+    }
+    await fetchHouseholdData(householdData.householdId);
+    return true;
+  };
+
+  const handleAddMember = async (draft: {
+    full_name: string;
+    role: HouseholdMemberRole;
+    birth_year?: number | null;
+    notes?: string | null;
+  }): Promise<boolean> => {
+    if (!householdData.householdId) return false;
+    const { error } = await supabase
+      .from('household_members')
+      .insert({
+        household_id: householdData.householdId,
+        full_name: draft.full_name,
+        role: draft.role,
+        birth_year: draft.birth_year ?? null,
+        notes: draft.notes ?? null,
+      });
+    if (error) {
+      console.error('Failed to add member:', error);
+      return false;
+    }
+    await fetchHouseholdData(householdData.householdId);
+    return true;
+  };
+
   // Mapped sessions and fallback household for MemberStudyModal
+  const mapStatusToCaseSession = (status: string): CaseSession['status'] => {
+    if (status === 'completed') return 'completed';
+    if (status === 'cancelled') return 'cancelled';
+    return 'scheduled';
+  };
+
   const mappedCaseSessions: CaseSession[] = useMemo(() => {
     if (!activeClient) return [];
     return activeClient.sessions.map((s) => ({
@@ -944,7 +1100,7 @@ export const AdminSessions: React.FC = () => {
       session_date: s.sessionDate,
       duration_minutes: null,
       google_meet_url: null,
-      status: (s.status === 'in-progress' ? 'scheduled' : s.status) as any,
+      status: mapStatusToCaseSession(s.status),
       drive_web_view_url: s.driveWebViewUrl,
       created_at: s.sessionDate,
       updated_at: s.sessionDate,
@@ -987,7 +1143,7 @@ export const AdminSessions: React.FC = () => {
       title="Session Notes"
       subtitle="Structured clinical insights, action items, and family progress."
       action={
-        <div className="flex items-center gap-2 flex-nowrap shrink-0">
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
           {/* Status Indicator (Syncing / Saved / Error) */}
           {loading && (
             <div className="hidden sm:flex items-center gap-1.5 px-2.5 h-10 text-[11px] font-medium text-warm-gray bg-white rounded-xl border border-beige/80 shrink-0">
@@ -1076,6 +1232,30 @@ export const AdminSessions: React.FC = () => {
             </div>
           </div>
 
+          {/* 2b. + New Session Button */}
+          <button
+            type="button"
+            onClick={handleOpenNewSession}
+            className="h-10 inline-flex items-center gap-1.5 px-3 text-xs font-semibold text-charcoal bg-[#faf8f4] hover:bg-white hover:text-sage-dark hover:border-sage/60 rounded-xl border border-beige/80 transition shadow-2xs shrink-0 cursor-pointer"
+            title="Add a new session (blank or from past booking)"
+          >
+            <Plus className="w-3.5 h-3.5 text-sage-dark" />
+            <span>New Session</span>
+          </button>
+
+          {/* 2c. Start Family Case Button (if no household linked yet) */}
+          {!activeClient.householdId && (
+            <button
+              type="button"
+              onClick={() => setIsStartFamilyCaseOpen(true)}
+              className="h-10 inline-flex items-center gap-1.5 px-3 text-xs font-semibold text-sage-dark bg-sage/15 hover:bg-sage/25 rounded-xl border border-sage/40 transition shadow-2xs shrink-0 cursor-pointer"
+              title="Start family case for this client"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Start Family Case</span>
+            </button>
+          )}
+
           {/* 3. Open Users CRM Dossier in place (no page navigation) */}
           <button
             type="button"
@@ -1086,18 +1266,6 @@ export const AdminSessions: React.FC = () => {
             <Users className="w-3.5 h-3.5 text-sage-dark" />
             <span>CRM Dossier</span>
           </button>
-
-          {/* 4. Direct Link to Family Case */}
-          {activeClient.householdId && (
-            <Link
-              to={`/admin/families/${activeClient.householdId}`}
-              className="h-10 inline-flex items-center gap-1.5 px-3 text-xs font-semibold text-charcoal bg-[#faf8f4] hover:bg-white hover:text-sage-dark hover:border-sage/60 rounded-xl border border-beige/80 transition shadow-2xs shrink-0"
-              title="View Family Case"
-            >
-              <Home className="w-3.5 h-3.5 text-sage-dark" />
-              <span>Family Case</span>
-            </Link>
-          )}
         </div>
       }
     >
@@ -1140,6 +1308,9 @@ export const AdminSessions: React.FC = () => {
               onSelectSession={handleSelectSession}
               onOpenMemberStudy={(member) => setSelectedStudyMember(member)}
               onToggleActionItem={handleToggleActionItem}
+              onUpdateHousehold={handleUpdateHousehold}
+              onAddMember={handleAddMember}
+              onStartFamilyCase={() => setIsStartFamilyCaseOpen(true)}
             />
           </div>
         </div>
@@ -1170,6 +1341,13 @@ export const AdminSessions: React.FC = () => {
               members: prev.members.map((m) => (m.id === updated.id ? updated : m)),
             }));
           }}
+          onMemberDeleted={(deletedId) => {
+            setSelectedStudyMember(null);
+            setHouseholdData((prev) => ({
+              ...prev,
+              members: prev.members.filter((m) => m.id !== deletedId),
+            }));
+          }}
           onStudyGenerated={() => {}}
           onAttendanceChanged={() => {
             if (householdData.householdId) {
@@ -1177,6 +1355,177 @@ export const AdminSessions: React.FC = () => {
             }
           }}
         />
+      )}
+
+      {/* Floating Start Family Case Modal */}
+      {isStartFamilyCaseOpen && activeClient && (
+        <StartFamilyCaseModal
+          client={{
+            id: activeClient.clientId,
+            full_name: activeClient.clientName,
+            email: activeClient.clientEmail,
+          }}
+          isOpen={isStartFamilyCaseOpen}
+          onClose={() => setIsStartFamilyCaseOpen(false)}
+          onSuccess={async (_hId, clientId) => {
+            await loadRealClientSessions();
+            setSelectedClientId(clientId);
+          }}
+        />
+      )}
+
+      {/* Floating New Session Modal */}
+      {isNewSessionModalOpen && activeClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl border border-beige/80 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-beige/70 bg-[#faf8f4] flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-sage/20 border border-sage/40 flex items-center justify-center text-sage-dark shrink-0">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-base text-charcoal">
+                    Add Session
+                  </h3>
+                  <p className="text-xs text-warm-gray">
+                    {activeClient.clientName}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsNewSessionModalOpen(false)}
+                className="p-1.5 text-warm-gray hover:text-charcoal rounded-xl hover:bg-beige/40 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto space-y-5">
+              {newSessionError && (
+                <div className="flex items-center gap-2 text-xs text-rose-800 bg-rose-50 border border-rose-200 p-3 rounded-xl">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{newSessionError}</span>
+                </div>
+              )}
+
+              {/* Option 1: Blank Session Today */}
+              <div className="p-4 rounded-2xl border border-beige/80 bg-[#faf8f4] space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">
+                      Blank Session (Today)
+                    </h4>
+                    <p className="text-xs text-warm-gray mt-0.5">
+                      Create an immediate blank consultation slot dated today.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCreateBlankSession}
+                    disabled={creatingSession}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-charcoal text-white hover:bg-charcoal/90 transition cursor-pointer shadow-xs disabled:opacity-50 shrink-0"
+                  >
+                    {creatingSession ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Plus className="w-3.5 h-3.5 text-sage" />
+                    )}
+                    <span>Create Blank</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Option 2: Unconverted Bookings */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">
+                    Or Convert from Booking Calendar
+                  </h4>
+                  <span className="text-[11px] text-warm-gray">
+                    {(() => {
+                      const usedBookingIds = new Set(activeClient.sessions.map((s) => s.bookingId).filter(Boolean));
+                      const unconverted = clientBookings.filter((b) => !usedBookingIds.has(b.id));
+                      return `${unconverted.length} available`;
+                    })()}
+                  </span>
+                </div>
+
+                {loadingClientBookings ? (
+                  <div className="py-6 text-center text-xs text-warm-gray flex items-center justify-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-sage-dark" />
+                    <span>Loading bookings...</span>
+                  </div>
+                ) : (() => {
+                  const usedBookingIds = new Set(activeClient.sessions.map((s) => s.bookingId).filter(Boolean));
+                  const unconverted = clientBookings.filter((b) => !usedBookingIds.has(b.id));
+
+                  if (unconverted.length === 0) {
+                    return (
+                      <div className="p-4 rounded-xl border border-dashed border-beige bg-[#faf8f4] text-center text-xs text-warm-gray">
+                        No unconverted bookings found for this client. All bookings are already linked to sessions.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                      {unconverted.map((b) => (
+                        <div
+                          key={b.id}
+                          className="flex items-center justify-between p-3 rounded-xl border border-beige/80 bg-white hover:border-sage transition shadow-2xs text-xs"
+                        >
+                          <div className="min-w-0 flex-1 pr-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-charcoal">
+                                {b.appointment_date} · {b.appointment_time}
+                              </span>
+                              <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-cream border border-beige text-charcoal/70">
+                                {b.status}
+                              </span>
+                            </div>
+                            {b.child_name && (
+                              <p className="text-[11px] text-warm-gray mt-0.5">
+                                Child: {b.child_name} {b.child_age ? `(${b.child_age} yrs)` : ''}
+                              </p>
+                            )}
+                            {b.notes && (
+                              <p className="text-[11px] text-warm-gray/80 truncate mt-0.5">
+                                Notes: {b.notes}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCreateSessionFromBooking(b)}
+                            disabled={creatingSession}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-sage/20 text-sage-dark hover:bg-sage/30 transition cursor-pointer shrink-0 disabled:opacity-50"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>Add Session</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-beige/70 bg-[#faf8f4] flex items-center justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsNewSessionModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold rounded-xl border border-beige bg-white text-charcoal hover:bg-beige/30 transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </AdminLayout>
   );

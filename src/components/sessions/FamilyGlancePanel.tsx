@@ -14,11 +14,18 @@ import {
   AlertTriangle,
   Calendar,
   ListTodo,
+  Pencil,
+  Plus,
+  X,
+  Check,
+  Sparkles,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import type {
   Household,
   HouseholdMember,
+  HouseholdMemberRole,
+  HouseholdStatus,
   MemberActionItem,
 } from '../../types/family';
 import { roleLabel, currentAge } from '../../types/family';
@@ -34,6 +41,19 @@ interface FamilyGlancePanelProps {
   onSelectSession: (sessionId: string) => void;
   onOpenMemberStudy: (member: HouseholdMember) => void;
   onToggleActionItem: (id: string, newStatus: 'open' | 'done') => Promise<void>;
+  onUpdateHousehold?: (updated: {
+    presenting_issue?: string | null;
+    working_plan?: string | null;
+    next_step?: string | null;
+    status?: HouseholdStatus;
+  }) => Promise<boolean>;
+  onAddMember?: (draft: {
+    full_name: string;
+    role: HouseholdMemberRole;
+    birth_year?: number | null;
+    notes?: string | null;
+  }) => Promise<boolean>;
+  onStartFamilyCase?: () => void;
 }
 
 export const FamilyGlancePanel: React.FC<FamilyGlancePanelProps> = ({
@@ -46,8 +66,53 @@ export const FamilyGlancePanel: React.FC<FamilyGlancePanelProps> = ({
   onSelectSession,
   onOpenMemberStudy,
   onToggleActionItem,
+  onUpdateHousehold,
+  onAddMember,
+  onStartFamilyCase,
 }) => {
   const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  // Edit Family state
+  const [isEditingFamily, setIsEditingFamily] = useState(false);
+  const [familyDraft, setFamilyDraft] = useState<{
+    presenting_issue: string;
+    working_plan: string;
+    next_step: string;
+    status: HouseholdStatus;
+  }>({
+    presenting_issue: household?.presenting_issue || '',
+    working_plan: household?.working_plan || '',
+    next_step: household?.next_step || '',
+    status: household?.status || 'active',
+  });
+  const [savingFamily, setSavingFamily] = useState(false);
+
+  // Add Member state
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [newMemberDraft, setNewMemberDraft] = useState<{
+    full_name: string;
+    role: HouseholdMemberRole;
+    birth_year: string;
+    notes: string;
+  }>({
+    full_name: '',
+    role: 'child',
+    birth_year: '',
+    notes: '',
+  });
+  const [savingMember, setSavingMember] = useState(false);
+
+  // Synchronize familyDraft when household changes
+  React.useEffect(() => {
+    if (household) {
+      setFamilyDraft({
+        presenting_issue: household.presenting_issue || '',
+        working_plan: household.working_plan || '',
+        next_step: household.next_step || '',
+        status: household.status || 'active',
+      });
+    }
+  }, [household]);
 
   // Find index in sessions list
   const currentIndex = useMemo(() => {
@@ -69,6 +134,13 @@ export const FamilyGlancePanel: React.FC<FamilyGlancePanelProps> = ({
       return dateStr;
     }
   };
+
+  // Safe family name display: don't append "Family" if it already ends with it
+  const displayFamilyName = useMemo(() => {
+    if (!household?.family_name) return clientName;
+    const trimmed = household.family_name.trim();
+    return /family$/i.test(trimmed) ? trimmed : `${trimmed} Family`;
+  }, [household?.family_name, clientName]);
 
   // Group open action items by member
   const groupedActionItems = useMemo(() => {
@@ -116,6 +188,42 @@ export const FamilyGlancePanel: React.FC<FamilyGlancePanelProps> = ({
     }
   };
 
+  const handleSaveFamily = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onUpdateHousehold) return;
+    setSavingFamily(true);
+    try {
+      await onUpdateHousehold({
+        presenting_issue: familyDraft.presenting_issue.trim() || null,
+        working_plan: familyDraft.working_plan.trim() || null,
+        next_step: familyDraft.next_step.trim() || null,
+        status: familyDraft.status,
+      });
+      setIsEditingFamily(false);
+    } finally {
+      setSavingFamily(false);
+    }
+  };
+
+  const handleCreateMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onAddMember || !newMemberDraft.full_name.trim()) return;
+    setSavingMember(true);
+    try {
+      const birthYearNum = newMemberDraft.birth_year ? parseInt(newMemberDraft.birth_year, 10) : null;
+      await onAddMember({
+        full_name: newMemberDraft.full_name.trim(),
+        role: newMemberDraft.role,
+        birth_year: Number.isNaN(birthYearNum) ? null : birthYearNum,
+        notes: newMemberDraft.notes.trim() || null,
+      });
+      setNewMemberDraft({ full_name: '', role: 'child', birth_year: '', notes: '' });
+      setIsAddingMember(false);
+    } finally {
+      setSavingMember(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full min-h-0 rounded-2xl border border-beige/80 bg-[#faf8f4] overflow-hidden shadow-2xs">
       {/* Pinned Header */}
@@ -129,14 +237,38 @@ export const FamilyGlancePanel: React.FC<FamilyGlancePanelProps> = ({
               Family at a Glance
             </h3>
             <p className="text-[11px] text-warm-gray truncate leading-tight mt-0.5">
-              {household?.family_name ? `${household.family_name} Family` : clientName}
+              {displayFamilyName}
             </p>
           </div>
         </div>
 
-        <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-cream border border-beige text-charcoal/75 shrink-0">
-          {members.length} {members.length === 1 ? 'member' : 'members'}
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {household && onUpdateHousehold ? (
+            <button
+              type="button"
+              onClick={() => setIsEditingFamily(true)}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-charcoal/80 hover:text-sage-dark px-2 py-1 rounded-lg border border-beige/80 bg-[#faf8f4] hover:bg-white hover:border-sage transition cursor-pointer shadow-2xs"
+              title="Edit family presenting focus, working plan, and status"
+            >
+              <Pencil className="w-3 h-3 text-sage-dark" />
+              <span className="hidden sm:inline">Edit</span>
+            </button>
+          ) : !household && onStartFamilyCase ? (
+            <button
+              type="button"
+              onClick={onStartFamilyCase}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-sage-dark bg-sage/15 hover:bg-sage/25 px-2.5 py-1 rounded-lg border border-sage/40 transition cursor-pointer shadow-2xs"
+              title="Start family case for this client"
+            >
+              <Sparkles className="w-3 h-3" />
+              <span>Start Case</span>
+            </button>
+          ) : null}
+
+          <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-cream border border-beige text-charcoal/75">
+            {members.length} {members.length === 1 ? 'member' : 'members'}
+          </span>
+        </div>
       </div>
 
       {/* Scrollable Body */}
@@ -257,7 +389,19 @@ export const FamilyGlancePanel: React.FC<FamilyGlancePanelProps> = ({
               <UserRound className="w-3 h-3 text-sage-dark" />
               <span>Family Members</span>
             </div>
-            <span className="text-[10px] text-warm-gray font-medium">Click to view study</span>
+
+            {household && onAddMember ? (
+              <button
+                type="button"
+                onClick={() => setIsAddingMember(true)}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-sage-dark hover:underline cursor-pointer"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Add Member</span>
+              </button>
+            ) : (
+              <span className="text-[10px] text-warm-gray font-medium">Click to view study</span>
+            )}
           </div>
 
           {members.length > 0 ? (
@@ -304,6 +448,15 @@ export const FamilyGlancePanel: React.FC<FamilyGlancePanelProps> = ({
             <div className="rounded-lg border border-dashed border-beige bg-[#faf8f4] p-3 text-center">
               <UserRound className="w-4 h-4 text-warm-gray/40 mx-auto mb-1" />
               <p className="text-xs text-warm-gray font-medium">No family members recorded</p>
+              {household && onAddMember && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddingMember(true)}
+                  className="mt-2 text-xs font-semibold text-sage-dark hover:underline"
+                >
+                  + Add first member
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -392,6 +545,235 @@ export const FamilyGlancePanel: React.FC<FamilyGlancePanelProps> = ({
           )}
         </div>
       </div>
+
+      {/* Edit Family Modal */}
+      {isEditingFamily && household && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/40 backdrop-blur-xs animate-in fade-in">
+          <form
+            onSubmit={handleSaveFamily}
+            className="bg-white rounded-2xl border border-beige/80 shadow-2xl max-w-md w-full overflow-hidden flex flex-col"
+          >
+            <div className="px-5 py-3.5 border-b border-beige/70 bg-[#faf8f4] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Pencil className="w-4 h-4 text-sage-dark" />
+                <h4 className="font-serif font-bold text-sm text-charcoal">
+                  Edit Family Profile
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditingFamily(false)}
+                className="p-1 text-warm-gray hover:text-charcoal rounded-lg hover:bg-beige/40 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3.5 text-xs">
+              <div className="space-y-1">
+                <label className="font-semibold text-charcoal uppercase tracking-wider text-[10px]">
+                  Case Status
+                </label>
+                <select
+                  value={familyDraft.status}
+                  onChange={(e) =>
+                    setFamilyDraft((d) => ({
+                      ...d,
+                      status: e.target.value as HouseholdStatus,
+                    }))
+                  }
+                  className="w-full p-2.5 rounded-xl bg-[#faf8f4] border border-beige/80 text-charcoal focus:outline-hidden focus:border-sage-dark font-medium"
+                >
+                  <option value="active">Active Case</option>
+                  <option value="paused">Paused / On Hold</option>
+                  <option value="completed">Completed Case</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-charcoal uppercase tracking-wider text-[10px]">
+                  Presenting Clinical Issue
+                </label>
+                <textarea
+                  rows={3}
+                  value={familyDraft.presenting_issue}
+                  onChange={(e) =>
+                    setFamilyDraft((d) => ({ ...d, presenting_issue: e.target.value }))
+                  }
+                  placeholder="Primary challenge, behavioral concerns, family distress..."
+                  className="w-full p-2.5 rounded-xl bg-[#faf8f4] border border-beige/80 text-charcoal focus:outline-hidden focus:border-sage-dark font-medium leading-relaxed"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-charcoal uppercase tracking-wider text-[10px]">
+                  Active Working Plan
+                </label>
+                <textarea
+                  rows={3}
+                  value={familyDraft.working_plan}
+                  onChange={(e) =>
+                    setFamilyDraft((d) => ({ ...d, working_plan: e.target.value }))
+                  }
+                  placeholder="Clinical intervention trajectory, co-regulation focus..."
+                  className="w-full p-2.5 rounded-xl bg-[#faf8f4] border border-beige/80 text-charcoal focus:outline-hidden focus:border-sage-dark font-medium leading-relaxed"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-charcoal uppercase tracking-wider text-[10px]">
+                  Immediate Next Step
+                </label>
+                <input
+                  type="text"
+                  value={familyDraft.next_step}
+                  onChange={(e) =>
+                    setFamilyDraft((d) => ({ ...d, next_step: e.target.value }))
+                  }
+                  placeholder="Next consultation focus or behavioral homework..."
+                  className="w-full p-2.5 rounded-xl bg-[#faf8f4] border border-beige/80 text-charcoal focus:outline-hidden focus:border-sage-dark font-medium"
+                />
+              </div>
+            </div>
+
+            <div className="px-5 py-3 border-t border-beige/70 bg-[#faf8f4] flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsEditingFamily(false)}
+                className="px-3 py-1.5 rounded-xl border border-beige bg-white text-xs font-medium text-charcoal hover:bg-beige/30 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingFamily}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-charcoal text-xs font-semibold text-white hover:bg-charcoal/90 transition shadow-2xs disabled:opacity-50"
+              >
+                {savingFamily ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Add Member Modal */}
+      {isAddingMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/40 backdrop-blur-xs animate-in fade-in">
+          <form
+            onSubmit={handleCreateMember}
+            className="bg-white rounded-2xl border border-beige/80 shadow-2xl max-w-md w-full overflow-hidden flex flex-col"
+          >
+            <div className="px-5 py-3.5 border-b border-beige/70 bg-[#faf8f4] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserRound className="w-4 h-4 text-sage-dark" />
+                <h4 className="font-serif font-bold text-sm text-charcoal">
+                  Add Family Member
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddingMember(false)}
+                className="p-1 text-warm-gray hover:text-charcoal rounded-lg hover:bg-beige/40 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3.5 text-xs">
+              <div className="space-y-1">
+                <label className="font-semibold text-charcoal uppercase tracking-wider text-[10px]">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newMemberDraft.full_name}
+                  onChange={(e) =>
+                    setNewMemberDraft((d) => ({ ...d, full_name: e.target.value }))
+                  }
+                  placeholder="e.g. Layla Al-Mansoor"
+                  className="w-full p-2.5 rounded-xl bg-[#faf8f4] border border-beige/80 text-charcoal focus:outline-hidden focus:border-sage-dark font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-charcoal uppercase tracking-wider text-[10px]">
+                    Family Role
+                  </label>
+                  <select
+                    value={newMemberDraft.role}
+                    onChange={(e) =>
+                      setNewMemberDraft((d) => ({
+                        ...d,
+                        role: e.target.value as HouseholdMemberRole,
+                      }))
+                    }
+                    className="w-full p-2.5 rounded-xl bg-[#faf8f4] border border-beige/80 text-charcoal focus:outline-hidden focus:border-sage-dark font-medium"
+                  >
+                    <option value="mother">Mother</option>
+                    <option value="father">Father</option>
+                    <option value="child">Child</option>
+                    <option value="guardian">Guardian</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-charcoal uppercase tracking-wider text-[10px]">
+                    Birth Year (Optional)
+                  </label>
+                  <input
+                    type="number"
+                    min="1940"
+                    max={new Date().getFullYear()}
+                    value={newMemberDraft.birth_year}
+                    onChange={(e) =>
+                      setNewMemberDraft((d) => ({ ...d, birth_year: e.target.value }))
+                    }
+                    placeholder="e.g. 2018"
+                    className="w-full p-2.5 rounded-xl bg-[#faf8f4] border border-beige/80 text-charcoal focus:outline-hidden focus:border-sage-dark font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-charcoal uppercase tracking-wider text-[10px]">
+                  Initial Notes / Observations
+                </label>
+                <textarea
+                  rows={2}
+                  value={newMemberDraft.notes}
+                  onChange={(e) =>
+                    setNewMemberDraft((d) => ({ ...d, notes: e.target.value }))
+                  }
+                  placeholder="Behavioral traits, temperament, relationship focus..."
+                  className="w-full p-2.5 rounded-xl bg-[#faf8f4] border border-beige/80 text-charcoal focus:outline-hidden focus:border-sage-dark font-medium"
+                />
+              </div>
+            </div>
+
+            <div className="px-5 py-3 border-t border-beige/70 bg-[#faf8f4] flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsAddingMember(false)}
+                className="px-3 py-1.5 rounded-xl border border-beige bg-white text-xs font-medium text-charcoal hover:bg-beige/30 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingMember || !newMemberDraft.full_name.trim()}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-charcoal text-xs font-semibold text-white hover:bg-charcoal/90 transition shadow-2xs disabled:opacity-50"
+              >
+                {savingMember ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                Add Member
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };
