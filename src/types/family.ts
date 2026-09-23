@@ -22,6 +22,42 @@ export interface HouseholdMember {
   role: HouseholdMemberRole;
   birth_year: number | null;
   notes: string | null;
+  persona_summary?: string | null;
+  temperament_traits?: string[];
+  known_triggers?: string[];
+  strengths?: string[];
+  concern_level?: string | null;
+  family_dynamic_role?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type MemberNoteType = 'observation' | 'concern' | 'progress' | 'follow_up';
+
+export interface MemberNote {
+  id: string;
+  household_member_id: string;
+  session_id: string | null;
+  note_type: MemberNoteType;
+  body: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type MemberActionStatus = 'suggested' | 'open' | 'done' | 'dropped';
+export type MemberActionPriority = 'normal' | 'high';
+export type MemberActionSource = 'coach' | 'ai';
+
+export interface MemberActionItem {
+  id: string;
+  household_member_id: string;
+  session_id: string | null;
+  task: string;
+  status: MemberActionStatus;
+  priority: MemberActionPriority;
+  due_date: string | null;
+  source: MemberActionSource;
   created_at: string;
   updated_at: string;
 }

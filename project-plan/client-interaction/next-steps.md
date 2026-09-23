@@ -34,11 +34,11 @@ Rules out the whole approach cheaply before UI work.
 - **Exit:** Stage 0 spike passed. User to confirm branch before Stage 1 begins.
 
 ## Stage 1 — Family persona
-- [ ] Migration: persona columns on `household_members`, `member_notes`, `member_action_items`, RLS (schema.md).
-- [ ] Types in `src/types/family.ts`.
-- [ ] Extend `MemberStudyModal.tsx` (don't duplicate) into tabs: **Persona** / **Notes timeline** / **What's required**.
-- [ ] `HouseholdDossier.tsx` member cards: persona summary, concern level, triggers/strengths chips, open action count.
-- [ ] Verification script: admin full CRUD, student denied on both new tables.
+- [x] Migration: persona columns on `household_members`, `member_notes`, `member_action_items`, RLS (`20260923110000_create_family_personas_and_member_notes.sql` pushed to live DB).
+- [x] Types in `src/types/family.ts`.
+- [x] Extend `MemberStudyModal.tsx` into tabs: **Persona & Profile** / **Longitudinal Notes** / **What is Required** / **Observational Study** / **Attendance**.
+- [x] `HouseholdDossier.tsx` member cards: persona summary, concern level, triggers/strengths chips, open action count.
+- [x] Verification script: `scripts/verify-family-persona-and-notes-rls.js` confirms admin full CRUD + strict student deny on all tables.
 
 ## Stage 2 — Unified client card
 - [ ] `ClientDossierModal.tsx`: add case sessions (via the client's household), attendees, recording link, transcript status.

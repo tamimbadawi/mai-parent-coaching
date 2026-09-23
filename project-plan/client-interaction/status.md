@@ -25,8 +25,8 @@
 | Stage | Focus | Status |
 | :--- | :--- | :--- |
 | 0 | Feasibility checks (Workspace, auto-record, API tier, Arabic spike) | ✅ Complete |
-| 1 | Family persona model + editor | ⬜ Ready |
-| 2 | Unified client card | ⬜ |
+| 1 | Family persona model + editor | ✅ Complete |
+| 2 | Unified client card | ⬜ Ready |
 | 3 | Recording link + consent | ⬜ |
 | 4 | Transcription job | ⬜ |
 | 5 | Transcript analysis → member action items | ⬜ |

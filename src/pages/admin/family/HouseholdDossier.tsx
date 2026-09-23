@@ -17,6 +17,10 @@ import {
   Mail,
   FileText,
   ExternalLink,
+  Flame,
+  ListTodo,
+  ShieldAlert,
+  Tag,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import AdminLayout from '../AdminLayout';
@@ -72,6 +76,7 @@ export const HouseholdDossier = (): JSX.Element => {
   const [memberEditDraft, setMemberEditDraft] = useState({ full_name: '', role: 'child' as HouseholdMemberRole, birth_year: '', notes: '' });
   const [savingMemberEdit, setSavingMemberEdit] = useState(false);
   const [studyCache, setStudyCache] = useState<Record<string, MemberStudyResult>>({});
+  const [openActionCounts, setOpenActionCounts] = useState<Record<string, number>>({});
 
   const load = async (): Promise<void> => {
     if (!householdId) return;
@@ -123,6 +128,22 @@ export const HouseholdDossier = (): JSX.Element => {
       } else {
         setJourneyClient(null);
         setJourney(null);
+      }
+
+      const memberIds = (m ?? []).map((row) => row.id);
+      if (memberIds.length > 0) {
+        const { data: actionsData } = await supabase
+          .from('member_action_items')
+          .select('household_member_id')
+          .in('household_member_id', memberIds)
+          .eq('status', 'open');
+        const counts: Record<string, number> = {};
+        for (const act of actionsData ?? []) {
+          counts[act.household_member_id] = (counts[act.household_member_id] ?? 0) + 1;
+        }
+        setOpenActionCounts(counts);
+      } else {
+        setOpenActionCounts({});
       }
 
       const sessionIds = (s ?? []).map((row) => row.id);
@@ -541,16 +562,18 @@ export const HouseholdDossier = (): JSX.Element => {
                     );
                   }
 
+                  const openTasksCount = openActionCounts[m.id] || 0;
+
                   return (
                     <div
                       key={m.id}
                       onClick={() => setSelectedMemberId(m.id)}
-                      title="Click to view member clinical study & attendance history"
-                      className="group flex items-center justify-between rounded-xl border border-beige/70 bg-[#faf8f4] hover:bg-cream/40 hover:border-sage/50 px-3.5 py-2.5 transition cursor-pointer"
+                      title="Click to view member persona, notes & clinical study"
+                      className="group flex items-start justify-between rounded-2xl border border-beige/80 bg-[#faf8f4] hover:bg-cream/40 hover:border-sage/60 p-3.5 transition cursor-pointer shadow-2xs space-y-1.5"
                     >
-                      <div className="flex-1 min-w-0 pr-2">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-medium text-charcoal group-hover:text-sage-dark transition truncate">
+                      <div className="flex-1 min-w-0 pr-2 space-y-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="text-sm font-semibold text-charcoal group-hover:text-sage-dark transition truncate">
                             {m.full_name}
                           </p>
                           {isMain ? (
@@ -558,18 +581,63 @@ export const HouseholdDossier = (): JSX.Element => {
                               [Main]
                             </span>
                           ) : null}
-                          <span className="inline-flex items-center gap-0.5 text-[9px] text-sage-dark/70 font-medium bg-sage/10 px-1.5 py-0.2 rounded group-hover:text-sage-dark shrink-0">
-                            <Sparkles className="h-2.5 w-2.5" /> Study
-                          </span>
+                          {m.concern_level && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
+                              <Flame className="w-2.5 h-2.5 text-amber-700" />
+                              {m.concern_level}
+                            </span>
+                          )}
+                          {m.family_dynamic_role && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.2 rounded bg-white text-charcoal/80 border border-beige shrink-0">
+                              <Tag className="w-2.5 h-2.5 text-warm-gray" />
+                              {m.family_dynamic_role}
+                            </span>
+                          )}
+                          {openTasksCount > 0 && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+                              <ListTodo className="w-2.5 h-2.5 text-amber-700" />
+                              {openTasksCount} task{openTasksCount > 1 ? 's' : ''}
+                            </span>
+                          )}
                         </div>
+
                         <p className="text-[11px] text-warm-gray">
                           {roleLabel(m.role)}
                           {m.birth_year ? ` · Age ${currentAge(m.birth_year)}` : ''}
                         </p>
-                        {m.notes ? <p className="mt-1 text-[11px] text-warm-gray/80 leading-relaxed line-clamp-2">{m.notes}</p> : null}
+
+                        {(m.persona_summary || m.notes) && (
+                          <p className="text-[11px] text-charcoal/80 leading-relaxed line-clamp-2">
+                            {m.persona_summary || m.notes}
+                          </p>
+                        )}
+
+                        {/* Quick Trigger & Strength Chips */}
+                        {((m.known_triggers && m.known_triggers.length > 0) ||
+                          (m.strengths && m.strengths.length > 0)) && (
+                          <div className="flex flex-wrap gap-1 pt-0.5">
+                            {m.known_triggers?.slice(0, 2).map((trig) => (
+                              <span
+                                key={trig}
+                                className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.2 rounded bg-rose-50 text-rose-800 border border-rose-200"
+                              >
+                                <ShieldAlert className="w-2 h-2 text-rose-600" />
+                                {trig}
+                              </span>
+                            ))}
+                            {m.strengths?.slice(0, 2).map((str) => (
+                              <span
+                                key={str}
+                                className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-medium"
+                              >
+                                {str}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0 pt-0.5">
                         <button
                           type="button"
                           onClick={(e) => {
