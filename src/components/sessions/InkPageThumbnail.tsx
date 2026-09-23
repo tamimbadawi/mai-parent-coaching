@@ -67,36 +67,73 @@ export const InkPageThumbnail: React.FC<InkPageThumbnailProps> = ({
           viewBox={`0 0 ${INK_PAGE_WIDTH} ${INK_PAGE_HEIGHT}`}
           className="w-full h-full block pointer-events-none"
         >
-          {/* Faint Margin Line */}
-          <line
-            x1="76"
-            y1="0"
-            x2="76"
-            y2={INK_PAGE_HEIGHT}
-            stroke="rgba(184, 92, 66, 0.2)"
-            strokeWidth="2"
-          />
-          {/* Faint Header Line */}
-          <line
-            x1="0"
-            y1="90"
-            x2={INK_PAGE_WIDTH}
-            y2="90"
-            stroke="rgba(184, 92, 66, 0.2)"
-            strokeWidth="2"
-          />
-          {/* Faint Ruled Lines */}
-          {[160, 240, 320, 400, 480, 560, 640, 720, 800, 880, 960, 1040].map((y) => (
-            <line
-              key={y}
-              x1="0"
-              y1={y}
-              x2={INK_PAGE_WIDTH}
-              y2={y}
-              stroke="rgba(170, 155, 140, 0.2)"
-              strokeWidth="1.5"
-            />
-          ))}
+          <defs>
+            <pattern
+              id={`thumb-grid-${page.id}`}
+              width="40"
+              height="40"
+              patternUnits="userSpaceOnUse"
+            >
+              <path
+                d="M 40 0 L 0 0 0 40"
+                fill="none"
+                stroke="rgba(170, 155, 140, 0.22)"
+                strokeWidth="1.2"
+              />
+            </pattern>
+            <pattern
+              id={`thumb-dot-${page.id}`}
+              width="36"
+              height="36"
+              patternUnits="userSpaceOnUse"
+            >
+              <circle cx="18" cy="18" r="2" fill="rgba(170, 155, 140, 0.35)" />
+            </pattern>
+          </defs>
+
+          {/* Paper Background Style */}
+          {(!page.paperStyle || page.paperStyle === 'lined') && (
+            <>
+              {/* Faint Margin Line */}
+              <line
+                x1="76"
+                y1="0"
+                x2="76"
+                y2={INK_PAGE_HEIGHT}
+                stroke="rgba(184, 92, 66, 0.2)"
+                strokeWidth="2"
+              />
+              {/* Faint Header Line */}
+              <line
+                x1="0"
+                y1="90"
+                x2={INK_PAGE_WIDTH}
+                y2="90"
+                stroke="rgba(184, 92, 66, 0.2)"
+                strokeWidth="2"
+              />
+              {/* Faint Ruled Lines */}
+              {[160, 240, 320, 400, 480, 560, 640, 720, 800, 880, 960, 1040].map((y) => (
+                <line
+                  key={y}
+                  x1="0"
+                  y1={y}
+                  x2={INK_PAGE_WIDTH}
+                  y2={y}
+                  stroke="rgba(170, 155, 140, 0.2)"
+                  strokeWidth="1.5"
+                />
+              ))}
+            </>
+          )}
+
+          {page.paperStyle === 'grid' && (
+            <rect width={INK_PAGE_WIDTH} height={INK_PAGE_HEIGHT} fill={`url(#thumb-grid-${page.id})`} />
+          )}
+
+          {page.paperStyle === 'dotted' && (
+            <rect width={INK_PAGE_WIDTH} height={INK_PAGE_HEIGHT} fill={`url(#thumb-dot-${page.id})`} />
+          )}
 
           {/* Render Strokes */}
           {strokePaths.map((s) => (
@@ -107,6 +144,22 @@ export const InkPageThumbnail: React.FC<InkPageThumbnailProps> = ({
               style={s.isHighlighter ? { mixBlendMode: 'multiply' } : undefined}
             />
           ))}
+
+          {/* Render Stamps */}
+          {page.stamps &&
+            page.stamps.map((stamp) => (
+              <text
+                key={stamp.id}
+                x={stamp.x}
+                y={stamp.y}
+                fontSize="48"
+                textAnchor="middle"
+                dominantBaseline="central"
+                className="select-none pointer-events-none"
+              >
+                {stamp.emoji}
+              </text>
+            ))}
         </svg>
 
         {/* Hover Action Badge */}

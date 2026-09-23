@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   FileText,
   Upload,
@@ -13,6 +13,8 @@ import {
   Plus,
   PenLine,
   Sparkles,
+  Eye,
+  Edit3,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { TranscriptUtterance } from '../../types/session';
@@ -53,6 +55,26 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
 
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [saveNotesSuccess, setSaveNotesSuccess] = useState(false);
+  const [notesViewMode, setNotesViewMode] = useState<'edit' | 'preview'>('edit');
+
+  // Extract all converted ink page references from typed notes
+  const convertedInkPageLinks = useMemo(() => {
+    const regex = /— From ink page (\d+)(?:,\s*([^—\n]+))? —/g;
+    const links: { pageNum: number; dateStr?: string }[] = [];
+    const seen = new Set<number>();
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(draftHandwritten)) !== null) {
+      const pageNum = parseInt(m[1], 10);
+      if (!seen.has(pageNum)) {
+        seen.add(pageNum);
+        links.push({
+          pageNum,
+          dateStr: m[2]?.trim(),
+        });
+      }
+    }
+    return links.sort((a, b) => a.pageNum - b.pageNum);
+  }, [draftHandwritten]);
 
   // Ink Notebook state
   const [inkPages, setInkPages] = useState<InkPage[]>(initialInkPages || []);
@@ -418,6 +440,71 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
     setShowAddUtterance(false);
   };
 
+  const renderFormattedNotes = () => {
+    if (!draftHandwritten.trim()) {
+      return (
+        <p className="text-xs text-warm-gray/60 italic py-4 text-center">
+          No typed notes yet. Switch to Edit to type or transcribe notebook pages.
+        </p>
+      );
+    }
+
+    const headerRegex = /(— From ink page \d+(?:,\s*[^—\n]+)? —|— From photo(?:,\s*[^—\n]+)? —)/g;
+    const parts = draftHandwritten.split(headerRegex);
+
+    return (
+      <div className="space-y-2 text-xs leading-relaxed text-charcoal">
+        {parts.map((part, idx) => {
+          const inkMatch = part.match(/^— From ink page (\d+)(?:,\s*([^—\n]+))? —$/);
+          if (inkMatch) {
+            const pageNum = parseInt(inkMatch[1], 10);
+            const dateStr = inkMatch[2]?.trim();
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setActiveNotebookPageIndex(Math.max(0, pageNum - 1));
+                  setIsNotebookOpen(true);
+                }}
+                className="w-full text-left my-2 py-1.5 px-3 rounded-xl bg-sage/10 hover:bg-sage/20 border border-sage/30 text-sage-dark font-medium transition cursor-pointer flex items-center justify-between group shadow-2xs"
+                title={`Click to open notebook directly at Page ${pageNum}`}
+              >
+                <span className="flex items-center gap-1.5 font-semibold">
+                  <PenLine className="w-3.5 h-3.5 text-sage-dark" />
+                  <span>— From ink page {pageNum}{dateStr ? `, ${dateStr}` : ''} —</span>
+                </span>
+                <span className="text-[10px] font-semibold text-sage-dark flex items-center gap-1 group-hover:underline">
+                  <span>Open Page {pageNum} in notebook</span>
+                  <ExternalLink className="w-2.5 h-2.5" />
+                </span>
+              </button>
+            );
+          }
+
+          if (part.startsWith('— From photo')) {
+            return (
+              <div
+                key={idx}
+                className="my-2 py-1 px-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 font-medium text-[11px]"
+              >
+                {part}
+              </div>
+            );
+          }
+
+          if (!part.trim()) return null;
+
+          return (
+            <div key={idx} className="whitespace-pre-wrap font-sans text-charcoal/90">
+              {part.trim()}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 p-4 sm:p-5">
       {/* 1. In-Session Handwritten & Raw Notes */}
@@ -597,13 +684,88 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
           </div>
         )}
 
-        <textarea
-          rows={8}
-          value={draftHandwritten}
-          onChange={(e) => setDraftHandwritten(e.target.value)}
-          placeholder="Capture real-time clinical observations, phrases spoken by parent or child, behavioral shifts, or upload a photo of your paper notebook to transcribe..."
-          className="w-full text-xs rounded-xl border border-beige bg-[#faf8f4] p-3 text-charcoal placeholder:text-warm-gray/60 focus:bg-white focus:border-sage focus:outline-hidden transition leading-relaxed font-sans"
-        />
+        {/* Typed Notes Sub-Header with Edit / Formatted Preview Toggle */}
+        <div className="flex items-center justify-between gap-2 pb-1.5 pt-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-semibold text-charcoal">Typed Notes & Transcripts</span>
+            {convertedInkPageLinks.length > 0 && (
+              <span className="text-[10px] text-warm-gray font-mono">
+                ({convertedInkPageLinks.length} ink page{convertedInkPageLinks.length > 1 ? 's' : ''} transcribed)
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-0.5 bg-[#FAF8F4] p-0.5 rounded-lg border border-beige/80 text-[10px]">
+            <button
+              type="button"
+              onClick={() => setNotesViewMode('edit')}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition cursor-pointer ${
+                notesViewMode === 'edit'
+                  ? 'bg-white text-charcoal shadow-2xs font-semibold border border-beige/60'
+                  : 'text-warm-gray hover:text-charcoal'
+              }`}
+            >
+              <Edit3 className="w-2.5 h-2.5" />
+              <span>Edit</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setNotesViewMode('preview')}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition cursor-pointer ${
+                notesViewMode === 'preview'
+                  ? 'bg-white text-charcoal shadow-2xs font-semibold border border-beige/60'
+                  : 'text-warm-gray hover:text-charcoal'
+              }`}
+            >
+              <Eye className="w-2.5 h-2.5" />
+              <span>Preview</span>
+            </button>
+          </div>
+        </div>
+
+        {notesViewMode === 'edit' ? (
+          <textarea
+            rows={8}
+            value={draftHandwritten}
+            onChange={(e) => setDraftHandwritten(e.target.value)}
+            placeholder="Capture real-time clinical observations, phrases spoken by parent or child, behavioral shifts, or upload a photo of your paper notebook to transcribe..."
+            className="w-full text-xs rounded-xl border border-beige bg-[#faf8f4] p-3 text-charcoal placeholder:text-warm-gray/60 focus:bg-white focus:border-sage focus:outline-hidden transition leading-relaxed font-sans"
+          />
+        ) : (
+          <div className="w-full min-h-[160px] max-h-[360px] overflow-y-auto custom-scrollbar rounded-xl border border-beige bg-[#faf8f4] p-3.5 text-xs text-charcoal">
+            {renderFormattedNotes()}
+          </div>
+        )}
+
+        {/* Converted Ink Pages Quick-Jump Chips (Click to open notebook at page) */}
+        {convertedInkPageLinks.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap pt-2">
+            <span className="text-[11px] text-warm-gray font-medium flex items-center gap-1">
+              <PenLine className="w-3 h-3 text-sage-dark" />
+              Notebook Pages:
+            </span>
+            {convertedInkPageLinks.map((item) => (
+              <button
+                key={item.pageNum}
+                type="button"
+                onClick={() => {
+                  const targetIndex = Math.max(0, item.pageNum - 1);
+                  setActiveNotebookPageIndex(targetIndex);
+                  setIsNotebookOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-beige hover:border-sage hover:text-sage-dark text-charcoal text-[11px] font-medium shadow-2xs transition cursor-pointer group"
+                title={`Open notebook directly at Page ${item.pageNum}`}
+              >
+                <span>Page {item.pageNum}</span>
+                {item.dateStr && (
+                  <span className="text-[10px] text-warm-gray group-hover:text-charcoal/70">
+                    · {item.dateStr}
+                  </span>
+                )}
+                <ExternalLink className="w-2.5 h-2.5 text-warm-gray group-hover:text-sage-dark" />
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Full-Screen Pen Ink Notebook Overlay */}
         {isNotebookOpen && (

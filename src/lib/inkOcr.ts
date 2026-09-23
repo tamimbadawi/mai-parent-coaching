@@ -1,6 +1,6 @@
 import { getStroke } from 'perfect-freehand';
 import { supabase } from './supabase';
-import type { InkPage, InkStroke } from '../types/ink';
+import type { InkPage } from '../types/ink';
 import { INK_PAGE_WIDTH, INK_PAGE_HEIGHT } from '../types/ink';
 
 /**
@@ -66,6 +66,16 @@ export async function renderInkPageToJpeg(
         ctx.fill();
       }
 
+      // 4. Render stamps
+      if (page.stamps && page.stamps.length > 0) {
+        ctx.font = '36px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (const stamp of page.stamps) {
+          ctx.fillText(stamp.emoji, stamp.x, stamp.y);
+        }
+      }
+
       const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
       const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
       resolve({ base64Data, mimeType: 'image/jpeg' });
@@ -82,7 +92,7 @@ export async function transcribeInkPage(page: InkPage): Promise<string> {
   const { base64Data, mimeType } = await renderInkPageToJpeg(page);
 
   const prompt =
-    'Transcribe this handwritten note exactly as written, in its original language (Arabic or English). Do not summarise, translate or add anything.';
+    "Transcribe the handwriting exactly (English). Keep hand-drawn marks as symbols: star ⭐, heart ❤️, tick ✓, cross ✗, arrow →, exclamation ❗, question ❓, smiley 🙂, checkbox ☐ / ticked ☑. Circled or underlined words -> **bold**. Any other drawing -> a short description in brackets, e.g. [sketch: small house]. Keep line breaks and list structure. Don't summarise or add anything.";
 
   const { data, error } = await supabase.functions.invoke('gemini-generate', {
     body: {
