@@ -19,6 +19,8 @@ import {
   MoreVertical,
   ShieldCheck,
   Crown,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
@@ -45,8 +47,20 @@ export const AdminCRM = (): JSX.Element => {
   // Selected client for dossier modal
   const [selectedClient, setSelectedClient] = useState<CustomerJourneyState | null>(null);
 
-  // Show client journey details for admin accounts (toggle, OFF by default)
-  const [showAdminJourney, setShowAdminJourney] = useState(false);
+  // Set of admin client IDs whose journey details are expanded (per-admin toggle)
+  const [expandedAdmins, setExpandedAdmins] = useState<Set<string>>(new Set());
+
+  const toggleAdminJourney = (clientId: string): void => {
+    setExpandedAdmins((prev) => {
+      const next = new Set(prev);
+      if (next.has(clientId)) {
+        next.delete(clientId);
+      } else {
+        next.add(clientId);
+      }
+      return next;
+    });
+  };
 
   // Section switcher: 'clients' vs 'studio'
   const sectionParam = searchParams.get('section') || searchParams.get('tab') || searchParams.get('view');
@@ -586,98 +600,85 @@ export const AdminCRM = (): JSX.Element => {
                   />
                 </div>
 
-                {/* Filter Pills and Toggle */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-[#faf8f4] p-1 border border-beige/60 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('all')}
-                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                        activeTab === 'all'
-                          ? 'bg-white text-charcoal shadow-2xs font-semibold'
-                          : 'text-warm-gray hover:text-charcoal'
-                      }`}
-                    >
-                      All ({stats.total})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('clients')}
-                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                        activeTab === 'clients'
-                          ? 'bg-white text-charcoal shadow-2xs font-semibold'
-                          : 'text-warm-gray hover:text-charcoal'
-                      }`}
-                    >
-                      Clients ({stats.totalClients})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('admins')}
-                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                        activeTab === 'admins'
-                          ? 'bg-white text-amber-800 shadow-2xs font-semibold'
-                          : 'text-warm-gray hover:text-charcoal'
-                      }`}
-                    >
-                      Admins ({stats.totalAdmins})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('track_a')}
-                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                        activeTab === 'track_a'
-                          ? 'bg-white text-charcoal shadow-2xs font-semibold'
-                          : 'text-warm-gray hover:text-charcoal'
-                      }`}
-                    >
-                      Track A ({stats.trackA})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('track_b')}
-                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                        activeTab === 'track_b'
-                          ? 'bg-white text-charcoal shadow-2xs font-semibold'
-                          : 'text-warm-gray hover:text-charcoal'
-                      }`}
-                    >
-                      Track B ({stats.trackB})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('attention')}
-                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                        activeTab === 'attention'
-                          ? 'bg-white text-amber-700 shadow-2xs font-semibold'
-                          : 'text-warm-gray hover:text-charcoal'
-                      }`}
-                    >
-                      Needs Attention ({stats.attention})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('active_coaching')}
-                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                        activeTab === 'active_coaching'
-                          ? 'bg-white text-emerald-700 shadow-2xs font-semibold'
-                          : 'text-warm-gray hover:text-charcoal'
-                      }`}
-                    >
-                      Upcoming Booked
-                    </button>
-                  </div>
-
-                  {/* Toggle: Show client journey for admins */}
-                  <label className="inline-flex items-center gap-2 cursor-pointer select-none text-xs text-charcoal/80 hover:text-charcoal px-3 py-2 rounded-xl border border-beige/70 bg-[#faf8f4] transition hover:bg-white">
-                    <input
-                      type="checkbox"
-                      checked={showAdminJourney}
-                      onChange={(e) => setShowAdminJourney(e.target.checked)}
-                      className="rounded border-beige text-[#5aa59e] focus:ring-[#5aa59e] h-3.5 w-3.5 cursor-pointer accent-[#5aa59e]"
-                    />
-                    <span className="font-medium whitespace-nowrap">Show client journey for admins</span>
-                  </label>
+                {/* Filter Pills */}
+                <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-[#faf8f4] p-1 border border-beige/60 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('all')}
+                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                      activeTab === 'all'
+                        ? 'bg-white text-charcoal shadow-2xs font-semibold'
+                        : 'text-warm-gray hover:text-charcoal'
+                    }`}
+                  >
+                    All ({stats.total})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('clients')}
+                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                      activeTab === 'clients'
+                        ? 'bg-white text-charcoal shadow-2xs font-semibold'
+                        : 'text-warm-gray hover:text-charcoal'
+                    }`}
+                  >
+                    Clients ({stats.totalClients})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('admins')}
+                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                      activeTab === 'admins'
+                        ? 'bg-white text-amber-800 shadow-2xs font-semibold'
+                        : 'text-warm-gray hover:text-charcoal'
+                    }`}
+                  >
+                    Admins ({stats.totalAdmins})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('track_a')}
+                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                      activeTab === 'track_a'
+                        ? 'bg-white text-charcoal shadow-2xs font-semibold'
+                        : 'text-warm-gray hover:text-charcoal'
+                    }`}
+                  >
+                    Track A ({stats.trackA})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('track_b')}
+                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                      activeTab === 'track_b'
+                        ? 'bg-white text-charcoal shadow-2xs font-semibold'
+                        : 'text-warm-gray hover:text-charcoal'
+                    }`}
+                  >
+                    Track B ({stats.trackB})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('attention')}
+                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                      activeTab === 'attention'
+                        ? 'bg-white text-amber-700 shadow-2xs font-semibold'
+                        : 'text-warm-gray hover:text-charcoal'
+                    }`}
+                  >
+                    Needs Attention ({stats.attention})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('active_coaching')}
+                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                      activeTab === 'active_coaching'
+                        ? 'bg-white text-emerald-700 shadow-2xs font-semibold'
+                        : 'text-warm-gray hover:text-charcoal'
+                    }`}
+                  >
+                    Upcoming Booked
+                  </button>
                 </div>
               </div>
             </div>
@@ -704,7 +705,7 @@ export const AdminCRM = (): JSX.Element => {
                     (c) => c.iso === client.country || c.name.toLowerCase() === client.country?.toLowerCase()
                   );
                   const isAdmin = client.role === 'admin';
-                  const showJourney = !isAdmin || showAdminJourney;
+                  const showJourney = !isAdmin || expandedAdmins.has(client.client_id);
 
                   return (
                     <div
@@ -723,7 +724,7 @@ export const AdminCRM = (): JSX.Element => {
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="text-base font-semibold text-charcoal">{client.parent_name}</p>
 
-                              {/* Track Badge (Hidden for admins unless showAdminJourney is ON) */}
+                              {/* Track Badge (Hidden for admins unless journey is expanded) */}
                               {showJourney && (
                                 <span
                                   className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
@@ -736,7 +737,7 @@ export const AdminCRM = (): JSX.Element => {
                                 </span>
                               )}
 
-                              {/* Lifecycle Stage Badge (Hidden for admins unless showAdminJourney is ON) */}
+                              {/* Lifecycle Stage Badge (Hidden for admins unless journey is expanded) */}
                               {showJourney && (
                                 <span
                                   className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
@@ -755,11 +756,31 @@ export const AdminCRM = (): JSX.Element => {
                                 </span>
                               )}
 
-                              {/* Role Badge if Admin */}
+                              {/* Role Badge and Per-Admin Journey Toggle if Admin */}
                               {client.role === 'admin' && (
-                                <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900 border border-amber-300">
-                                  Admin
-                                </span>
+                                <>
+                                  <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900 border border-amber-300">
+                                    Admin
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleAdminJourney(client.client_id)}
+                                    className="inline-flex items-center gap-1 rounded-full bg-[#faf8f4] hover:bg-beige/40 px-2.5 py-0.5 text-[10px] font-medium text-charcoal border border-beige/80 transition cursor-pointer"
+                                    title={expandedAdmins.has(client.client_id) ? 'Hide client journey details' : 'Show client journey details'}
+                                  >
+                                    {expandedAdmins.has(client.client_id) ? (
+                                      <>
+                                        <EyeOff className="h-3 w-3 text-warm-gray" />
+                                        <span>Hide journey</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Eye className="h-3 w-3 text-sage-dark" />
+                                        <span>Show journey</span>
+                                      </>
+                                    )}
+                                  </button>
+                                </>
                               )}
                             </div>
 
@@ -783,7 +804,7 @@ export const AdminCRM = (): JSX.Element => {
                               <span>Joined {new Date(client.client_created_at).toLocaleDateString()}</span>
                             </div>
 
-                            {/* Next Step Recommendation Callout (Hidden for admins unless showAdminJourney is ON) */}
+                            {/* Next Step Recommendation Callout (Hidden for admins unless journey is expanded) */}
                             {showJourney && (
                               <div className="mt-2.5 flex items-start sm:items-center gap-2 text-xs text-charcoal bg-[#faf8f4] p-2.5 rounded-xl border border-beige/70">
                                 <CheckCircle2 className="h-4 w-4 shrink-0 text-[#4d8b82] mt-0.5 sm:mt-0" />
@@ -798,7 +819,7 @@ export const AdminCRM = (): JSX.Element => {
 
                         {/* Right: Metrics & Actions */}
                         <div className="flex flex-wrap lg:flex-nowrap items-center gap-2.5 shrink-0">
-                          {/* Session Stats Box (Hidden for admins unless showAdminJourney is ON) */}
+                          {/* Session Stats Box (Hidden for admins unless journey is expanded) */}
                           {showJourney && (
                             <div className="flex items-center gap-3 rounded-xl bg-[#faf8f4] px-3.5 py-2 border border-beige/60 text-xs">
                               <div>
@@ -830,7 +851,7 @@ export const AdminCRM = (): JSX.Element => {
                             </div>
                           )}
 
-                          {/* Action: Open Dossier (Hidden for admins unless showAdminJourney is ON) */}
+                          {/* Action: Open Dossier (Hidden for admins unless journey is expanded) */}
                           {showJourney && (
                             <button
                               type="button"
@@ -842,7 +863,7 @@ export const AdminCRM = (): JSX.Element => {
                             </button>
                           )}
 
-                          {/* Secondary Action: Family Case Link (Hidden for admins unless showAdminJourney is ON) */}
+                          {/* Secondary Action: Family Case Link (Hidden for admins unless journey is expanded) */}
                           {showJourney && (
                             <Link
                               to={`/admin/families?client=${client.client_id}&name=${encodeURIComponent(
@@ -856,7 +877,7 @@ export const AdminCRM = (): JSX.Element => {
                             </Link>
                           )}
 
-                          {/* Secondary Action: Session Notes Link (Hidden for admins unless showAdminJourney is ON) */}
+                          {/* Secondary Action: Session Notes Link (Hidden for admins unless journey is expanded) */}
                           {showJourney && (
                             <Link
                               to={`/admin/sessions?client=${client.client_id}`}
