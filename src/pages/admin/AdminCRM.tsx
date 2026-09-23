@@ -45,6 +45,9 @@ export const AdminCRM = (): JSX.Element => {
   // Selected client for dossier modal
   const [selectedClient, setSelectedClient] = useState<CustomerJourneyState | null>(null);
 
+  // Show client journey details for admin accounts (toggle, OFF by default)
+  const [showAdminJourney, setShowAdminJourney] = useState(false);
+
   // Section switcher: 'clients' vs 'studio'
   const sectionParam = searchParams.get('section') || searchParams.get('tab') || searchParams.get('view');
   const [activeSection, setActiveSection] = useState<'clients' | 'studio'>(
@@ -416,13 +419,13 @@ export const AdminCRM = (): JSX.Element => {
             >
               <Users className="h-3.5 w-3.5" />
               <span>Client Journeys</span>
-              {clients.length > 0 && (
+              {stats.totalClients > 0 && (
                 <span
                   className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] ${
                     activeSection === 'clients' ? 'bg-white/20 text-white' : 'bg-beige/60 text-charcoal'
                   }`}
                 >
-                  {clients.length}
+                  {stats.totalClients}
                 </span>
               )}
             </button>
@@ -612,96 +615,109 @@ export const AdminCRM = (): JSX.Element => {
                   />
                 </div>
 
-                {/* Filter Pills */}
-                <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-[#faf8f4] p-1 border border-beige/60 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('all')}
-                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                      activeTab === 'all'
-                        ? 'bg-white text-charcoal shadow-2xs font-semibold'
-                        : 'text-warm-gray hover:text-charcoal'
-                    }`}
-                  >
-                    All ({stats.total})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('clients')}
-                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                      activeTab === 'clients'
-                        ? 'bg-white text-charcoal shadow-2xs font-semibold'
-                        : 'text-warm-gray hover:text-charcoal'
-                    }`}
-                  >
-                    Clients ({stats.totalClients})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('admins')}
-                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                      activeTab === 'admins'
-                        ? 'bg-white text-amber-800 shadow-2xs font-semibold'
-                        : 'text-warm-gray hover:text-charcoal'
-                    }`}
-                  >
-                    Admins ({stats.totalAdmins})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('track_a')}
-                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                      activeTab === 'track_a'
-                        ? 'bg-white text-charcoal shadow-2xs font-semibold'
-                        : 'text-warm-gray hover:text-charcoal'
-                    }`}
-                  >
-                    Track A ({stats.trackA})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('track_b')}
-                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                      activeTab === 'track_b'
-                        ? 'bg-white text-charcoal shadow-2xs font-semibold'
-                        : 'text-warm-gray hover:text-charcoal'
-                    }`}
-                  >
-                    Track B ({stats.trackB})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('attention')}
-                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                      activeTab === 'attention'
-                        ? 'bg-white text-amber-700 shadow-2xs font-semibold'
-                        : 'text-warm-gray hover:text-charcoal'
-                    }`}
-                  >
-                    Needs Attention ({stats.attention})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('active_coaching')}
-                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                      activeTab === 'active_coaching'
-                        ? 'bg-white text-emerald-700 shadow-2xs font-semibold'
-                        : 'text-warm-gray hover:text-charcoal'
-                    }`}
-                  >
-                    Upcoming Booked
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('opted_out_paused')}
-                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                      activeTab === 'opted_out_paused'
-                        ? 'bg-white text-rose-700 shadow-2xs font-semibold'
-                        : 'text-warm-gray hover:text-charcoal'
-                    }`}
-                  >
-                    Opted Out / Paused ({stats.optedOutOrPaused})
-                  </button>
+                {/* Filter Pills and Toggle */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-[#faf8f4] p-1 border border-beige/60 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('all')}
+                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                        activeTab === 'all'
+                          ? 'bg-white text-charcoal shadow-2xs font-semibold'
+                          : 'text-warm-gray hover:text-charcoal'
+                      }`}
+                    >
+                      All ({stats.total})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('clients')}
+                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                        activeTab === 'clients'
+                          ? 'bg-white text-charcoal shadow-2xs font-semibold'
+                          : 'text-warm-gray hover:text-charcoal'
+                      }`}
+                    >
+                      Clients ({stats.totalClients})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('admins')}
+                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                        activeTab === 'admins'
+                          ? 'bg-white text-amber-800 shadow-2xs font-semibold'
+                          : 'text-warm-gray hover:text-charcoal'
+                      }`}
+                    >
+                      Admins ({stats.totalAdmins})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('track_a')}
+                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                        activeTab === 'track_a'
+                          ? 'bg-white text-charcoal shadow-2xs font-semibold'
+                          : 'text-warm-gray hover:text-charcoal'
+                      }`}
+                    >
+                      Track A ({stats.trackA})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('track_b')}
+                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                        activeTab === 'track_b'
+                          ? 'bg-white text-charcoal shadow-2xs font-semibold'
+                          : 'text-warm-gray hover:text-charcoal'
+                      }`}
+                    >
+                      Track B ({stats.trackB})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('attention')}
+                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                        activeTab === 'attention'
+                          ? 'bg-white text-amber-700 shadow-2xs font-semibold'
+                          : 'text-warm-gray hover:text-charcoal'
+                      }`}
+                    >
+                      Needs Attention ({stats.attention})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('active_coaching')}
+                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                        activeTab === 'active_coaching'
+                          ? 'bg-white text-emerald-700 shadow-2xs font-semibold'
+                          : 'text-warm-gray hover:text-charcoal'
+                      }`}
+                    >
+                      Upcoming Booked
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('opted_out_paused')}
+                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                        activeTab === 'opted_out_paused'
+                          ? 'bg-white text-rose-700 shadow-2xs font-semibold'
+                          : 'text-warm-gray hover:text-charcoal'
+                      }`}
+                    >
+                      Opted Out / Paused ({stats.optedOutOrPaused})
+                    </button>
+                  </div>
+
+                  {/* Toggle: Show client journey for admins */}
+                  <label className="inline-flex items-center gap-2 cursor-pointer select-none text-xs text-charcoal/80 hover:text-charcoal px-3 py-2 rounded-xl border border-beige/70 bg-[#faf8f4] transition hover:bg-white">
+                    <input
+                      type="checkbox"
+                      checked={showAdminJourney}
+                      onChange={(e) => setShowAdminJourney(e.target.checked)}
+                      className="rounded border-beige text-[#5aa59e] focus:ring-[#5aa59e] h-3.5 w-3.5 cursor-pointer accent-[#5aa59e]"
+                    />
+                    <span className="font-medium whitespace-nowrap">Show client journey for admins</span>
+                  </label>
                 </div>
               </div>
             </div>
@@ -727,6 +743,8 @@ export const AdminCRM = (): JSX.Element => {
                   const country = COUNTRIES.find(
                     (c) => c.iso === client.country || c.name.toLowerCase() === client.country?.toLowerCase()
                   );
+                  const isAdmin = client.role === 'admin';
+                  const showJourney = !isAdmin || showAdminJourney;
 
                   return (
                     <div
@@ -745,33 +763,37 @@ export const AdminCRM = (): JSX.Element => {
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="text-base font-semibold text-charcoal">{client.parent_name}</p>
 
-                              {/* Track Badge */}
-                              <span
-                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                                  client.current_track === 'track_b'
-                                    ? 'bg-[#6b9080] text-white'
-                                    : 'bg-[#faf8f4] text-charcoal border border-beige/80'
-                                }`}
-                              >
-                                {client.current_track === 'track_b' ? 'TRACK B: CONTINUITY' : 'TRACK A: NURTURE'}
-                              </span>
+                              {/* Track Badge (Hidden for admins unless showAdminJourney is ON) */}
+                              {showJourney && (
+                                <span
+                                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                                    client.current_track === 'track_b'
+                                      ? 'bg-[#6b9080] text-white'
+                                      : 'bg-[#faf8f4] text-charcoal border border-beige/80'
+                                  }`}
+                                >
+                                  {client.current_track === 'track_b' ? 'TRACK B: CONTINUITY' : 'TRACK A: NURTURE'}
+                                </span>
+                              )}
 
-                              {/* Lifecycle Stage Badge */}
-                              <span
-                                className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                                  client.engagement_status === 'opted_out'
-                                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                    : client.engagement_status === 'paused'
-                                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                    : client.lifecycle_stage === 'track_b_reengagement_due'
-                                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                    : client.lifecycle_stage === 'track_a_booked' || client.upcoming_sessions_count > 0
-                                    ? 'bg-sky-50 text-sky-700 border border-sky-200'
-                                    : 'bg-[#edf7f1] text-[#2c6e49] border border-[#cbe8d6]'
-                                }`}
-                              >
-                                {client.lifecycle_stage.replace(/_/g, ' ')}
-                              </span>
+                              {/* Lifecycle Stage Badge (Hidden for admins unless showAdminJourney is ON) */}
+                              {showJourney && (
+                                <span
+                                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+                                    client.engagement_status === 'opted_out'
+                                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                      : client.engagement_status === 'paused'
+                                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                      : client.lifecycle_stage === 'track_b_reengagement_due'
+                                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                      : client.lifecycle_stage === 'track_a_booked' || client.upcoming_sessions_count > 0
+                                      ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                                      : 'bg-[#edf7f1] text-[#2c6e49] border border-[#cbe8d6]'
+                                  }`}
+                                >
+                                  {client.lifecycle_stage.replace(/_/g, ' ')}
+                                </span>
+                              )}
 
                               {/* Role Badge if Admin */}
                               {client.role === 'admin' && (
@@ -801,82 +823,92 @@ export const AdminCRM = (): JSX.Element => {
                               <span>Joined {new Date(client.client_created_at).toLocaleDateString()}</span>
                             </div>
 
-                            {/* Next Step Recommendation Callout */}
-                            <div className="mt-2.5 flex items-start sm:items-center gap-2 text-xs text-charcoal bg-[#faf8f4] p-2.5 rounded-xl border border-beige/70">
-                              <CheckCircle2 className="h-4 w-4 shrink-0 text-[#4d8b82] mt-0.5 sm:mt-0" />
-                              <span className="leading-relaxed">
-                                <strong className="text-charcoal font-semibold">Next Step: </strong>
-                                {client.next_step_recommendation}
-                              </span>
-                            </div>
+                            {/* Next Step Recommendation Callout (Hidden for admins unless showAdminJourney is ON) */}
+                            {showJourney && (
+                              <div className="mt-2.5 flex items-start sm:items-center gap-2 text-xs text-charcoal bg-[#faf8f4] p-2.5 rounded-xl border border-beige/70">
+                                <CheckCircle2 className="h-4 w-4 shrink-0 text-[#4d8b82] mt-0.5 sm:mt-0" />
+                                <span className="leading-relaxed">
+                                  <strong className="text-charcoal font-semibold">Next Step: </strong>
+                                  {client.next_step_recommendation}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
 
                         {/* Right: Metrics & Actions */}
                         <div className="flex flex-wrap lg:flex-nowrap items-center gap-2.5 shrink-0">
-                          {/* Session Stats Box */}
-                          <div className="flex items-center gap-3 rounded-xl bg-[#faf8f4] px-3.5 py-2 border border-beige/60 text-xs">
-                            <div>
-                              <p className="text-[10px] uppercase tracking-wider text-warm-gray">Paid Sessions</p>
-                              <p className="font-semibold text-charcoal text-center">
-                                {client.completed_paid_sessions_count}
-                              </p>
+                          {/* Session Stats Box (Hidden for admins unless showAdminJourney is ON) */}
+                          {showJourney && (
+                            <div className="flex items-center gap-3 rounded-xl bg-[#faf8f4] px-3.5 py-2 border border-beige/60 text-xs">
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wider text-warm-gray">Paid Sessions</p>
+                                <p className="font-semibold text-charcoal text-center">
+                                  {client.completed_paid_sessions_count}
+                                </p>
+                              </div>
+                              <div className="h-6 w-px bg-beige/80" />
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wider text-warm-gray">Last Touch</p>
+                                <p className="font-semibold text-charcoal text-center">
+                                  {client.days_since_last_engagement}d ago
+                                </p>
+                              </div>
+                              {client.upcoming_sessions_count > 0 && (
+                                <>
+                                  <div className="h-6 w-px bg-beige/80" />
+                                  <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-emerald-700 font-medium">
+                                      Upcoming
+                                    </p>
+                                    <p className="font-semibold text-emerald-700 text-center">
+                                      {client.upcoming_sessions_count}
+                                    </p>
+                                  </div>
+                                </>
+                              )}
                             </div>
-                            <div className="h-6 w-px bg-beige/80" />
-                            <div>
-                              <p className="text-[10px] uppercase tracking-wider text-warm-gray">Last Touch</p>
-                              <p className="font-semibold text-charcoal text-center">
-                                {client.days_since_last_engagement}d ago
-                              </p>
-                            </div>
-                            {client.upcoming_sessions_count > 0 && (
-                              <>
-                                <div className="h-6 w-px bg-beige/80" />
-                                <div>
-                                  <p className="text-[10px] uppercase tracking-wider text-emerald-700 font-medium">
-                                    Upcoming
-                                  </p>
-                                  <p className="font-semibold text-emerald-700 text-center">
-                                    {client.upcoming_sessions_count}
-                                  </p>
-                                </div>
-                              </>
-                            )}
-                          </div>
+                          )}
 
-                          {/* Primary Action: Open Dossier */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenDossier(client)}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-charcoal text-white px-3.5 py-2 text-xs font-medium hover:bg-black transition shadow-2xs cursor-pointer"
-                          >
-                            <Compass className="h-3.5 w-3.5 text-sage" />
-                            <span>Open Dossier</span>
-                          </button>
+                          {/* Action: Open Dossier (Hidden for admins unless showAdminJourney is ON) */}
+                          {showJourney && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDossier(client)}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-charcoal text-white px-3.5 py-2 text-xs font-medium hover:bg-black transition shadow-2xs cursor-pointer"
+                            >
+                              <Compass className="h-3.5 w-3.5 text-sage" />
+                              <span>Open Dossier</span>
+                            </button>
+                          )}
 
-                          {/* Secondary Action: Family Case Link */}
-                          <Link
-                            to={`/admin/families?client=${client.client_id}&name=${encodeURIComponent(
-                              client.parent_name
-                            )}&email=${encodeURIComponent(client.email)}`}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-beige bg-[#faf8f4] text-charcoal px-3 py-2 text-xs font-medium hover:border-sage hover:text-sage-dark transition shadow-2xs"
-                            title="Open Family Case"
-                          >
-                            <Home className="h-3.5 w-3.5 text-sage-dark" />
-                            <span className="hidden sm:inline">Family Case</span>
-                          </Link>
+                          {/* Secondary Action: Family Case Link (Hidden for admins unless showAdminJourney is ON) */}
+                          {showJourney && (
+                            <Link
+                              to={`/admin/families?client=${client.client_id}&name=${encodeURIComponent(
+                                client.parent_name
+                              )}&email=${encodeURIComponent(client.email)}`}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-beige bg-[#faf8f4] text-charcoal px-3 py-2 text-xs font-medium hover:border-sage hover:text-sage-dark transition shadow-2xs"
+                              title="Open Family Case"
+                            >
+                              <Home className="h-3.5 w-3.5 text-sage-dark" />
+                              <span className="hidden sm:inline">Family Case</span>
+                            </Link>
+                          )}
 
-                          {/* Secondary Action: Session Notes Link */}
-                          <Link
-                            to={`/admin/sessions?client=${client.client_id}`}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-beige bg-[#faf8f4] text-charcoal px-3 py-2 text-xs font-medium hover:border-sage hover:text-sage-dark transition shadow-2xs"
-                            title="Open Session Notes"
-                          >
-                            <Sparkles className="h-3.5 w-3.5 text-sage-dark" />
-                            <span className="hidden sm:inline">Session Notes</span>
-                          </Link>
+                          {/* Secondary Action: Session Notes Link (Hidden for admins unless showAdminJourney is ON) */}
+                          {showJourney && (
+                            <Link
+                              to={`/admin/sessions?client=${client.client_id}`}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-beige bg-[#faf8f4] text-charcoal px-3 py-2 text-xs font-medium hover:border-sage hover:text-sage-dark transition shadow-2xs"
+                              title="Open Session Notes"
+                            >
+                              <Sparkles className="h-3.5 w-3.5 text-sage-dark" />
+                              <span className="hidden sm:inline">Session Notes</span>
+                            </Link>
+                          )}
 
-                          {/* More Options Dropdown Menu for User Management */}
+                          {/* More Options Dropdown Menu for User Management (Always Kept) */}
                           <div className="relative client-actions-dropdown">
                             <button
                               type="button"
