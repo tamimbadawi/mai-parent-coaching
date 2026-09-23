@@ -38,6 +38,7 @@ export interface SessionTranscript {
   sessionDate: string; // ISO date
   durationMinutes: number;
   googleMeetUrl?: string;
+  driveWebViewUrl?: string | null;
   focusAreas: string[];
   
   // Structured clinical insights

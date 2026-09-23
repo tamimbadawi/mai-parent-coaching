@@ -58,27 +58,18 @@ create index on public.member_action_items (household_member_id, status);
 
 AI-extracted items are inserted with `source = 'ai'`, `status = 'suggested'`; Mai accepts (`open`) or drops them.
 
-## `case_sessions` — recording & transcription columns (Stage 3)
+## `case_sessions` — recording link (Stage 3)
 
 ```sql
 alter table public.case_sessions
-  add column if not exists drive_file_id          text,
-  add column if not exists drive_web_view_url     text,
-  add column if not exists recording_duration_sec integer,
-  add column if not exists transcription_status   text not null default 'none'
-    check (transcription_status in ('none', 'pending', 'processing', 'done', 'failed')),
-  add column if not exists transcription_error    text,
-  add column if not exists transcribed_at         timestamptz;
+  add column if not exists drive_web_view_url text;
 ```
 
-## `bookings` — consent (Stage 3)
+That's all. The transcript itself lives in `session_content` (below); "has a transcript" = a `live_transcript` row exists.
 
-```sql
-alter table public.bookings
-  add column if not exists recording_consent boolean not null default false;
-```
+## Consent
 
-Existing booking RLS is unchanged; the public booking form writes this flag on insert.
+No consent columns. Recording consent is collected off-platform by Mai's assistant (see decisions.md §3). `bookings` is not changed by this feature.
 
 ## Transcript storage
 

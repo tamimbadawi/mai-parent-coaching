@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Users, Calendar, User, CheckCircle2, Loader2, AlertCircle, Home } from 'lucide-react';
+import { Users, Calendar, User, CheckCircle2, Loader2, AlertCircle, Home, ExternalLink } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { SuperAdminGate } from '../../components/auth/SuperAdminGate';
 import { TranscriptViewer } from '../../components/sessions/TranscriptViewer';
@@ -78,7 +78,7 @@ export const AdminSessions: React.FC = () => {
       // 3. Fetch case sessions with content
       const { data: sessionsData } = await supabase
         .from('case_sessions')
-        .select('id, household_id, booking_id, session_date, duration_minutes, google_meet_url, status, session_content(id, content_type, content, source_metadata)')
+        .select('id, household_id, booking_id, session_date, duration_minutes, google_meet_url, drive_web_view_url, status, session_content(id, content_type, content, source_metadata)')
         .order('session_date', { ascending: true });
 
       // 4. Fetch bookings
@@ -217,6 +217,7 @@ export const AdminSessions: React.FC = () => {
               sessionDate: dbSess.session_date,
               durationMinutes: dbSess.duration_minutes || seedSession?.durationMinutes || 50,
               googleMeetUrl: dbSess.google_meet_url || seedSession?.googleMeetUrl,
+              driveWebViewUrl: dbSess.drive_web_view_url || seedSession?.driveWebViewUrl,
               focusAreas: seedSession?.focusAreas || (household.presenting_issue ? [household.presenting_issue.slice(0, 40)] : ['Parent Coaching']),
               clinicalSummary,
               handwrittenNotes,
@@ -479,12 +480,13 @@ export const AdminSessions: React.FC = () => {
 
     setSaveStatus('saving');
     try {
-      // Update case_session duration & status
+      // Update case_session duration, status & recording link
       await supabase
         .from('case_sessions')
         .update({
           duration_minutes: updatedSession.durationMinutes,
           status: updatedSession.status === 'completed' ? 'completed' : 'scheduled',
+          drive_web_view_url: updatedSession.driveWebViewUrl ?? null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', updatedSession.id);
@@ -548,6 +550,51 @@ export const AdminSessions: React.FC = () => {
       console.error('Failed to persist session updates to Supabase:', saveErr);
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 4000);
+    }
+  };
+
+  // Google Drive link editing state
+  const [driveInput, setDriveInput] = useState('');
+  const [driveError, setDriveError] = useState<string | null>(null);
+  const [isSavingDrive, setIsSavingDrive] = useState(false);
+
+  // Sync drive link input when active session changes
+  useEffect(() => {
+    setDriveInput(activeSession?.driveWebViewUrl || '');
+    setDriveError(null);
+  }, [activeSession?.id, activeSession?.driveWebViewUrl]);
+
+  const handleSaveDriveLink = async () => {
+    if (!activeSession) return;
+    const trimmed = driveInput.trim();
+    if (!trimmed.startsWith('https://drive.google.com/')) {
+      setDriveError('Link must start with https://drive.google.com/');
+      return;
+    }
+    setDriveError(null);
+    setIsSavingDrive(true);
+    try {
+      await handleUpdateSession({
+        ...activeSession,
+        driveWebViewUrl: trimmed,
+      });
+    } finally {
+      setIsSavingDrive(false);
+    }
+  };
+
+  const handleClearDriveLink = async () => {
+    if (!activeSession) return;
+    setDriveInput('');
+    setDriveError(null);
+    setIsSavingDrive(true);
+    try {
+      await handleUpdateSession({
+        ...activeSession,
+        driveWebViewUrl: null,
+      });
+    } finally {
+      setIsSavingDrive(false);
     }
   };
 
@@ -703,8 +750,84 @@ export const AdminSessions: React.FC = () => {
             </div>
           }
         >
+          {/* Google Drive Link Bar */}
+          <div className="mb-3 rounded-2xl border border-beige bg-white p-3 shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center shrink-0">
+                  <ExternalLink className="w-4 h-4 text-emerald-700" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-charcoal">Voice Recording (Google Drive)</span>
+                    {activeSession.driveWebViewUrl ? (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Linked
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-warm-gray">Not linked</span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-warm-gray truncate">
+                    {activeSession.driveWebViewUrl ? (
+                      <a
+                        href={activeSession.driveWebViewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-700 hover:underline inline-flex items-center gap-1 font-mono text-[10px]"
+                      >
+                        {activeSession.driveWebViewUrl}
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    ) : (
+                      'Paste the Google Drive link to the session voice recording'
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* Input & Action buttons */}
+              <div className="flex flex-col items-start sm:items-end gap-1 shrink-0">
+                <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                  <input
+                    type="url"
+                    value={driveInput}
+                    onChange={(e) => {
+                      setDriveInput(e.target.value);
+                      if (driveError) setDriveError(null);
+                    }}
+                    placeholder="https://drive.google.com/..."
+                    className="w-full sm:w-72 text-xs rounded-xl border border-beige bg-[#faf8f4] px-3 py-1.5 text-charcoal placeholder:text-warm-gray/60 focus:bg-white focus:border-sage focus:outline-hidden transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveDriveLink}
+                    disabled={isSavingDrive}
+                    className="px-3 py-1.5 text-xs font-medium rounded-xl bg-sage text-white hover:bg-sage-dark transition shrink-0 disabled:opacity-50"
+                  >
+                    {isSavingDrive ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearDriveLink}
+                    disabled={isSavingDrive || (!driveInput && !activeSession.driveWebViewUrl)}
+                    className="px-2.5 py-1.5 text-xs font-medium rounded-xl border border-beige bg-white text-warm-gray hover:text-rose-600 hover:border-rose-200 transition shrink-0 disabled:opacity-40 disabled:hover:text-warm-gray disabled:hover:border-beige"
+                    title="Clear Drive link"
+                  >
+                    Clear
+                  </button>
+                </div>
+                {driveError && (
+                  <span className="text-[11px] font-medium text-rose-600">
+                    {driveError}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Main Content Grid directly under Header: Left 7/12 (Notes) + Right 5/12 (Assistant) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start lg:h-[calc(100vh-120px)] lg:max-h-[calc(100vh-120px)]">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start lg:h-[calc(100vh-175px)] lg:max-h-[calc(100vh-175px)]">
             <div className="lg:col-span-7 h-full min-h-0 min-w-0 flex flex-col overflow-hidden">
               <TranscriptViewer
                 session={activeSession}
@@ -730,6 +853,7 @@ export const AdminSessions: React.FC = () => {
           {showDossierModal && dossierClient ? (
             <ClientDossierModal
               client={dossierClient}
+              sessions={activeClient?.sessions}
               onClose={() => setShowDossierModal(false)}
               onClientUpdated={(updated) => {
                 setDossierClient((prev) => (prev ? { ...prev, ...updated } : null));

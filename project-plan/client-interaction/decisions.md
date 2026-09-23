@@ -40,11 +40,9 @@ Reviewed and revised version of the Antigravity draft plan (2026-09-23). This fi
 - Meet recordings are always **MP4** (even for voice-only calls with cameras off). The pipeline accepts MP4 and sends audio to Gemini; no conversion is required for Gemini.
 - **Auto-record:** set per meeting ("Record automatically" in the Calendar event's meeting settings), with the Workspace admin allowing it. Whether it can be set programmatically on events created by `_shared/google-calendar.ts` must be **verified in Stage 0**, not assumed. Fallback: Mai presses Record at call start.
 - Recordings land in the organizer's `My Drive/Meet Recordings/`. **Nothing is copied into Supabase Storage.** The database stores only the Drive file ID and link.
-- **Linking is manual first, automatic later:**
-  - Stage 4: Mai pastes a Drive link on the session; the app parses the file ID.
-  - Stage 6: automatic lookup via Google Meet REST API (conference record → recording → Drive file ID) using the coach's OAuth token, run by a scheduled job after the session ends (recordings appear minutes to hours later).
+- **Linking is manual:** Mai pastes the Drive link on the session (Stage 3). Automatic Meet/Drive lookup was dropped as unnecessary at this scale (2026-09-23); revisit only if session volume makes pasting painful.
 - **Access:** the Drive link opens in Google Drive under Mai's Google account. Drive's own sharing stays private (organizer only). The website never makes files public.
-- **Consent:** bookings gain a `recording_consent` flag. Sessions without consent are not recorded or transcribed.
+- **Consent (decided by user, 2026-09-23):** recording consent is collected **outside the website** — Mai's assistant obtains it from the client verbally or in writing. The system stores **no consent flag**: no booking checkbox, no `recording_consent` column, and transcription is not gated on consent in code.
 
 ---
 
@@ -58,7 +56,7 @@ Reviewed and revised version of the Antigravity draft plan (2026-09-23). This fi
 - **Two-step pipeline (decided):**
   1. **Transcribe only** → structured utterances saved to `session_content` (`live_transcript`). Mai can review/correct.
   2. **Analyse text** → summary, insights, and action items from the saved transcript, via the existing analysis functions. A failure in step 2 never loses the transcript.
-- **Runs as a background job**, not one blocking request: Edge Function uploads audio to the Gemini Files API and records a status (`pending → processing → done | failed`) on the session; the UI polls. Long recordings are split into ~10–15 minute chunks to stay within Edge Function time/memory limits and reduce timestamp drift; chunk timestamps are offset and merged.
+- **Keep it simple (user, 2026-09-23):** one "Transcribe" button → one Edge Function request → transcript saved. No job queue or status tracking. Chunking is added **only if** a real 60-minute recording fails or times out. No automatic Drive/Meet lookup; Mai pastes the Drive link.
 - **Speaker attribution:** the prompt receives the session's attendee roster (from `session_attendees`: name + role) and Mai's name, so speakers are labelled as real people. Diarization is model-inferred, not acoustic — Mai can reassign a speaker in the viewer.
 
 ---
@@ -115,3 +113,20 @@ Full schema: [schema.md](file:///d:/Cursor/Mai_Website/project-plan/client-inter
 - `Mockup/كيف تؤثر ضغوطنا ... [6QBocv9Xjik].mp3` is a public podcast: 2 speakers, mostly formal Arabic, little overlap. Good for a first pass; **it overstates real-session accuracy**.
 - Add at least one self-recorded role-play in dialect with 3 speakers and interruptions before judging quality.
 - Mockup audio stays local and is not committed to git.
+
+---
+
+## 9. Session page follows Mai's workflow: Before → Session → After (user, 2026-09-23)
+
+The session page is organised around Mai's three moments, not by content type. Replaces the Notes / Action Plan / Dynamics / Transcript tabs.
+
+| Step | Purpose | Contents | Storage |
+| :--- | :--- | :--- | :--- |
+| **Before** | Recap just before the call | Auto-assembled (no AI needed): presenting issue + working plan, last session's write-up, open `member_action_items` per member, member concern levels + recent `member_notes`. Plus "My prep notes". | Recap assembled live; prep notes → `session_content.pre_session_recap` |
+| **Session** | Raw capture during the call | Handwritten notes (typed, or photo → Gemini OCR **appended**), Drive recording link, transcript when available. | `handwritten_notes`, `case_sessions.drive_web_view_url`, `live_transcript` |
+| **After** | Fresh analysis right after | Write-up, key insights, dynamics, action items assigned per member, quick member note per attendee. | `post_session_notes`, `member_action_items`, `member_notes` |
+
+- Default step: future session → Before; today → Session; past without a write-up → After.
+- Chat panel stays visible on all steps.
+- **Action items live only in `member_action_items`** (with `session_id`), never inside `post_session_notes.source_metadata`. This is what lets "After" feed the next session's "Before" and the member persona.
+- Existing action items in `source_metadata` are demo/seed data; no migration of them needed unless real ones exist.

@@ -13,13 +13,11 @@ STAGE 1: Family persona data model + editor
    ▼
 STAGE 2: Unified client card
    ▼
-STAGE 3: Recording link + consent (manual Drive link)
+STAGE 3: Recording link (manual Drive link)
    ▼
-STAGE 4: Transcription job (Drive/upload → Gemini → live_transcript)
+STAGE 4: Transcribe button (upload → Gemini → live_transcript)
    ▼
-STAGE 5: Transcript analysis → notes & member action items
-   ▼
-STAGE 6: Automatic recording lookup (Meet API + scheduled job)
+STAGE 5: Summary & action items (optional)
 ```
 
 ---
@@ -47,28 +45,29 @@ Rules out the whole approach cheaply before UI work.
 - [x] Loading / empty / error states.
 - [x] Verification: Checked with `tsc` (`npx tsc --noEmit -p tsconfig.app.json` - 0 errors in touched files) and `vite build`.
 
-## Stage 3 — Recording link & consent
-- [ ] Migration: recording/transcription columns on `case_sessions`, `recording_consent` on `bookings`.
-- [ ] Booking form: consent checkbox (clear Arabic/English label), persisted on insert.
-- [ ] Session workspace + client card: "Paste Drive link" field (parse file ID, validate), "Open in Google Drive" button.
+## Stage 3 — Recording link (keep it simple)
+- [x] Migration: one column, `case_sessions.drive_web_view_url text`. No consent columns (decisions.md §3).
+- [x] Session view (`AdminSessions.tsx`): paste a Drive link, save it, clear it. Only accept links starting with `https://drive.google.com/`.
+- [x] Client card: the existing "Open in Google Drive" button shows when the link is set.
 
-## Stage 4 — Transcription job
-- [ ] Edge Function `session-transcribe` (admin-only, validates JWT + `is_admin`):
-  - Input: `session_id`. Refuses if `recording_consent` is false (free-tier phase: also refuses unless explicitly flagged as test data).
-  - Gets audio (Stage 4: admin file upload of the recording; Drive download added in Stage 6 when Drive scope exists).
-  - Uploads to Gemini Files API, chunked ~10–15 min; prompt includes attendee roster + Mai's name; returns utterance JSON (decisions.md §5).
-  - Sets `transcription_status` through `pending → processing → done | failed`; writes `live_transcript`.
-- [ ] Widen `TranscriptUtterance` in `src/types/session.ts`; `TranscriptViewer` renders RTL, lets Mai reassign a speaker and edit text.
-- [ ] Verify against the Mockup audio and one self-recorded dialect role-play.
+## Stage 3b — Session page: Before → Session → After (decisions.md §9)
+- [ ] Replace the Notes / Action Plan / Dynamics / Transcript tabs with three steps: Before, Session, After. Default step chosen by session date.
+- [ ] Before: auto recap from existing data + "My prep notes" (`pre_session_recap`).
+- [ ] Session: handwritten notes (typed + photo upload that appends), Drive link, transcript.
+- [ ] After: write-up, insights, dynamics, per-member action items (`member_action_items`), quick member notes.
+- [ ] Real save status (check Supabase errors); no demo/mock fallback text on real DB sessions.
 
-## Stage 5 — Analysis
-- [ ] Run existing text analysis (`family-session-analysis`) on the saved transcript for summary/insights (clinical-framework guard still applies).
-- [ ] Extract action items per member → `member_action_items` with `source='ai'`, `status='suggested'`; Mai accepts or drops in the persona "What's required" tab.
+## Stage 4 — Transcribe button
+- [ ] Edge Function `session-transcribe` (admin-only, same auth pattern as `gemini-generate`): Mai uploads the recording file for a session → Gemini → transcript JSON (decisions.md §5) saved into `session_content` `live_transcript`. The prompt includes the attendee names.
+- [ ] Try one plain request first. Only add chunking if a real 60-minute recording actually fails or times out.
+- [ ] `TranscriptViewer`: show Arabic right-to-left, with real speaker names. Editing text uses the existing edit pattern.
+- [ ] Test with the Mockup audio.
 
-## Stage 6 — Automatic recording lookup
-- [ ] Extend `google-calendar-auth` scopes (Drive read-only + Meet read-only); Mai re-consents once.
-- [ ] Scheduled job: for completed sessions without `drive_file_id`, look up the Meet conference recording → Drive file ID/link; optionally enqueue transcription.
-- [ ] `session-transcribe` can pull audio directly from Drive by file ID.
+## Stage 5 — Summary & action items (optional)
+- [ ] "Summarise" button reusing `family-session-analysis` on the saved transcript. Suggested action items can be added to a member with one click.
+
+## Dropped (not needed at this scale)
+- Automatic Drive/Meet recording lookup, scheduled jobs, extra Google OAuth scopes. Pasting the link takes seconds. Revisit only if session volume makes it painful.
 
 ## Before real client audio is processed
 - [ ] Revisit decisions.md §4 (free vs paid Gemini API tier) with the user.

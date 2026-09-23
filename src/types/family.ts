@@ -70,6 +70,7 @@ export interface CaseSession {
   duration_minutes: number | null;
   google_meet_url: string | null;
   status: CaseSessionStatus;
+  drive_web_view_url?: string | null;
   session_content?: SessionContent[];
   session_attendees?: { household_member_id: string }[];
   created_at: string;
