@@ -48,6 +48,8 @@ Reviewed and revised version of the Antigravity draft plan (2026-09-23). This fi
 
 ## 4. Transcription engine & data-handling decision
 
+> **Parked as a future feature (user, 2026-09-23).** Everything below still applies when it resumes; spike results and the recommended chunked design are in next-steps.md.
+
 - **Engine:** Gemini (Flash-class model via the Gemini API), called only from Edge Functions using `_shared/gemini.ts`. `GEMINI_API_KEY` stays server-side.
 - **Decision (user, 2026-09-23): stay on the free Gemini API tier for the testing phase.**
   - Known trade-off, accepted: on the free tier Google may use submitted content to improve its products. Free-tier limits are low (repo comment in `_shared/gemini.ts`: ~20 requests/day for Flash/Pro models).

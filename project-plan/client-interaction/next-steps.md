@@ -15,9 +15,9 @@ STAGE 2: Unified client card
    ▼
 STAGE 3: Recording link (manual Drive link)
    ▼
-STAGE 4: Transcribe button (upload → Gemini → live_transcript)
+STAGE 3b: Session page — Prep → Session → Write-up
    ▼
-STAGE 5: Summary & action items (optional)
+FUTURE: Transcription + summary (parked, see below)
 ```
 
 ---
@@ -57,14 +57,28 @@ Rules out the whole approach cheaply before UI work.
 - [x] Write-up: consultation write-up, insights, dynamics, per-member action items (`member_action_items`), quick member notes.
 - [x] Real save status (check Supabase errors); no demo/mock fallback text on real DB sessions; demo clients labeled with `(Demo)`.
 
-## Stage 4 — Transcribe button
-- [ ] Edge Function `session-transcribe` (admin-only, same auth pattern as `gemini-generate`): Mai uploads the recording file for a session → Gemini → transcript JSON (decisions.md §5) saved into `session_content` `live_transcript`. The prompt includes the attendee names.
-- [ ] Try one plain request first. Only add chunking if a real 60-minute recording actually fails or times out.
-- [ ] `TranscriptViewer`: show Arabic right-to-left, with real speaker names. Editing text uses the existing edit pattern.
-- [ ] Test with the Mockup audio.
+## Future feature (parked 2026-09-23, user decision): automatic transcription + summary
+Parked because it was taking too much effort for now. Mai pastes the Drive link, and writes notes / uploads photos of notes as today. Resume from here — **do not repeat the spikes below**.
 
-## Stage 5 — Summary & action items (optional)
-- [ ] "Summarise" button reusing `family-session-analysis` on the saved transcript. Suggested action items can be added to a member with one click.
+**Already built and committed (7adc6c0), not wired into any UI:**
+- Edge Function `session-transcribe` (deployed; admin-only; refuses anything without `test_mode=true`).
+- `scripts/spike-stage4-transcribe.js`; outputs in `Mockup/output/stage4_*.json` (gitignored). Test recordings in `Mockup/test_session_*.mp4|m4a` (Arabic podcast, non-client).
+
+**Spike 1 findings (single request per file):**
+| File | Result |
+| :--- | :--- |
+| 10-min MP4 (14 MB) | ✅ 54 s, valid JSON, near-verbatim dialect Arabic, **2 speakers correctly separated** |
+| 60-min audio-only M4A (22 MB) | ✅ 107 s, 7,759 words, timestamps 00:01→57:36 monotonic — but ❌ **all 476 lines labelled as the coach** (speaker separation collapses on long files) |
+| 60-min MP4 (82 MB) | ❌ timed out at 305 s |
+- Video is token-heavy: 10 min of MP4 = 54,600 input tokens vs 60 min of audio = 90,000.
+- 60-min output used 29,581 of 32,768 max output tokens (near the cap).
+
+**Recommended design when resumed (untested — run "spike 2" first):**
+1. Upload the recording to the Gemini Files API once (own request).
+2. Transcribe in ~10-minute windows (`videoMetadata.startOffset/endOffset`, low fps + `mediaResolution: LOW` for video), absolute timestamps, `maxOutputTokens` 65536; UI shows progress and merges windows into `session_content.live_transcript`.
+3. Fallback if windows don't work: extract audio in the browser before upload.
+- Free tier ≈ 20 requests/day → ~6 requests per 1-hour session. Revisit decisions.md §4 (paid tier) before any real client audio.
+- Then: optional "Summarise" button reusing `family-session-analysis` on the transcript → suggested action items per member.
 
 ## Dropped (not needed at this scale)
 - Automatic Drive/Meet recording lookup, scheduled jobs, extra Google OAuth scopes. Pasting the link takes seconds. Revisit only if session volume makes it painful.

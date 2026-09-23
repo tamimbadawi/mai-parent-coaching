@@ -1,6 +1,6 @@
 # Client Interaction, Voice Session Pipeline & Family Personas — Status
 
-## Current Status: 🟢 Stage 3b Complete & Verified — Ready for Stage 4
+## Current Status: 🟢 Stages 1–3b Complete & Verified — Transcription parked as a future feature
 - Plan revised from the Antigravity draft on 2026-09-23 after review. See [decisions.md](file:///d:/Cursor/Mai_Website/project-plan/client-interaction/decisions.md), [schema.md](file:///d:/Cursor/Mai_Website/project-plan/client-interaction/schema.md), [next-steps.md](file:///d:/Cursor/Mai_Website/project-plan/client-interaction/next-steps.md).
 - **Stage 0 Spike (⚠️ Partial, 2026-09-23)**: Audio slice (3 min from `Mockup/` MP3) tested via `scripts/spike-arabic-transcription.js`. Dialectal Arabic accuracy near-verbatim in 19.1s. Note: Workspace recording capability and calendar auto-record checks remain open.
 - **Stage 1 Complete (2026-09-23)**: Family persona model, `member_notes`, `member_action_items`, migration pushed, `MemberStudyModal` 5-tab redesign, `HouseholdDossier` persona badges, RLS verified.
@@ -19,8 +19,8 @@
 | 2 | Unified client card | ✅ Complete |
 | 3 | Recording link (consent handled off-platform) | ✅ Complete |
 | 3b | Session page: Before → Session → After | ✅ Complete |
-| 4 | Transcribe button | ⬜ |
-| 5 | Summary & action items (optional) | ⬜ |
+| 4 | Transcribe button | 💤 Future feature (parked 2026-09-23; spike findings in next-steps.md) |
+| 5 | Summary & action items (optional) | 💤 Future feature (depends on transcription) |
 | — | Automatic recording lookup | Dropped (not needed at this scale) |
 
 ## Open questions
