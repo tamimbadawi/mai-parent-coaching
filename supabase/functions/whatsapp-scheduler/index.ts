@@ -196,6 +196,7 @@ Deno.serve(async (request: Request) => {
     const { data: eligibleClients } = await supabaseAdmin
       .from('customer_journey_state')
       .select('*')
+      .eq('role', 'student')
       .eq('engagement_status', 'active')
       .not('phone', 'is', null)
       .in('lifecycle_stage', ['track_a_active', 'track_a_taper', 'track_b_between_sessions', 'track_b_reengagement_due']);
@@ -291,6 +292,7 @@ Deno.serve(async (request: Request) => {
         .from('customer_journey_state')
         .select('*')
         .eq('client_id', body.test_crm_client_id)
+        .eq('role', 'student')
         .single();
 
       if (testClient) {

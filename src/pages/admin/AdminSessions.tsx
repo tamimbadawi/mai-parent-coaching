@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Users, Calendar, User, CheckCircle2, Loader2, AlertCircle, Home, ExternalLink } from 'lucide-react';
 import AdminLayout from './AdminLayout';
-import { SuperAdminGate } from '../../components/auth/SuperAdminGate';
 import { TranscriptViewer } from '../../components/sessions/TranscriptViewer';
 import { SessionChatPanel } from '../../components/sessions/SessionChatPanel';
 import { ClientDossierModal } from './components/ClientDossierModal';
@@ -64,28 +63,29 @@ export const AdminSessions: React.FC = () => {
   const loadRealClientSessions = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. Fetch profiles
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, phone, role')
-        .order('created_at', { ascending: false });
-
-      // 2. Fetch households with members
-      const { data: householdsData } = await supabase
-        .from('households')
-        .select('id, primary_contact_profile_id, family_name, presenting_issue, working_plan, next_step, status, household_members(id, full_name, role, birth_year, notes)');
-
-      // 3. Fetch case sessions with content
-      const { data: sessionsData } = await supabase
-        .from('case_sessions')
-        .select('id, household_id, booking_id, session_date, duration_minutes, google_meet_url, drive_web_view_url, status, session_content(id, content_type, content, source_metadata)')
-        .order('session_date', { ascending: true });
-
-      // 4. Fetch bookings
-      const { data: bookingsData } = await supabase
-        .from('bookings')
-        .select('id, user_id, parent_name, email, phone, child_name, child_age, appointment_date, appointment_time, status, notes, google_meet_url')
-        .order('appointment_date', { ascending: false });
+      // 1-4. Fetch profiles, households, case_sessions, and bookings in parallel
+      const [
+        { data: profilesData },
+        { data: householdsData },
+        { data: sessionsData },
+        { data: bookingsData },
+      ] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, full_name, email, phone, role')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('households')
+          .select('id, primary_contact_profile_id, family_name, presenting_issue, working_plan, next_step, status, household_members(id, full_name, role, birth_year, notes)'),
+        supabase
+          .from('case_sessions')
+          .select('id, household_id, booking_id, session_date, duration_minutes, google_meet_url, drive_web_view_url, status, session_content(id, content_type, content, source_metadata)')
+          .order('session_date', { ascending: true }),
+        supabase
+          .from('bookings')
+          .select('id, user_id, parent_name, email, phone, child_name, child_age, appointment_date, appointment_time, status, notes, google_meet_url')
+          .order('appointment_date', { ascending: false }),
+      ]);
 
       const profiles = profilesData || [];
       const households = householdsData || [];
@@ -365,13 +365,14 @@ export const AdminSessions: React.FC = () => {
 
       setClients(unifiedClients);
 
-      // Check if URL specifies a client
-      const urlClientId = searchParams.get('client');
+      // Check if initial URL specifies a client
+      const initialParams = new URLSearchParams(window.location.search);
+      const urlClientId = initialParams.get('client');
       if (urlClientId) {
         const found = unifiedClients.find((c) => c.clientId === urlClientId);
         if (found) {
           setSelectedClientId(urlClientId);
-          const urlSessionId = searchParams.get('session');
+          const urlSessionId = initialParams.get('session');
           if (urlSessionId && found.sessions.some((s) => s.id === urlSessionId)) {
             setSelectedSessionId(urlSessionId);
           } else if (found.sessions.length > 0) {
@@ -386,7 +387,7 @@ export const AdminSessions: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     void loadRealClientSessions();
@@ -614,29 +615,23 @@ export const AdminSessions: React.FC = () => {
 
   if (!activeClient || !activeSession) {
     return (
-      <SuperAdminGate>
-        {() => (
-          <AdminLayout
-            title="Session Notes"
-            subtitle="Clinical notes and consultation intelligence."
-          >
-            <div className="flex flex-col items-center justify-center py-20 text-warm-gray">
-              <Loader2 className="h-8 w-8 animate-spin text-sage-dark mb-3" />
-              <p className="text-sm font-medium">Loading connected client records...</p>
-            </div>
-          </AdminLayout>
-        )}
-      </SuperAdminGate>
+      <AdminLayout
+        title="Session Notes"
+        subtitle="Clinical notes and consultation intelligence."
+      >
+        <div className="flex flex-col items-center justify-center py-20 text-warm-gray">
+          <Loader2 className="h-8 w-8 animate-spin text-sage-dark mb-3" />
+          <p className="text-sm font-medium">Loading connected client records...</p>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <SuperAdminGate>
-      {() => (
-        <AdminLayout
-          fillHeight
-          title="Session Notes"
-          subtitle="Structured clinical insights, action items, and conversational consultation."
+    <AdminLayout
+      fillHeight
+      title="Session Notes"
+      subtitle="Structured clinical insights, action items, and conversational consultation."
           action={
             <div className="flex items-center gap-2 flex-nowrap shrink-0">
               {/* Status Indicator (Syncing / Saved / Error) */}
@@ -726,7 +721,7 @@ export const AdminSessions: React.FC = () => {
                 </div>
               </div>
 
-              {/* 3. Open Client CRM Dossier in place (no page navigation) */}
+              {/* 3. Open Users CRM Dossier in place (no page navigation) */}
               <button
                 type="button"
                 onClick={() => void openClientDossier(activeClient)}
@@ -847,8 +842,6 @@ export const AdminSessions: React.FC = () => {
             />
           ) : null}
         </AdminLayout>
-      )}
-    </SuperAdminGate>
   );
 };
 

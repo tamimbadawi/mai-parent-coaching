@@ -29,7 +29,7 @@ import { UserComposerModal } from './components/UserComposerModal';
 import type { CustomerJourneyState } from '../../types';
 import { COUNTRIES } from '../../data/countries';
 
-type FilterTab = 'all' | 'track_a' | 'track_b' | 'attention' | 'active_coaching' | 'opted_out_paused' | 'admins';
+type FilterTab = 'all' | 'clients' | 'admins' | 'track_a' | 'track_b' | 'attention' | 'active_coaching' | 'opted_out_paused';
 
 export const AdminCRM = (): JSX.Element => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -123,21 +123,38 @@ export const AdminCRM = (): JSX.Element => {
 
   // Summary Metrics
   const stats = useMemo(() => {
-    const total = clients.length;
-    const trackA = clients.filter((c) => c.current_track === 'track_a').length;
-    const trackB = clients.filter((c) => c.current_track === 'track_b').length;
-    const attention = clients.filter(
+    const total = clients.length; // Everyone (clients + admins)
+    const clientUsers = clients.filter((c) => c.role === 'student');
+    const adminUsers = clients.filter((c) => c.role === 'admin');
+
+    const totalClients = clientUsers.length;
+    const totalAdmins = adminUsers.length;
+
+    // Track and lifecycle counts: CLIENTS ONLY (admins excluded from nurture tracks)
+    const trackA = clientUsers.filter((c) => c.current_track === 'track_a').length;
+    const trackB = clientUsers.filter((c) => c.current_track === 'track_b').length;
+    const attention = clientUsers.filter(
       (c) =>
         c.lifecycle_stage === 'track_b_reengagement_due' ||
         c.lifecycle_stage === 'track_a_taper' ||
         c.lifecycle_stage === 'track_b_quiet'
     ).length;
-    const optedOutOrPaused = clients.filter(
+    const activeCoaching = clientUsers.filter((c) => c.upcoming_sessions_count > 0).length;
+    const optedOutOrPaused = clientUsers.filter(
       (c) => c.engagement_status === 'opted_out' || c.engagement_status === 'paused'
     ).length;
-    const admins = clients.filter((c) => c.role === 'admin').length;
 
-    return { total, trackA, trackB, attention, optedOutOrPaused, admins };
+    return {
+      total,
+      totalClients,
+      totalAdmins,
+      trackA,
+      trackB,
+      attention,
+      activeCoaching,
+      optedOutOrPaused,
+      admins: totalAdmins,
+    };
   }, [clients]);
 
   // Filter and search logic
@@ -153,27 +170,35 @@ export const AdminCRM = (): JSX.Element => {
       }
 
       // 2. Tab filter
-      if (activeTab === 'track_a') {
-        return client.current_track === 'track_a';
-      }
-      if (activeTab === 'track_b') {
-        return client.current_track === 'track_b';
-      }
-      if (activeTab === 'attention') {
-        return (
-          client.lifecycle_stage === 'track_b_reengagement_due' ||
-          client.lifecycle_stage === 'track_a_taper' ||
-          client.lifecycle_stage === 'track_b_quiet'
-        );
-      }
-      if (activeTab === 'active_coaching') {
-        return client.upcoming_sessions_count > 0;
-      }
-      if (activeTab === 'opted_out_paused') {
-        return client.engagement_status === 'opted_out' || client.engagement_status === 'paused';
+      if (activeTab === 'clients') {
+        return client.role === 'student';
       }
       if (activeTab === 'admins') {
         return client.role === 'admin';
+      }
+      // Track and lifecycle tabs count and show CLIENTS ONLY (admins excluded from nurture tracks)
+      if (activeTab === 'track_a') {
+        return client.role === 'student' && client.current_track === 'track_a';
+      }
+      if (activeTab === 'track_b') {
+        return client.role === 'student' && client.current_track === 'track_b';
+      }
+      if (activeTab === 'attention') {
+        return (
+          client.role === 'student' &&
+          (client.lifecycle_stage === 'track_b_reengagement_due' ||
+            client.lifecycle_stage === 'track_a_taper' ||
+            client.lifecycle_stage === 'track_b_quiet')
+        );
+      }
+      if (activeTab === 'active_coaching') {
+        return client.role === 'student' && client.upcoming_sessions_count > 0;
+      }
+      if (activeTab === 'opted_out_paused') {
+        return (
+          client.role === 'student' &&
+          (client.engagement_status === 'opted_out' || client.engagement_status === 'paused')
+        );
       }
 
       return true;
@@ -361,7 +386,7 @@ export const AdminCRM = (): JSX.Element => {
 
   return (
     <AdminLayout
-      title={activeSection === 'studio' ? 'Nurture Content Studio' : 'Client Relationship Management (CRM)'}
+      title={activeSection === 'studio' ? 'Nurture Content Studio' : 'Users CRM'}
       subtitle={
         activeSection === 'studio'
           ? 'Author, preview, and manage Track A & Track B nurture templates, worksheets, and prompts.'
@@ -476,7 +501,7 @@ export const AdminCRM = (): JSX.Element => {
           <>
             {/* Top Summary 5-Stat Cards (Compact horizontal layout matching user suggestion) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
-              {/* Card 1: Total Clients */}
+              {/* Card 1: Total Users (Everyone) */}
               <div className="rounded-2xl border border-beige/80 bg-white px-3.5 py-2.5 shadow-2xs transition hover:border-beige flex items-center gap-2.5 min-w-0">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#edf5f3] text-[#4d8b82]">
                   <Users className="h-4 w-4" />
@@ -487,10 +512,10 @@ export const AdminCRM = (): JSX.Element => {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-charcoal/80 truncate">
-                    TOTAL CLIENTS
+                    TOTAL USERS
                   </p>
                   <p className="text-[11px] text-warm-gray truncate leading-tight mt-0.5">
-                    Active registered parents
+                    Clients and admins
                   </p>
                 </div>
               </div>
@@ -598,7 +623,29 @@ export const AdminCRM = (): JSX.Element => {
                         : 'text-warm-gray hover:text-charcoal'
                     }`}
                   >
-                    All Clients ({clients.length})
+                    All ({stats.total})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('clients')}
+                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                      activeTab === 'clients'
+                        ? 'bg-white text-charcoal shadow-2xs font-semibold'
+                        : 'text-warm-gray hover:text-charcoal'
+                    }`}
+                  >
+                    Clients ({stats.totalClients})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('admins')}
+                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                      activeTab === 'admins'
+                        ? 'bg-white text-amber-800 shadow-2xs font-semibold'
+                        : 'text-warm-gray hover:text-charcoal'
+                    }`}
+                  >
+                    Admins ({stats.totalAdmins})
                   </button>
                   <button
                     type="button"
@@ -655,19 +702,6 @@ export const AdminCRM = (): JSX.Element => {
                   >
                     Opted Out / Paused ({stats.optedOutOrPaused})
                   </button>
-                  {stats.admins > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('admins')}
-                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                        activeTab === 'admins'
-                          ? 'bg-white text-amber-800 shadow-2xs font-semibold'
-                          : 'text-warm-gray hover:text-charcoal'
-                      }`}
-                    >
-                      Admins ({stats.admins})
-                    </button>
-                  )}
                 </div>
               </div>
             </div>

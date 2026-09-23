@@ -144,7 +144,7 @@ export default function Navbar() {
                     {profile?.role === 'admin' ? (
                       <>
                         <Link to="/admin" onClick={() => setIsProfileMenuOpen(false)} className="block rounded-xl px-2 py-2 text-sm text-sage-dark hover:bg-cream">Admin Dashboard</Link>
-                        <Link to="/admin/crm" onClick={() => setIsProfileMenuOpen(false)} className="block rounded-xl px-2 py-2 text-sm text-warm-gray hover:bg-cream">Client CRM & Users</Link>
+                        <Link to="/admin/crm" onClick={() => setIsProfileMenuOpen(false)} className="block rounded-xl px-2 py-2 text-sm text-warm-gray hover:bg-cream">Users CRM</Link>
                       </>
                     ) : (
                       <>
@@ -244,7 +244,7 @@ export default function Navbar() {
                 {profile?.role === 'admin' ? (
                   <>
                     <Link to="/admin" className="mt-4 block rounded-full bg-sage/10 px-5 py-3 text-sm font-medium text-sage-dark">Admin Dashboard</Link>
-                    <Link to="/admin/crm" className="block rounded-full bg-cream px-5 py-3 text-sm font-medium text-charcoal">Client CRM & Users</Link>
+                    <Link to="/admin/crm" className="block rounded-full bg-cream px-5 py-3 text-sm font-medium text-charcoal">Users CRM</Link>
                   </>
                 ) : (
                   <Link to="/dashboard" className="mt-4 block rounded-full bg-cream px-5 py-3 text-sm font-medium text-charcoal">My Dashboard</Link>

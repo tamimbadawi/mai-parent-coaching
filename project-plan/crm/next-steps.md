@@ -20,7 +20,7 @@ STAGE 2: Content Library Schema & Admin CRUD UI
 STAGE 3: Rotation & Dispatch Engine (Scheduler/Dispatcher Extension)
    │
    ▼
-STAGE 4: Admin Per-Client CRM Dossier & Unified Timeline
+STAGE 4: Admin Users CRM Dossier & Unified Timeline
    │
    ▼
 STAGE 5: Real End-to-End Loop Verification & Clean Disposal
@@ -127,14 +127,14 @@ STAGE 5: Real End-to-End Loop Verification & Clean Disposal
 
 ---
 
-### STAGE 4 — Admin Per-Client CRM Dossier & Unified Timeline ✅ *(Complete)*
+### STAGE 4 — Admin Users CRM Dossier & Unified Timeline ✅ *(Complete)*
 
 **Objective**: Consolidate all historical touchpoints into a unified, zero-memory client dossier so Mai can immediately see where a client stands.
 
-1. [x] **Client CRM Page (`/admin/crm`)**:
+1. [x] **Users CRM Page (`/admin/crm`)**:
    - Built [`src/pages/admin/AdminCRM.tsx`](file:///d:/Cursor/Mai_Website/src/pages/admin/AdminCRM.tsx) — full client list with 5-tab filter bar (All / Track A / Track B / Needs Attention / Active Coaching / Opted Out), search by name/email/phone, and 5 StatCards.
    - Added `/admin/crm` route to [`src/App.tsx`](file:///d:/Cursor/Mai_Website/src/App.tsx) with `requiredRole="admin"`.
-   - Added **Client CRM** nav item with `HeartHandshake` icon to admin sidebar in [`AdminLayout.tsx`](file:///d:/Cursor/Mai_Website/src/pages/admin/AdminLayout.tsx).
+   - Added **Users CRM** nav item with `HeartHandshake` icon to admin sidebar in [`AdminLayout.tsx`](file:///d:/Cursor/Mai_Website/src/pages/admin/AdminLayout.tsx).
    - Added **CRM Dossier** deep-link button to each student row in [`AdminUsers.tsx`](file:///d:/Cursor/Mai_Website/src/pages/admin/AdminUsers.tsx) (`/admin/crm?client=:id`).
 2. [x] **Client State Card (Relationship Intelligence section)**:
    - Built [`src/pages/admin/components/ClientDossierModal.tsx`](file:///d:/Cursor/Mai_Website/src/pages/admin/components/ClientDossierModal.tsx):

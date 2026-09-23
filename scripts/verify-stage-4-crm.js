@@ -53,7 +53,7 @@ async function logStep(stepNum, title) {
 }
 
 async function runStage4Verification() {
-  console.log('[START] Verifying Stage 4: Admin Per-Client CRM Dossier & Unified Timeline');
+  console.log('[START] Verifying Stage 4: Admin Users CRM Dossier & Unified Timeline');
 
   try {
     // ----------------------------------------------------

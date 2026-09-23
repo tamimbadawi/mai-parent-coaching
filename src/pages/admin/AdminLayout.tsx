@@ -1,7 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Users,
   MessageSquare,
   BookOpen,
   FileText,
@@ -72,8 +71,8 @@ const AdminLayout = ({ children, title, subtitle, action, headerContent, fillHei
       items: [
         { to: '/admin', label: 'Overview', icon: LayoutDashboard },
         { to: '/admin/bookings', label: 'Bookings', icon: CalendarDays },
-        { to: '/admin/crm', label: 'Client CRM', icon: HeartHandshake },
-        { to: '/admin/sessions', label: 'Session Notes', icon: Sparkles, badge: 'Super' },
+        { to: '/admin/crm', label: 'Users CRM', icon: HeartHandshake },
+        { to: '/admin/sessions', label: 'Session Notes', icon: Sparkles },
         { to: '/admin/messages', label: 'Inbox', icon: MessageSquare },
         { to: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
       ],
