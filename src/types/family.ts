@@ -1,5 +1,5 @@
 export type HouseholdStatus = 'active' | 'paused' | 'completed';
-export type HouseholdMemberRole = 'mother' | 'father' | 'child' | 'guardian' | 'other';
+export type HouseholdMemberRole = 'parent' | 'mother' | 'father' | 'child' | 'guardian' | 'other';
 export type CaseSessionStatus = 'scheduled' | 'completed' | 'cancelled';
 export type SessionContentType = 'pre_session_recap' | 'live_transcript' | 'handwritten_notes' | 'post_session_notes';
 
@@ -103,6 +103,7 @@ export const currentAge = (birthYear: number | null): number | null =>
 
 export const roleLabel = (role: HouseholdMemberRole): string => {
   const labels: Record<HouseholdMemberRole, string> = {
+    parent: 'Parent',
     mother: 'Mother',
     father: 'Father',
     child: 'Child',

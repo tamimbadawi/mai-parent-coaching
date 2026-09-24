@@ -32,7 +32,7 @@ import type { CustomerJourneyState, CRMContentItem, CRMLifecycleStage } from '..
 import { roleLabel, currentAge, type Household, type HouseholdMember } from '../../../types/family';
 import { COUNTRIES } from '../../../data/countries';
 import InternalWhatsAppMessengerModal from './InternalWhatsAppMessengerModal';
-import { StartFamilyCaseModal } from '../family/StartFamilyCaseModal';
+import { ensureHousehold } from '../family/ensureHousehold';
 
 export interface TimelineEvent {
   id: string;
@@ -144,7 +144,7 @@ export const ClientDossierModal = ({
   const [updatingCadence, setUpdatingCadence] = useState(false);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [isMessengerOpen, setIsMessengerOpen] = useState(false);
-  const [isStartFamilyCaseOpen, setIsStartFamilyCaseOpen] = useState(false);
+  const [isEnsuringHousehold, setIsEnsuringHousehold] = useState(false);
 
   // Country details
   const countryObj = useMemo(() => {
@@ -334,11 +334,23 @@ export const ClientDossierModal = ({
 
       // 4. Fetch Household & Case Sessions
       if (client.client_id) {
-        const { data: householdData } = await supabase
+        let { data: householdData } = await supabase
           .from('households')
           .select('*, household_members(*)')
           .eq('primary_contact_profile_id', client.client_id)
           .maybeSingle();
+
+        if (!householdData) {
+          const hId = await ensureHousehold(client.client_id);
+          if (hId) {
+            const { data: createdHousehold } = await supabase
+              .from('households')
+              .select('*, household_members(*)')
+              .eq('id', hId)
+              .maybeSingle();
+            householdData = createdHousehold;
+          }
+        }
 
         if (householdData) {
           const membersList: HouseholdMember[] = householdData.household_members || [];
@@ -656,7 +668,7 @@ export const ClientDossierModal = ({
                   className="inline-flex items-center gap-1.5 font-medium text-sage-dark hover:text-charcoal hover:underline cursor-pointer"
                 >
                   <Sparkles className="h-3.5 w-3.5 text-sage-dark" />
-                  <span>Session Notes</span>
+                  <span>Client Workspace</span>
                 </Link>
               </div>
             </div>
@@ -998,7 +1010,7 @@ export const ClientDossierModal = ({
                         to={`/admin/sessions?client=${client.client_id}`}
                         className="inline-flex items-center gap-1.5 rounded-xl border border-beige bg-white px-3 py-2 text-xs font-medium text-charcoal hover:border-sage hover:text-sage-dark transition shadow-2xs shrink-0"
                       >
-                        Open in Session Notes
+                        Open in Client Workspace
                         <ArrowRight className="h-3 w-3" />
                       </Link>
                     </div>
@@ -1124,17 +1136,23 @@ export const ClientDossierModal = ({
                 ) : (
                   <div className="rounded-xl border border-dashed border-beige bg-[#faf8f4] py-12 text-center">
                     <Users className="mx-auto h-8 w-8 text-warm-gray/60 mb-2" />
-                    <h5 className="font-medium text-sm text-charcoal">No Household Linked</h5>
+                    <h5 className="font-medium text-sm text-charcoal">Household Setup</h5>
                     <p className="mt-1 text-xs text-warm-gray max-w-sm mx-auto">
-                      This client is not yet linked to a household in Family Cases. You can establish a household to record family personas, longitudinal notes, and member action items.
+                      A household workspace will be automatically established for this client.
                     </p>
                     <button
                       type="button"
-                      onClick={() => setIsStartFamilyCaseOpen(true)}
-                      className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-sage px-3 py-1.5 text-xs font-medium text-white hover:bg-sage-dark transition shadow-2xs cursor-pointer"
+                      disabled={isEnsuringHousehold}
+                      onClick={async () => {
+                        setIsEnsuringHousehold(true);
+                        await ensureHousehold(client.client_id);
+                        await loadTimeline();
+                        setIsEnsuringHousehold(false);
+                      }}
+                      className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-sage px-3 py-1.5 text-xs font-medium text-white hover:bg-sage-dark transition shadow-2xs cursor-pointer disabled:opacity-50"
                     >
                       <Sparkles className="h-3.5 w-3.5" />
-                      Start Family Case
+                      <span>{isEnsuringHousehold ? 'Setting up...' : 'Create Household Profile'}</span>
                     </button>
                   </div>
                 )}
@@ -1342,22 +1360,7 @@ export const ClientDossierModal = ({
         onMessageSent={() => void loadTimeline()}
       />
 
-      {/* Start Family Case Modal */}
-      {isStartFamilyCaseOpen && (
-        <StartFamilyCaseModal
-          client={{
-            id: client.client_id,
-            full_name: client.parent_name,
-            email: client.email,
-          }}
-          isOpen={isStartFamilyCaseOpen}
-          onClose={() => setIsStartFamilyCaseOpen(false)}
-          onSuccess={() => {
-            setIsStartFamilyCaseOpen(false);
-            void loadTimeline();
-          }}
-        />
-      )}
+
     </div>
   );
 };

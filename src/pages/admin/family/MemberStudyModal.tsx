@@ -38,7 +38,7 @@ import {
   type MemberActionPriority,
 } from '../../../types/family';
 
-const ROLE_OPTIONS: HouseholdMemberRole[] = ['mother', 'father', 'child', 'guardian', 'other'];
+const ROLE_OPTIONS: HouseholdMemberRole[] = ['parent', 'mother', 'father', 'child', 'guardian', 'other'];
 
 // Placeholder suggestion lists per project-plan/client-interaction/decisions.md §6.
 // To be updated once Mai provides the official clinical taxonomy.

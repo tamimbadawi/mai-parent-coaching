@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, Calendar, CheckCircle2, Loader2, AlertCircle, Plus, Sparkles, X } from 'lucide-react';
+import { Users, Calendar, CheckCircle2, Loader2, AlertCircle, Plus, X } from 'lucide-react';
 import { isToday, isFuture, parseISO } from 'date-fns';
 import AdminLayout from './AdminLayout';
 import { TranscriptViewer } from '../../components/sessions/TranscriptViewer';
 import { FamilyGlancePanel } from '../../components/sessions/FamilyGlancePanel';
 import { MemberStudyModal } from './family/MemberStudyModal';
-import { StartFamilyCaseModal } from './family/StartFamilyCaseModal';
+import { ensureHousehold } from './family/ensureHousehold';
 import { ClientDossierModal } from './components/ClientDossierModal';
 import { ClientPicker } from '../../components/admin/ClientPicker';
 import { MOCK_CLIENT_SESSIONS } from '../../data/mockSessions';
@@ -55,7 +55,7 @@ export const AdminSessions: React.FC = () => {
   const [loadingClientBookings, setLoadingClientBookings] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [newSessionError, setNewSessionError] = useState<string | null>(null);
-  const [isStartFamilyCaseOpen, setIsStartFamilyCaseOpen] = useState(false);
+  const isEnsuringHouseholdRef = useRef<string | null>(null);
 
   // Client and Session state with URL synchronization
   const initialClientId = searchParams.get('client') || clients[0]?.clientId || '';
@@ -510,9 +510,11 @@ export const AdminSessions: React.FC = () => {
     }
   }, []);
 
-  // Trigger lazy household fetch only when the active household changes
+  // Trigger lazy household fetch or ensure household if missing
   useEffect(() => {
-    if (!activeClient?.householdId) {
+    if (!activeClient) return;
+
+    if (!activeClient.householdId) {
       setHouseholdData({
         householdId: null,
         household: null,
@@ -522,16 +524,30 @@ export const AdminSessions: React.FC = () => {
         attendees: [],
       });
       loadedHouseholdIdRef.current = null;
+
+      if (!activeClient.isDemo && isEnsuringHouseholdRef.current !== activeClient.clientId) {
+        isEnsuringHouseholdRef.current = activeClient.clientId;
+        void ensureHousehold(activeClient.clientId).then(async (newHouseholdId) => {
+          if (newHouseholdId) {
+            setClients((prev) =>
+              prev.map((c) =>
+                c.clientId === activeClient.clientId ? { ...c, householdId: newHouseholdId } : c
+              )
+            );
+            await fetchHouseholdData(newHouseholdId);
+          }
+        });
+      }
       return;
     }
 
     if (activeClient.householdId !== loadedHouseholdIdRef.current) {
       void fetchHouseholdData(activeClient.householdId);
     }
-  }, [activeClient?.householdId, fetchHouseholdData]);
+  }, [activeClient?.clientId, activeClient?.householdId, activeClient?.isDemo, fetchHouseholdData]);
 
-  // When client changes, auto-select their first session
-  const handleSelectClient = (clientId: string) => {
+  // When client changes, auto-select their first session and ensure household if needed
+  const handleSelectClient = async (clientId: string) => {
     setSelectedClientId(clientId);
     const targetClient = clients.find((c) => c.clientId === clientId);
     if (targetClient && targetClient.sessions.length > 0) {
@@ -540,6 +556,16 @@ export const AdminSessions: React.FC = () => {
       setSearchParams({ client: clientId, session: nextSessionId });
     } else {
       setSearchParams({ client: clientId });
+    }
+
+    if (targetClient && !targetClient.householdId && !targetClient.isDemo) {
+      const hId = await ensureHousehold(clientId);
+      if (hId) {
+        setClients((prev) =>
+          prev.map((c) => (c.clientId === clientId ? { ...c, householdId: hId } : c))
+        );
+        void fetchHouseholdData(hId);
+      }
     }
   };
 
@@ -1122,13 +1148,20 @@ export const AdminSessions: React.FC = () => {
     return true;
   };
 
-  // Open New Session modal (or Start Family Case if client has no household)
+  // Open New Session modal
   const handleOpenNewSession = async () => {
     if (!activeClient) return;
-    if (!activeClient.householdId) {
-      setIsStartFamilyCaseOpen(true);
-      return;
+
+    if (!activeClient.householdId && !activeClient.isDemo) {
+      const hId = await ensureHousehold(activeClient.clientId);
+      if (hId) {
+        setClients((prev) =>
+          prev.map((c) => (c.clientId === activeClient.clientId ? { ...c, householdId: hId } : c))
+        );
+        void fetchHouseholdData(hId);
+      }
     }
+
     setIsNewSessionModalOpen(true);
     setNewSessionError(null);
     setLoadingClientBookings(true);
@@ -1147,7 +1180,18 @@ export const AdminSessions: React.FC = () => {
   };
 
   const handleCreateBlankSession = async () => {
-    if (!activeClient || !activeClient.householdId) return;
+    if (!activeClient) return;
+    let targetHouseholdId = activeClient.householdId;
+    if (!targetHouseholdId && !activeClient.isDemo) {
+      targetHouseholdId = (await ensureHousehold(activeClient.clientId)) || undefined;
+      if (targetHouseholdId) {
+        setClients((prev) =>
+          prev.map((c) => (c.clientId === activeClient.clientId ? { ...c, householdId: targetHouseholdId } : c))
+        );
+        void fetchHouseholdData(targetHouseholdId);
+      }
+    }
+    if (!targetHouseholdId) return;
     setCreatingSession(true);
     setNewSessionError(null);
     try {
@@ -1305,7 +1349,7 @@ export const AdminSessions: React.FC = () => {
   if (!activeClient || !activeSession) {
     return (
       <AdminLayout
-        title="Session Notes"
+        title="Client Workspace"
         subtitle="Clinical notes and structured consultation records."
       >
         <div className="flex flex-col items-center justify-center py-20 text-warm-gray">
@@ -1319,8 +1363,8 @@ export const AdminSessions: React.FC = () => {
   return (
     <AdminLayout
       fillHeight
-      title="Session Notes"
-      subtitle="Structured clinical insights, action items, and family progress."
+      title="Client Workspace"
+      subtitle="Everything for this family in one place — sessions, notes, and progress."
       action={
         <div className="flex items-center gap-2 flex-wrap shrink-0">
           {/* Status Indicator (Syncing / Saved / Error) */}
@@ -1398,18 +1442,7 @@ export const AdminSessions: React.FC = () => {
             <span>New Session</span>
           </button>
 
-          {/* 2c. Start Family Case Button (if no household linked yet) */}
-          {!activeClient.householdId && (
-            <button
-              type="button"
-              onClick={() => setIsStartFamilyCaseOpen(true)}
-              className="h-10 inline-flex items-center gap-1.5 px-3 text-xs font-semibold text-sage-dark bg-sage/15 hover:bg-sage/25 rounded-xl border border-sage/40 transition shadow-2xs shrink-0 cursor-pointer"
-              title="Start family case for this client"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Start Family Case</span>
-            </button>
-          )}
+
 
           {/* 3. Open Users CRM Dossier in place (no page navigation) */}
           <button
@@ -1466,7 +1499,6 @@ export const AdminSessions: React.FC = () => {
               onToggleActionItem={handleToggleActionItem}
               onUpdateHousehold={handleUpdateHousehold}
               onAddMember={handleAddMember}
-              onStartFamilyCase={() => setIsStartFamilyCaseOpen(true)}
             />
           </div>
         </div>
@@ -1513,22 +1545,7 @@ export const AdminSessions: React.FC = () => {
         />
       )}
 
-      {/* Floating Start Family Case Modal */}
-      {isStartFamilyCaseOpen && activeClient && (
-        <StartFamilyCaseModal
-          client={{
-            id: activeClient.clientId,
-            full_name: activeClient.clientName,
-            email: activeClient.clientEmail,
-          }}
-          isOpen={isStartFamilyCaseOpen}
-          onClose={() => setIsStartFamilyCaseOpen(false)}
-          onSuccess={async (_hId, clientId) => {
-            await loadRealClientSessions();
-            setSelectedClientId(clientId);
-          }}
-        />
-      )}
+
 
       {/* Floating New Session Modal */}
       {isNewSessionModalOpen && activeClient && (

@@ -27,7 +27,6 @@ import { EmptyPanel } from './components/AdminUI';
 import { ClientDossierModal } from './components/ClientDossierModal';
 import ContentLibraryStudio from './components/ContentLibraryStudio';
 import { UserComposerModal } from './components/UserComposerModal';
-import { StartFamilyCaseModal } from './family/StartFamilyCaseModal';
 import { DeleteUserModal } from './components/DeleteUserModal';
 import type { CustomerJourneyState } from '../../types';
 import { COUNTRIES } from '../../data/countries';
@@ -38,11 +37,6 @@ export const AdminCRM = (): JSX.Element => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [clients, setClients] = useState<CustomerJourneyState[]>([]);
   const [householdClientIds, setHouseholdClientIds] = useState<Set<string>>(new Set());
-  const [startCaseClient, setStartCaseClient] = useState<{
-    id: string;
-    full_name?: string | null;
-    email?: string | null;
-  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -852,34 +846,16 @@ export const AdminCRM = (): JSX.Element => {
                             </button>
                           )}
 
-                          {/* Session Notes / Family Case Action (Hidden for admins unless journey is expanded) */}
+                          {/* Client Workspace Action (Hidden for admins unless journey is expanded) */}
                           {showJourney && (
-                            householdClientIds.has(client.client_id) ? (
-                              <Link
-                                to={`/admin/sessions?client=${client.client_id}`}
-                                className="inline-flex items-center gap-1.5 rounded-xl border border-beige bg-[#faf8f4] text-charcoal px-3 py-2 text-xs font-medium hover:border-sage hover:text-sage-dark transition shadow-2xs"
-                                title="Open Session Notes & Family Case"
-                              >
-                                <Sparkles className="h-3.5 w-3.5 text-sage-dark" />
-                                <span className="hidden sm:inline">Session Notes</span>
-                              </Link>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setStartCaseClient({
-                                    id: client.client_id,
-                                    full_name: client.parent_name,
-                                    email: client.email,
-                                  })
-                                }
-                                className="inline-flex items-center gap-1.5 rounded-xl border border-sage/40 bg-sage/10 text-sage-dark px-3 py-2 text-xs font-medium hover:bg-sage/20 transition shadow-2xs cursor-pointer"
-                                title="Start Family Case"
-                              >
-                                <Sparkles className="h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">Start Family Case</span>
-                              </button>
-                            )
+                            <Link
+                              to={`/admin/sessions?client=${client.client_id}`}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-beige bg-[#faf8f4] text-charcoal px-3 py-2 text-xs font-medium hover:border-sage hover:text-sage-dark transition shadow-2xs"
+                              title="Open Client Workspace"
+                            >
+                              <Sparkles className="h-3.5 w-3.5 text-sage-dark" />
+                              <span className="hidden sm:inline">Workspace</span>
+                            </Link>
                           )}
 
                           {/* More Options Dropdown Menu for User Management (Always Kept) */}
@@ -979,18 +955,7 @@ export const AdminCRM = (): JSX.Element => {
         }}
       />
 
-      {/* Start Family Case Modal */}
-      {startCaseClient && (
-        <StartFamilyCaseModal
-          client={startCaseClient}
-          isOpen={Boolean(startCaseClient)}
-          onClose={() => setStartCaseClient(null)}
-          onSuccess={() => {
-            setStartCaseClient(null);
-            void fetchJourneyStates();
-          }}
-        />
-      )}
+
 
       {/* Delete User Type-To-Confirm Modal */}
       {deleteTargetClient && (

@@ -18,7 +18,6 @@ import {
   Plus,
   X,
   Check,
-  Sparkles,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import type {
@@ -53,7 +52,6 @@ interface FamilyGlancePanelProps {
     birth_year?: number | null;
     notes?: string | null;
   }) => Promise<boolean>;
-  onStartFamilyCase?: () => void;
 }
 
 export const FamilyGlancePanel: React.FC<FamilyGlancePanelProps> = ({
@@ -68,7 +66,6 @@ export const FamilyGlancePanel: React.FC<FamilyGlancePanelProps> = ({
   onToggleActionItem,
   onUpdateHousehold,
   onAddMember,
-  onStartFamilyCase,
 }) => {
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -253,16 +250,6 @@ export const FamilyGlancePanel: React.FC<FamilyGlancePanelProps> = ({
               <Pencil className="w-3 h-3 text-sage-dark" />
               <span className="hidden sm:inline">Edit</span>
             </button>
-          ) : !household && onStartFamilyCase ? (
-            <button
-              type="button"
-              onClick={onStartFamilyCase}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-sage-dark bg-sage/15 hover:bg-sage/25 px-2.5 py-1 rounded-lg border border-sage/40 transition cursor-pointer shadow-2xs"
-              title="Start family case for this client"
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>Start Case</span>
-            </button>
           ) : null}
 
           <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-cream border border-beige text-charcoal/75">
@@ -443,6 +430,29 @@ export const FamilyGlancePanel: React.FC<FamilyGlancePanelProps> = ({
                   <ChevronRight className="w-3.5 h-3.5 text-warm-gray group-hover:text-sage-dark group-hover:translate-x-0.5 transition shrink-0" />
                 </button>
               ))}
+
+              {/* Soft prompt when household has no child member yet */}
+              {household && !members.some((m) => m.role === 'child') && onAddMember && (
+                <div className="rounded-lg border border-dashed border-sage/50 bg-sage/5 p-2.5 flex items-center justify-between text-xs">
+                  <span className="text-charcoal/70">No child recorded yet</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewMemberDraft({
+                        full_name: '',
+                        role: 'child',
+                        birth_year: '',
+                        notes: '',
+                      });
+                      setIsAddingMember(true);
+                    }}
+                    className="font-semibold text-sage-dark hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Add a child</span>
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="rounded-lg border border-dashed border-beige bg-[#faf8f4] p-3 text-center">
@@ -712,6 +722,7 @@ export const FamilyGlancePanel: React.FC<FamilyGlancePanelProps> = ({
                     }
                     className="w-full p-2.5 rounded-xl bg-[#faf8f4] border border-beige/80 text-charcoal focus:outline-hidden focus:border-sage-dark font-medium"
                   >
+                    <option value="parent">Parent</option>
                     <option value="mother">Mother</option>
                     <option value="father">Father</option>
                     <option value="child">Child</option>

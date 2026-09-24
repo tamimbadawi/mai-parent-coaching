@@ -420,7 +420,7 @@ const AdminUsers = (): JSX.Element => {
                           to={`/admin/sessions?client=${user.id}`}
                           className="rounded-2xl border border-beige bg-[#faf8f4] px-4 py-3 text-sm font-medium text-charcoal transition hover:border-sage hover:text-sage-dark"
                         >
-                          <span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4 text-sage-dark" /> Session Notes</span>
+                          <span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4 text-sage-dark" /> Client Workspace</span>
                         </Link>
                         <button
                           onClick={() => openEdit(user)}
