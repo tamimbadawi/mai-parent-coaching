@@ -365,6 +365,19 @@ export const AdminSessions: React.FC = () => {
           });
         }
 
+        // Fill members from all household.household_members, whatever their role. If there's no household but there's a booking child_name, use that as a single child member.
+        let members: { name: string; role: string }[] | undefined;
+        if (household?.household_members && household.household_members.length > 0) {
+          members = (household.household_members as { full_name: string; role: string }[])
+            .filter((m) => Boolean(m.full_name))
+            .map((m) => ({
+              name: m.full_name,
+              role: m.role || 'member',
+            }));
+        } else if (childName) {
+          members = [{ name: childName, role: 'child' }];
+        }
+
         unifiedClients.push({
           clientId: profile.id,
           clientName: profile.full_name || (profile.email ? profile.email.split('@')[0] : 'Parent'),
@@ -374,6 +387,7 @@ export const AdminSessions: React.FC = () => {
           childAge,
           householdId: household?.id,
           totalSessions: clientSessions.length,
+          members,
           isDemo: false,
           sessions: clientSessions,
         });
@@ -384,6 +398,7 @@ export const AdminSessions: React.FC = () => {
         if (!unifiedClients.some((c) => c.clientId === m.clientId || (c.clientEmail && c.clientEmail.toLowerCase() === m.clientEmail.toLowerCase()))) {
           unifiedClients.push({
             ...m,
+            members: m.members || (m.childName ? [{ name: m.childName, role: 'child' }] : undefined),
             isDemo: true,
           });
         }

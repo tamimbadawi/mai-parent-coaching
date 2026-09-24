@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Users, User, ChevronDown, Search } from 'lucide-react';
+import { Users, User, ChevronDown, ChevronRight, Search } from 'lucide-react';
 import type { ClientSessionSummary } from '../../types/session';
 
 export interface ClientPickerProps {
@@ -8,6 +8,24 @@ export interface ClientPickerProps {
   onSelectClient: (clientId: string) => void;
   activeClient?: ClientSessionSummary;
 }
+
+interface VisibleClientItem {
+  type: 'client';
+  client: ClientSessionSummary;
+  clientId: string;
+  hasMembers: boolean;
+  isExpanded: boolean;
+}
+
+interface VisibleMemberItem {
+  type: 'member';
+  client: ClientSessionSummary;
+  clientId: string;
+  member: { name: string; role: string };
+  memberIndex: number;
+}
+
+type VisibleItem = VisibleClientItem | VisibleMemberItem;
 
 /**
  * Returns the timestamp of the client's most recent session (in ms), or 0 if none.
@@ -34,6 +52,7 @@ export const ClientPicker: React.FC<ClientPickerProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedClientIds, setExpandedClientIds] = useState<Set<string>>(new Set());
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -61,33 +80,94 @@ export const ClientPicker: React.FC<ClientPickerProps> = ({
     });
   }, [clients]);
 
-  // Case-insensitive substring match on clientName and childName
+  // Case-insensitive substring match on clientName or any household member name
   const filteredClients = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return sortedClients;
     return sortedClients.filter((client) => {
       const clientNameMatch = client.clientName?.toLowerCase().includes(q);
-      const childNameMatch = client.childName?.toLowerCase().includes(q);
-      return Boolean(clientNameMatch || childNameMatch);
+      const memberMatch = client.members?.some((m) => m.name?.toLowerCase().includes(q));
+      const childMatch = client.childName?.toLowerCase().includes(q);
+      return Boolean(clientNameMatch || memberMatch || childMatch);
     });
   }, [sortedClients, searchQuery]);
 
-  // Reset highlight to top when search query changes
+  // Manage expanded state:
+  // With no search text, all rows start collapsed.
+  // When search matches through a member, families expand automatically.
   useEffect(() => {
-    setHighlightedIndex(0);
-  }, [searchQuery]);
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      setExpandedClientIds(new Set());
+    } else {
+      const autoExpanded = new Set<string>();
+      for (const client of filteredClients) {
+        const matchesMember = client.members?.some((m) => m.name.toLowerCase().includes(q));
+        if (matchesMember) {
+          autoExpanded.add(client.clientId);
+        }
+      }
+      setExpandedClientIds(autoExpanded);
+    }
+  }, [searchQuery, filteredClients]);
 
-  // When opening, reset search and set highlight to active client if present
+  // Flatten visible items based on current expansion state
+  const visibleItems: VisibleItem[] = useMemo(() => {
+    const items: VisibleItem[] = [];
+    for (const client of filteredClients) {
+      const hasMembers = Boolean(client.members && client.members.length > 0);
+      const isExpanded = expandedClientIds.has(client.clientId);
+      items.push({
+        type: 'client',
+        client,
+        clientId: client.clientId,
+        hasMembers,
+        isExpanded,
+      });
+      if (hasMembers && isExpanded) {
+        client.members!.forEach((member, mIdx) => {
+          items.push({
+            type: 'member',
+            client,
+            clientId: client.clientId,
+            member,
+            memberIndex: mIdx,
+          });
+        });
+      }
+    }
+    return items;
+  }, [filteredClients, expandedClientIds]);
+
+  // When opening popover, reset search and set initial highlight to active client
   useEffect(() => {
     if (isOpen) {
       setSearchQuery('');
-      const currentIndex = sortedClients.findIndex((c) => c.clientId === selectedClientId);
-      setHighlightedIndex(currentIndex >= 0 ? currentIndex : 0);
+      setExpandedClientIds(new Set());
+      const idx = sortedClients.findIndex((c) => c.clientId === selectedClientId);
+      setHighlightedIndex(idx >= 0 ? idx : 0);
       requestAnimationFrame(() => {
         searchInputRef.current?.focus();
       });
     }
   }, [isOpen, selectedClientId, sortedClients]);
+
+  // Highlight selection logic when search query changes:
+  // When searching, find and highlight the first matching item (e.g. matching member if matched through member).
+  useEffect(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      return; // Do not reset highlight on expand/collapse when search is empty
+    }
+
+    const matchIdx = visibleItems.findIndex((item) => {
+      if (item.type === 'member') {
+        return item.member.name.toLowerCase().includes(q);
+      }
+      return item.client.clientName.toLowerCase().includes(q);
+    });
+    setHighlightedIndex(matchIdx >= 0 ? matchIdx : 0);
+  }, [searchQuery, visibleItems]);
 
   // Scroll highlighted item into view if it leaves visible area
   useEffect(() => {
@@ -120,21 +200,65 @@ export const ClientPicker: React.FC<ClientPickerProps> = ({
     triggerButtonRef.current?.focus();
   };
 
+  const toggleExpand = (clientId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setExpandedClientIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(clientId)) {
+        next.delete(clientId);
+      } else {
+        next.add(clientId);
+      }
+      return next;
+    });
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      if (filteredClients.length > 0) {
-        setHighlightedIndex((prev) => (prev < filteredClients.length - 1 ? prev + 1 : 0));
+      if (visibleItems.length > 0) {
+        setHighlightedIndex((prev) => (prev < visibleItems.length - 1 ? prev + 1 : 0));
       }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      if (filteredClients.length > 0) {
-        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : filteredClients.length - 1));
+      if (visibleItems.length > 0) {
+        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : visibleItems.length - 1));
+      }
+    } else if (e.key === 'ArrowRight') {
+      const current = visibleItems[highlightedIndex];
+      if (current && current.type === 'client' && current.hasMembers && !current.isExpanded) {
+        e.preventDefault();
+        setExpandedClientIds((prev) => new Set(prev).add(current.clientId));
+      }
+    } else if (e.key === 'ArrowLeft') {
+      const current = visibleItems[highlightedIndex];
+      if (current) {
+        if (current.type === 'client' && current.isExpanded) {
+          e.preventDefault();
+          setExpandedClientIds((prev) => {
+            const next = new Set(prev);
+            next.delete(current.clientId);
+            return next;
+          });
+        } else if (current.type === 'member') {
+          e.preventDefault();
+          setExpandedClientIds((prev) => {
+            const next = new Set(prev);
+            next.delete(current.clientId);
+            return next;
+          });
+          const parentIdx = visibleItems.findIndex(
+            (v) => v.type === 'client' && v.clientId === current.clientId
+          );
+          if (parentIdx >= 0) {
+            setHighlightedIndex(parentIdx);
+          }
+        }
       }
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (filteredClients[highlightedIndex]) {
-        handleSelect(filteredClients[highlightedIndex].clientId);
+      if (visibleItems[highlightedIndex]) {
+        handleSelect(visibleItems[highlightedIndex].clientId);
       }
     } else if (e.key === 'Escape') {
       e.preventDefault();
@@ -194,7 +318,7 @@ export const ClientPicker: React.FC<ClientPickerProps> = ({
       {/* Popover Dropdown */}
       {isOpen && (
         <div
-          className="absolute left-0 top-full mt-1.5 w-[280px] max-h-[320px] bg-white rounded-xl border border-beige/80 shadow-xl z-50 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+          className="absolute left-0 top-full mt-1.5 w-[280px] sm:w-[290px] max-h-[320px] bg-white rounded-xl border border-beige/80 shadow-xl z-50 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-100"
           onKeyDown={handleKeyDown}
         >
           {/* Autofocused Search Input */}
@@ -206,7 +330,7 @@ export const ClientPicker: React.FC<ClientPickerProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search client or child..."
+                placeholder="Search client or member..."
                 className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white border border-beige/80 rounded-lg text-charcoal placeholder:text-charcoal/40 focus:outline-hidden focus:border-sage-dark/60 transition-colors shadow-2xs"
                 autoFocus
               />
@@ -225,43 +349,97 @@ export const ClientPicker: React.FC<ClientPickerProps> = ({
               </div>
             ) : (
               <ul className="space-y-0.5" role="listbox">
-                {filteredClients.map((client, index) => {
-                  const isSelected = client.clientId === selectedClientId;
+                {visibleItems.map((item, index) => {
                   const isHighlighted = index === highlightedIndex;
+
+                  if (item.type === 'client') {
+                    const isSelected = item.client.clientId === selectedClientId;
+                    return (
+                      <li key={item.client.clientId} role="option" aria-selected={isSelected}>
+                        <div
+                          className={`w-full flex items-center justify-between gap-1 text-xs rounded-lg px-2 py-1 transition-colors ${
+                            isHighlighted
+                              ? 'bg-sage/15 text-sage-dark font-medium'
+                              : isSelected
+                              ? 'bg-[#faf8f4] text-charcoal font-medium'
+                              : 'text-charcoal hover:bg-[#faf8f4]'
+                          }`}
+                        >
+                          {/* Left: Expand/collapse chevron + Client name button */}
+                          <div className="flex items-center gap-1 min-w-0 flex-1">
+                            {item.hasMembers ? (
+                              <button
+                                type="button"
+                                onClick={(e) => toggleExpand(item.client.clientId, e)}
+                                className="w-5 h-5 flex items-center justify-center text-charcoal/50 hover:text-charcoal rounded hover:bg-black/5 transition-colors cursor-pointer shrink-0"
+                                title={item.isExpanded ? 'Collapse family' : 'Expand family'}
+                                aria-label={item.isExpanded ? 'Collapse family' : 'Expand family'}
+                              >
+                                <ChevronRight
+                                  className={`w-3.5 h-3.5 transition-transform duration-150 ${
+                                    item.isExpanded ? 'rotate-90 text-charcoal' : 'text-charcoal/60'
+                                  }`}
+                                />
+                              </button>
+                            ) : (
+                              <span className="w-5 shrink-0" />
+                            )}
+
+                            <button
+                              type="button"
+                              ref={(el) => {
+                                itemRefs.current[index] = el;
+                              }}
+                              onClick={() => handleSelect(item.client.clientId)}
+                              onMouseEnter={() => setHighlightedIndex(index)}
+                              className="flex items-center gap-1.5 min-w-0 flex-1 text-left cursor-pointer focus:outline-hidden py-0.5"
+                            >
+                              <span className="truncate">{item.client.clientName}</span>
+                              {item.client.isDemo && (
+                                <span className="text-[9px] uppercase tracking-wider font-semibold px-1 py-0.2 rounded bg-amber-500/15 text-amber-800 border border-amber-500/30 shrink-0">
+                                  (Demo)
+                                </span>
+                              )}
+                            </button>
+                          </div>
+
+                          {/* Right: Session count */}
+                          <span className="text-[11px] text-charcoal/50 tabular-nums shrink-0 ml-1">
+                            ({item.client.totalSessions})
+                          </span>
+                        </div>
+                      </li>
+                    );
+                  }
+
+                  // Member row
                   return (
-                    <li key={client.clientId} role="option" aria-selected={isSelected}>
-                      <button
-                        type="button"
-                        ref={(el) => {
-                          itemRefs.current[index] = el;
-                        }}
-                        onClick={() => handleSelect(client.clientId)}
-                        onMouseEnter={() => setHighlightedIndex(index)}
-                        className={`w-full text-left px-2.5 py-1.5 flex items-center justify-between gap-2 text-xs transition-colors cursor-pointer rounded-lg ${
+                    <li
+                      key={`${item.client.clientId}-mem-${item.memberIndex}-${item.member.name}`}
+                      role="option"
+                    >
+                      <div
+                        className={`w-full flex items-center text-xs rounded-lg pl-8 pr-2 py-1 transition-colors ${
                           isHighlighted
                             ? 'bg-sage/15 text-sage-dark font-medium'
-                            : isSelected
-                            ? 'bg-[#faf8f4] text-charcoal font-medium'
-                            : 'text-charcoal hover:bg-[#faf8f4]'
+                            : 'text-charcoal/60 hover:bg-[#faf8f4] hover:text-charcoal'
                         }`}
                       >
-                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                          <span className="truncate">{client.clientName}</span>
-                          {client.childName && (
-                            <span className="text-[11px] text-charcoal/50 truncate shrink-0">
-                              ({client.childName})
-                            </span>
-                          )}
-                          {client.isDemo && (
-                            <span className="text-[9px] uppercase tracking-wider font-semibold px-1 py-0.2 rounded bg-amber-500/15 text-amber-800 border border-amber-500/30 shrink-0">
-                              (Demo)
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[11px] text-charcoal/50 tabular-nums shrink-0 ml-1">
-                          ({client.totalSessions})
-                        </span>
-                      </button>
+                        <button
+                          type="button"
+                          ref={(el) => {
+                            itemRefs.current[index] = el;
+                          }}
+                          onClick={() => handleSelect(item.client.clientId)}
+                          onMouseEnter={() => setHighlightedIndex(index)}
+                          className="flex items-center gap-1.5 min-w-0 flex-1 text-left cursor-pointer focus:outline-hidden py-0.5"
+                        >
+                          <span className="truncate">
+                            {item.member.name}{' '}
+                            <span className="text-charcoal/40 font-normal">· {item.member.role}</span>
+                          </span>
+                        </button>
+                      </div>
                     </li>
                   );
                 })}

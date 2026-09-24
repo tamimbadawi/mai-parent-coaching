@@ -81,6 +81,7 @@ export interface ClientSessionSummary {
   childAge?: string;
   householdId?: string;
   totalSessions: number;
+  members?: { name: string; role: string }[];
   isDemo?: boolean;
   sessions: SessionTranscript[];
 }
