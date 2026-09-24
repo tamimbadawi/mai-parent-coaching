@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, Calendar, User, CheckCircle2, Loader2, AlertCircle, Plus, Sparkles, X } from 'lucide-react';
+import { Users, Calendar, CheckCircle2, Loader2, AlertCircle, Plus, Sparkles, X } from 'lucide-react';
 import { isToday, isFuture, parseISO } from 'date-fns';
 import AdminLayout from './AdminLayout';
 import { TranscriptViewer } from '../../components/sessions/TranscriptViewer';
@@ -8,6 +8,7 @@ import { FamilyGlancePanel } from '../../components/sessions/FamilyGlancePanel';
 import { MemberStudyModal } from './family/MemberStudyModal';
 import { StartFamilyCaseModal } from './family/StartFamilyCaseModal';
 import { ClientDossierModal } from './components/ClientDossierModal';
+import { ClientPicker } from '../../components/admin/ClientPicker';
 import { MOCK_CLIENT_SESSIONS } from '../../data/mockSessions';
 import { supabase } from '../../lib/supabase';
 import type { ClientSessionSummary, SessionTranscript, TranscriptUtterance, EmotionalObservation } from '../../types/session';
@@ -1334,36 +1335,12 @@ export const AdminSessions: React.FC = () => {
           )}
 
           {/* 1. Client Selector Dropdown */}
-          <div className="h-10 flex items-center gap-2 bg-[#faf8f4] px-2.5 rounded-xl border border-beige/80 shadow-2xs shrink-0">
-            <div className="w-6 h-6 rounded-lg bg-sage/20 border border-sage/40 flex items-center justify-center text-sage-dark shrink-0">
-              <Users className="w-3 h-3" />
-            </div>
-
-            <div className="flex flex-col text-left justify-center">
-              <span className="text-[9px] font-semibold text-charcoal/50 uppercase tracking-wider leading-none">
-                Client ({clients.length})
-              </span>
-              <select
-                value={selectedClientId}
-                onChange={(e) => handleSelectClient(e.target.value)}
-                className="font-serif text-xs font-semibold text-charcoal bg-transparent border-0 focus:outline-hidden cursor-pointer hover:text-sage-dark transition-colors py-0 pl-0 pr-3 max-w-[130px] sm:max-w-[170px] truncate leading-tight"
-              >
-                {clients.map((c) => (
-                  <option key={c.clientId} value={c.clientId}>
-                    {c.clientName}
-                    {c.isDemo ? ' (Demo)' : ''} {c.totalSessions > 0 ? `(${c.totalSessions})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {activeClient.childName && (
-              <span className="hidden lg:inline-flex items-center gap-1 text-[10px] font-medium bg-white text-charcoal/70 border border-beige/80 px-1.5 py-0.5 rounded-md shrink-0">
-                <User className="w-2.5 h-2.5 text-sage-dark" />
-                <span className="max-w-[80px] truncate">{activeClient.childName}</span>
-              </span>
-            )}
-          </div>
+          <ClientPicker
+            clients={clients}
+            selectedClientId={selectedClientId}
+            onSelectClient={handleSelectClient}
+            activeClient={activeClient}
+          />
 
           {/* 2. Session Selector Dropdown */}
           <div className="h-10 flex items-center gap-2 bg-[#faf8f4] px-2.5 rounded-xl border border-beige/80 shadow-2xs shrink-0">
