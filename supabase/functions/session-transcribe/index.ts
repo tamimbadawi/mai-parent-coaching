@@ -62,6 +62,18 @@ Deno.serve(async (request: Request) => {
       return json({ error: 'Forbidden: Admin access required.', code: 'ADMIN_REQUIRED' }, 403);
     }
 
+    const { data: activeUnlock } = await adminClient
+      .from('family_unlocks')
+      .select('id')
+      .eq('admin_id', userData.user.id)
+      .gt('expires_at', new Date().toISOString())
+      .limit(1)
+      .maybeSingle();
+
+    if (!activeUnlock) {
+      return json({ error: 'Forbidden: Active Family Sessions unlock required.', code: 'FAMILY_UNLOCK_REQUIRED' }, 403);
+    }
+
     // 2. Parse multipart/form-data
     let formData: FormData;
     try {

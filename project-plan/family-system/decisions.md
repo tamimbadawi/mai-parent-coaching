@@ -22,9 +22,14 @@
   - `handwritten_notes` (OCR from image uploads)
   - `post_session_notes` (Mai's typed write-up)
 
-### 5. Access Control & Single Administrator
-- **Decision**: Mai is the only administrator. No secondary passcodes, client-side unlock modals, or "super-admin" tiers.
-- **Implementation**: RLS policy checks `profiles.role = 'admin'`. Frontend gates access using standard `ProtectedRoute requiredRole="admin"`.
+### 5. Access Control: Admin Role + Shared Family Sessions Password
+- **Decision (revised 2026-09-24, supersedes "no secondary passcodes")**: Family Sessions content sits behind a single shared password that any admin can enter. Being an admin alone is not enough to read session content. No per-admin passwords, no "super-admin" tier.
+- **Implementation**:
+  - Password lives only as an Edge Function secret (`FAMILY_SESSIONS_PASSWORD`), never in frontend code or env.
+  - `family-unlock` Edge Function verifies the admin + password and writes a time-limited row to `family_unlocks` (8h). Basic brute-force guard: 5 failed attempts per admin per 15 min.
+  - RLS on session-content tables (`case_sessions`, `session_attendees`, `session_content`, `member_notes`, `member_action_items`, `session_chat_messages`) requires `is_admin() AND has_family_unlock()`. `households` / `household_members` stay admin-only (no password) so CRM badges and the Client Dossier's family summary keep working.
+  - Family AI Edge Functions (`session-chat`, `family-session-analysis`, `family-member-study`, `session-transcribe`) also reject callers without an active unlock.
+  - Frontend: unlock screen on `/admin/sessions` (and anything opening member notes); this is UX only, security is enforced by RLS + Edge Functions.
 
 ### 6. Clinical Assessment Framework Discipline
 - **Decision**: Gemini AI must not hallucinate clinical frameworks or diagnostic categories.

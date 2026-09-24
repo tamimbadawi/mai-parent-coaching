@@ -44,6 +44,7 @@ import AdminWhatsApp from './pages/admin/AdminWhatsApp';
 import AdminCRM from './pages/admin/AdminCRM';
 import FamilyRedirect from './pages/admin/family/FamilyRedirect';
 import AdminSessions from './pages/admin/AdminSessions';
+import { FamilyUnlockGate } from './components/admin/FamilyUnlockGate';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -104,7 +105,7 @@ function AppShell() {
           <Route path="/admin/crm" element={<ProtectedRoute requiredRole="admin"><AdminCRM /></ProtectedRoute>} />
           <Route path="/admin/families" element={<ProtectedRoute requiredRole="admin"><FamilyRedirect /></ProtectedRoute>} />
           <Route path="/admin/families/:householdId" element={<ProtectedRoute requiredRole="admin"><FamilyRedirect /></ProtectedRoute>} />
-          <Route path="/admin/sessions" element={<ProtectedRoute requiredRole="admin"><AdminSessions /></ProtectedRoute>} />
+          <Route path="/admin/sessions" element={<ProtectedRoute requiredRole="admin"><FamilyUnlockGate withLayout><AdminSessions /></FamilyUnlockGate></ProtectedRoute>} />
         </Routes>
       </main>
       {isAdminRoute || isDashboardRoute ? null : <Footer />}

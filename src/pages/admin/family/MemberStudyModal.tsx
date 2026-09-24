@@ -24,6 +24,7 @@ import {
   Circle,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+import { FamilyUnlockGate } from '../../../components/admin/FamilyUnlockGate';
 import {
   currentAge,
   roleLabel,
@@ -493,8 +494,9 @@ export const MemberStudyModal = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white rounded-3xl shadow-2xl border border-beige/60 max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden">
-        {/* Modal Header */}
+      <div className="bg-white rounded-3xl shadow-2xl border border-beige/60 max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden relative">
+        <FamilyUnlockGate onClose={onClose} onUnlocked={() => void loadMemberData()}>
+          {/* Modal Header */}
         <div className="px-6 py-4 border-b border-beige/70 bg-[#faf8f4] flex items-start justify-between gap-4 shrink-0">
           <div className="flex-1 min-w-0">
             {isEditingMember ? (
@@ -1465,6 +1467,7 @@ export const MemberStudyModal = ({
             </div>
           )}
         </div>
+        </FamilyUnlockGate>
       </div>
     </div>
   );

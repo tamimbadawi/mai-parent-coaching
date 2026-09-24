@@ -276,6 +276,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
   const signOut = useCallback(async (): Promise<void> => {
     bumpAuthEpoch();
 
+    // 0. Delete caller's family_unlocks rows before signing out (ignoring errors)
+    try {
+      const currentUserId = user?.id || (await supabase.auth.getUser()).data.user?.id;
+      if (currentUserId) {
+        await supabase.from('family_unlocks').delete().eq('admin_id', currentUserId);
+      }
+    } catch {
+      // ignore
+    }
+
     // 1. Wipe all localStorage items matching supabase or auth FIRST
     try {
       const keysToRemove: string[] = [];

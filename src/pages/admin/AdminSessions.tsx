@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, Calendar, CheckCircle2, Loader2, AlertCircle, Plus, X } from 'lucide-react';
+import { Users, Calendar, CheckCircle2, Loader2, AlertCircle, Plus, X, Lock } from 'lucide-react';
 import { isToday, isFuture, parseISO } from 'date-fns';
 import AdminLayout from './AdminLayout';
 import { TranscriptViewer } from '../../components/sessions/TranscriptViewer';
@@ -55,6 +55,7 @@ export const AdminSessions: React.FC = () => {
   const [loadingClientBookings, setLoadingClientBookings] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [newSessionError, setNewSessionError] = useState<string | null>(null);
+  const [lockingSessions, setLockingSessions] = useState(false);
   const isEnsuringHouseholdRef = useRef<string | null>(null);
 
   // Client and Session state with URL synchronization
@@ -1307,6 +1308,21 @@ export const AdminSessions: React.FC = () => {
     return true;
   };
 
+  const handleLockSessions = async () => {
+    setLockingSessions(true);
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData?.user?.id) {
+        await supabase.from('family_unlocks').delete().eq('admin_id', authData.user.id);
+      }
+    } catch (err) {
+      console.error('Failed to delete family_unlocks on lock:', err);
+    } finally {
+      setLockingSessions(false);
+      window.dispatchEvent(new Event('family-sessions-locked'));
+    }
+  };
+
   // Mapped sessions and fallback household for MemberStudyModal
   const mapStatusToCaseSession = (status: string): CaseSession['status'] => {
     if (status === 'completed') return 'completed';
@@ -1453,6 +1469,22 @@ export const AdminSessions: React.FC = () => {
           >
             <Users className="w-3.5 h-3.5 text-sage-dark" />
             <span>CRM Dossier</span>
+          </button>
+
+          {/* 4. Lock Family Sessions Workspace */}
+          <button
+            type="button"
+            onClick={handleLockSessions}
+            disabled={lockingSessions}
+            className="h-10 inline-flex items-center gap-1.5 px-3 text-xs font-semibold text-charcoal/80 bg-[#faf8f4] hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 rounded-xl border border-beige/80 transition shadow-2xs shrink-0 cursor-pointer disabled:opacity-50"
+            title="Lock Family Sessions workspace"
+          >
+            {lockingSessions ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-charcoal/60" />
+            ) : (
+              <Lock className="w-3.5 h-3.5 text-charcoal/60" />
+            )}
+            <span>Lock</span>
           </button>
         </div>
       }
