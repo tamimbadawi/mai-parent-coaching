@@ -28,6 +28,7 @@ import { ClientDossierModal } from './components/ClientDossierModal';
 import ContentLibraryStudio from './components/ContentLibraryStudio';
 import { UserComposerModal } from './components/UserComposerModal';
 import { StartFamilyCaseModal } from './family/StartFamilyCaseModal';
+import { DeleteUserModal } from './components/DeleteUserModal';
 import type { CustomerJourneyState } from '../../types';
 import { COUNTRIES } from '../../data/countries';
 
@@ -86,6 +87,7 @@ export const AdminCRM = (): JSX.Element => {
     address?: string | null;
     role?: 'student' | 'admin' | string;
   } | null>(null);
+  const [deleteTargetClient, setDeleteTargetClient] = useState<CustomerJourneyState | null>(null);
 
   // Card dropdown menu state & action in progress
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
@@ -373,33 +375,9 @@ export const AdminCRM = (): JSX.Element => {
     }
   };
 
-  const handleDeleteUser = async (client: CustomerJourneyState): Promise<void> => {
+  const handleDeleteUser = (client: CustomerJourneyState): void => {
     setActiveDropdownId(null);
-    const confirmMsg = `Permanently delete ${client.parent_name} (${client.email})? This removes their auth user account and profile data.`;
-    if (!window.confirm(confirmMsg)) return;
-
-    setUpdatingUserId(client.client_id);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const result = await invokeUserManager({
-        action: 'deleteUser',
-        userId: client.client_id,
-      });
-
-      if (result.error) {
-        setError(result.error);
-      } else {
-        setSuccess('User account successfully deleted.');
-        await fetchJourneyStates();
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(`Delete failed: ${msg}`);
-    } finally {
-      setUpdatingUserId(null);
-    }
+    setDeleteTargetClient(client);
   };
 
   return (
@@ -1010,6 +988,31 @@ export const AdminCRM = (): JSX.Element => {
           onSuccess={() => {
             setStartCaseClient(null);
             void fetchJourneyStates();
+          }}
+        />
+      )}
+
+      {/* Delete User Type-To-Confirm Modal */}
+      {deleteTargetClient && (
+        <DeleteUserModal
+          isOpen={Boolean(deleteTargetClient)}
+          user={{
+            id: deleteTargetClient.client_id,
+            email: deleteTargetClient.email,
+            name: deleteTargetClient.parent_name,
+          }}
+          hasHousehold={householdClientIds.has(deleteTargetClient.client_id)}
+          onClose={() => setDeleteTargetClient(null)}
+          onConfirm={async () => {
+            return await invokeUserManager({
+              action: 'deleteUser',
+              userId: deleteTargetClient.client_id,
+            });
+          }}
+          onSuccess={async () => {
+            setSuccess('User account successfully deleted.');
+            setDeleteTargetClient(null);
+            await fetchJourneyStates();
           }}
         />
       )}
