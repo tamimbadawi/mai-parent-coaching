@@ -13,7 +13,6 @@ import {
   X,
   MessageCircle,
   HeartHandshake,
-  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -72,7 +71,6 @@ const AdminLayout = ({ children, title, subtitle, action, headerContent, fillHei
         { to: '/admin', label: 'Overview', icon: LayoutDashboard },
         { to: '/admin/bookings', label: 'Bookings', icon: CalendarDays },
         { to: '/admin/crm', label: 'Users CRM', icon: HeartHandshake },
-        { to: '/admin/sessions', label: 'Session Notes', icon: Sparkles },
         { to: '/admin/messages', label: 'Inbox', icon: MessageSquare },
         { to: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
       ],
@@ -175,7 +173,10 @@ const AdminLayout = ({ children, title, subtitle, action, headerContent, fillHei
               </p>
               <div className="space-y-0.5">
                 {group.items.map(({ to, label, icon: Icon, badge }) => {
-                  const isActive = pathname === to || (to !== '/admin' && pathname.startsWith(`${to}/`));
+                  const isActive =
+                    pathname === to ||
+                    (to !== '/admin' && pathname.startsWith(`${to}/`)) ||
+                    (to === '/admin/crm' && pathname.startsWith('/admin/sessions'));
                   return (
                     <Link
                       key={to}
