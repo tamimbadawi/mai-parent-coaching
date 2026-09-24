@@ -44,6 +44,15 @@ function getLatestSessionTime(client: ClientSessionSummary): number {
   return maxTime;
 }
 
+/**
+ * Returns formatted household member count, defaulting to 1 member if no members present.
+ */
+function formatHouseholdMemberCount(client?: ClientSessionSummary): string {
+  if (!client) return '1 member';
+  const count = client.members && client.members.length > 0 ? client.members.length : 1;
+  return `${count} ${count === 1 ? 'member' : 'members'}`;
+}
+
 export const ClientPicker: React.FC<ClientPickerProps> = ({
   clients,
   selectedClientId,
@@ -292,11 +301,11 @@ export const ClientPicker: React.FC<ClientPickerProps> = ({
             aria-expanded={isOpen}
             aria-haspopup="listbox"
             className="flex items-center gap-1 font-serif text-xs font-semibold text-charcoal bg-transparent border-0 focus:outline-hidden cursor-pointer hover:text-sage-dark transition-colors py-0 pl-0 pr-1 max-w-[130px] sm:max-w-[170px] truncate leading-tight text-left"
-            title={activeClient ? `${activeClient.clientName} (${activeClient.totalSessions})` : 'Select client'}
+            title={activeClient ? `${activeClient.clientName} (${formatHouseholdMemberCount(activeClient)})` : 'Select client'}
           >
             <span className="truncate">
               {activeClient
-                ? `${activeClient.clientName} (${activeClient.totalSessions})`
+                ? `${activeClient.clientName} (${formatHouseholdMemberCount(activeClient)})`
                 : 'Select Client'}
             </span>
             <ChevronDown
@@ -403,9 +412,9 @@ export const ClientPicker: React.FC<ClientPickerProps> = ({
                             </button>
                           </div>
 
-                          {/* Right: Session count */}
+                          {/* Right: Household member count */}
                           <span className="text-[11px] text-charcoal/50 tabular-nums shrink-0 ml-1">
-                            ({item.client.totalSessions})
+                            {formatHouseholdMemberCount(item.client)}
                           </span>
                         </div>
                       </li>
