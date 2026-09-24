@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       country: currentUser.user_metadata?.country ?? null,
       city: currentUser.user_metadata?.city ?? null,
       address: currentUser.user_metadata?.address ?? null,
-      role: currentUser.user_metadata?.role ?? (currentUser.email === 'admin@admin.com' ? 'admin' : 'student'),
+      role: 'student',
       approval_status: currentUser.user_metadata?.approval_status ?? 'approved',
       approved_at: null,
       created_at: new Date().toISOString(),
@@ -77,8 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
           (data.phone && meta.phone !== data.phone) ||
           (data.country && meta.country !== data.country) ||
           (data.city && meta.city !== data.city) ||
-          (data.address && meta.address !== data.address) ||
-          (data.role && meta.role !== data.role)
+          (data.address && meta.address !== data.address)
         ) {
           void supabase.auth.updateUser({
             data: {
@@ -86,7 +85,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
               country: data.country,
               city: data.city,
               address: data.address,
-              role: data.role,
             },
           }).catch(() => {});
         }
