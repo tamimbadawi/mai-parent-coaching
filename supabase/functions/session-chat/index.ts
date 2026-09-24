@@ -75,8 +75,9 @@ Deno.serve(async (request: Request) => {
       return json({ error: 'Message exceeds the maximum allowed length.', code: 'MESSAGE_TOO_LONG' }, 400);
     }
 
-    const [{ data: household }, { data: members }, { data: sessions }, { data: rules }, { data: history }] = await Promise.all([
-      adminClient.from('households').select('family_name, presenting_issue, working_plan, next_step').eq('id', householdId).maybeSingle(),
+    const [{ data: household }, { data: clinical }, { data: members }, { data: sessions }, { data: rules }, { data: history }] = await Promise.all([
+      adminClient.from('households').select('family_name').eq('id', householdId).maybeSingle(),
+      adminClient.from('household_clinical').select('presenting_issue, working_plan, next_step').eq('household_id', householdId).maybeSingle(),
       adminClient.from('household_members').select('full_name, role, birth_year').eq('household_id', householdId),
       adminClient
         .from('case_sessions')
@@ -117,9 +118,9 @@ Deno.serve(async (request: Request) => {
 Family: ${household.family_name}
 Members:
 ${membersBlock || '(none recorded)'}
-Presenting issue: ${household.presenting_issue || '(not recorded)'}
-Working plan: ${household.working_plan || '(not recorded)'}
-Next step: ${household.next_step || '(not recorded)'}
+Presenting issue: ${clinical?.presenting_issue || '(not recorded)'}
+Working plan: ${clinical?.working_plan || '(not recorded)'}
+Next step: ${clinical?.next_step || '(not recorded)'}
 
 Session history:
 ${sessionsBlock || '(no sessions recorded yet)'}

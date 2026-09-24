@@ -159,10 +159,10 @@ export const MemberStudyModal = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Load attended session IDs, plus member_notes and member_action_items
+  // Load attended session IDs, plus member_notes, member_action_items, and member_personas
   const loadMemberData = async () => {
     try {
-      const [{ data: attendees, error: attErr }, { data: memberNotesData }, { data: memberActionsData }] =
+      const [{ data: attendees, error: attErr }, { data: memberNotesData }, { data: memberActionsData }, { data: personaData }] =
         await Promise.all([
           supabase
             .from('session_attendees')
@@ -178,6 +178,11 @@ export const MemberStudyModal = ({
             .select('*')
             .eq('household_member_id', member.id)
             .order('created_at', { ascending: false }),
+          supabase
+            .from('member_personas')
+            .select('*')
+            .eq('household_member_id', member.id)
+            .maybeSingle(),
         ]);
 
       if (attErr) throw attErr;
@@ -186,6 +191,23 @@ export const MemberStudyModal = ({
       setAttendedSessionIds(ids);
       setNotes((memberNotesData as MemberNote[]) || []);
       setActions((memberActionsData as MemberActionItem[]) || []);
+
+      if (personaData) {
+        setPersonaDraft((prev) => ({
+          ...prev,
+          notes: personaData.notes || '',
+          persona_summary: personaData.persona_summary || '',
+          concern_level: personaData.concern_level || '',
+          family_dynamic_role: personaData.family_dynamic_role || '',
+          temperament_traits: personaData.temperament_traits || [],
+          known_triggers: personaData.known_triggers || [],
+          strengths: personaData.strengths || [],
+        }));
+        setEditDraft((prev) => ({
+          ...prev,
+          notes: personaData.notes || '',
+        }));
+      }
     } catch (err: any) {
       console.error('Failed to load member session history:', err);
     }
@@ -206,7 +228,6 @@ export const MemberStudyModal = ({
         full_name: editDraft.full_name.trim(),
         role: editDraft.role,
         birth_year: editDraft.birth_year ? Number(editDraft.birth_year) : null,
-        notes: editDraft.notes || null,
         updated_at: new Date().toISOString(),
       };
       const { data, error } = await supabase
@@ -216,7 +237,25 @@ export const MemberStudyModal = ({
         .select()
         .single();
       if (error) throw error;
-      onMemberUpdated(data as HouseholdMember);
+
+      if (editDraft.notes !== undefined) {
+        const { error: pErr } = await supabase
+          .from('member_personas')
+          .upsert(
+            {
+              household_member_id: member.id,
+              notes: editDraft.notes || null,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'household_member_id' }
+          );
+        if (pErr) console.error('Failed to update member notes in member_personas:', pErr);
+      }
+
+      onMemberUpdated({
+        ...(data as HouseholdMember),
+        notes: editDraft.notes || null,
+      });
       setIsEditingMember(false);
     } catch (err: any) {
       setEditError(err.message || 'Failed to update member.');
@@ -231,27 +270,50 @@ export const MemberStudyModal = ({
     setPersonaError(null);
     try {
       const birthYearNum = personaDraft.birth_year ? parseInt(personaDraft.birth_year, 10) : null;
-      const payload = {
+      // 1. Update basic demographic info on household_members
+      const memberPayload = {
         full_name: personaDraft.full_name.trim() || member.full_name,
         role: personaDraft.role,
         birth_year: Number.isNaN(birthYearNum) ? null : birthYearNum,
+        updated_at: new Date().toISOString(),
+      };
+      const { data: memberData, error: memberErr } = await supabase
+        .from('household_members')
+        .update(memberPayload)
+        .eq('id', member.id)
+        .select()
+        .single();
+      if (memberErr) throw memberErr;
+
+      // 2. Upsert clinical persona and notes in member_personas
+      const personaPayload = {
+        household_member_id: member.id,
         notes: personaDraft.notes.trim() || null,
-        persona_summary: personaDraft.persona_summary || null,
-        concern_level: personaDraft.concern_level || null,
-        family_dynamic_role: personaDraft.family_dynamic_role || null,
+        persona_summary: personaDraft.persona_summary.trim() || null,
+        concern_level: personaDraft.concern_level.trim() || null,
+        family_dynamic_role: personaDraft.family_dynamic_role.trim() || null,
         temperament_traits: personaDraft.temperament_traits,
         known_triggers: personaDraft.known_triggers,
         strengths: personaDraft.strengths,
         updated_at: new Date().toISOString(),
       };
-      const { data, error } = await supabase
-        .from('household_members')
-        .update(payload)
-        .eq('id', member.id)
+      const { data: personaResult, error: personaErr } = await supabase
+        .from('member_personas')
+        .upsert(personaPayload, { onConflict: 'household_member_id' })
         .select()
         .single();
-      if (error) throw error;
-      onMemberUpdated(data as HouseholdMember);
+      if (personaErr) throw personaErr;
+
+      onMemberUpdated({
+        ...(memberData as HouseholdMember),
+        notes: personaResult.notes,
+        persona_summary: personaResult.persona_summary,
+        concern_level: personaResult.concern_level,
+        family_dynamic_role: personaResult.family_dynamic_role,
+        temperament_traits: personaResult.temperament_traits,
+        known_triggers: personaResult.known_triggers,
+        strengths: personaResult.strengths,
+      });
       setPersonaSavedToast(true);
       setTimeout(() => setPersonaSavedToast(false), 2500);
     } catch (err: any) {

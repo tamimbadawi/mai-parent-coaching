@@ -3,16 +3,40 @@ export type HouseholdMemberRole = 'parent' | 'mother' | 'father' | 'child' | 'gu
 export type CaseSessionStatus = 'scheduled' | 'completed' | 'cancelled';
 export type SessionContentType = 'pre_session_recap' | 'live_transcript' | 'handwritten_notes' | 'post_session_notes';
 
+export interface HouseholdClinical {
+  household_id: string;
+  presenting_issue: string | null;
+  working_plan: string | null;
+  next_step: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemberPersona {
+  household_member_id: string;
+  persona_summary: string | null;
+  temperament_traits: string[];
+  known_triggers: string[];
+  strengths: string[];
+  concern_level: string | null;
+  family_dynamic_role: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Household {
   id: string;
   primary_contact_profile_id: string;
   family_name: string;
-  presenting_issue: string | null;
-  working_plan: string | null;
-  next_step: string | null;
   status: HouseholdStatus;
   created_at: string;
   updated_at: string;
+  // Gated clinical fields (available via household_clinical when unlocked)
+  clinical?: HouseholdClinical | null;
+  presenting_issue?: string | null;
+  working_plan?: string | null;
+  next_step?: string | null;
 }
 
 export interface HouseholdMember {
@@ -21,15 +45,17 @@ export interface HouseholdMember {
   full_name: string;
   role: HouseholdMemberRole;
   birth_year: number | null;
-  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  // Gated persona fields (available via member_personas when unlocked)
+  persona?: MemberPersona | null;
+  notes?: string | null;
   persona_summary?: string | null;
   temperament_traits?: string[];
   known_triggers?: string[];
   strengths?: string[];
   concern_level?: string | null;
   family_dynamic_role?: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 export type MemberNoteType = 'observation' | 'concern' | 'progress' | 'follow_up';

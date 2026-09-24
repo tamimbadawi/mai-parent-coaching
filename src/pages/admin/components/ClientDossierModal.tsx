@@ -1018,7 +1018,7 @@ export const ClientDossierModal = ({
                     {/* Member Personas Cards */}
                     <div className="space-y-3">
                       <h5 className="text-xs font-semibold uppercase tracking-wider text-warm-gray">
-                        Family Members & Psychological Personas ({householdInfo.members.length})
+                        Family Members ({householdInfo.members.length})
                       </h5>
 
                       {householdInfo.members.length === 0 ? (

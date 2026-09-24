@@ -23,13 +23,17 @@
   - `post_session_notes` (Mai's typed write-up)
 
 ### 5. Access Control: Admin Role + Shared Family Sessions Password
-- **Decision (revised 2026-09-24, supersedes "no secondary passcodes")**: Family Sessions content sits behind a single shared password that any admin can enter. Being an admin alone is not enough to read session content. No per-admin passwords, no "super-admin" tier.
+- **Decision (revised 2026-09-24, supersedes "no secondary passcodes")**: Family Sessions content sits behind a single shared password that any admin can enter. Being an admin alone is not enough to read session content or clinical records. No per-admin passwords, no "super-admin" tier.
 - **Implementation**:
   - Password lives only as an Edge Function secret (`FAMILY_SESSIONS_PASSWORD`), never in frontend code or env.
   - `family-unlock` Edge Function verifies the admin + password and writes a time-limited row to `family_unlocks` (8h). Basic brute-force guard: 5 failed attempts per admin per 15 min.
-  - RLS on session-content tables (`case_sessions`, `session_attendees`, `session_content`, `member_notes`, `member_action_items`, `session_chat_messages`) requires `is_admin() AND has_family_unlock()`. `households` / `household_members` stay admin-only (no password) so CRM badges and the Client Dossier's family summary keep working.
-  - Family AI Edge Functions (`session-chat`, `family-session-analysis`, `family-member-study`, `session-transcribe`) also reject callers without an active unlock.
-  - Frontend: unlock screen on `/admin/sessions` (and anything opening member notes); this is UX only, security is enforced by RLS + Edge Functions.
+  - **Clinical fields segregated**: `households` and `household_members` hold strictly non-clinical data (names, roles, birth years, contact links, status) and remain accessible to any authenticated admin without password, allowing CRM badges and Client Dossier summary views to work without unlocking.
+  - All clinical and persona fields reside in dedicated 1-to-1 extension tables:
+    - `household_clinical` (`household_id` PK → `households`, `presenting_issue`, `working_plan`, `next_step`, `updated_at`).
+    - `member_personas` (`household_member_id` PK → `household_members`, `persona_summary`, `temperament_traits`, `known_triggers`, `strengths`, `concern_level`, `family_dynamic_role`, `notes`, `updated_at`).
+  - RLS on gated tables (`household_clinical`, `member_personas`, `case_sessions`, `session_attendees`, `session_content`, `member_notes`, `member_action_items`, `session_chat_messages`) requires `is_admin() AND has_family_unlock()`.
+  - Family AI Edge Functions (`session-chat`, `family-session-analysis`, `family-member-study`, `session-transcribe`) also reject callers without an active unlock and read clinical/persona data from the gated tables.
+  - Frontend: unlock screen on `/admin/sessions` (and anything opening member study/notes); this is UX only, security is enforced by RLS + Edge Functions. Locking deletes the admin's `family_unlocks` rows immediately.
 
 ### 6. Clinical Assessment Framework Discipline
 - **Decision**: Gemini AI must not hallucinate clinical frameworks or diagnostic categories.

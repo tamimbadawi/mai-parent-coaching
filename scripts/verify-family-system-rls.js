@@ -117,6 +117,8 @@ async function runRLSVerification() {
     const allTables = [
       'households',
       'household_members',
+      'household_clinical',
+      'member_personas',
       'case_sessions',
       'session_attendees',
       'session_content',
@@ -152,7 +154,6 @@ async function runRLSVerification() {
       .insert({
         primary_contact_profile_id: studentUserId,
         family_name: 'The Locked Testing Family',
-        presenting_issue: 'Bedtime anxiety',
         status: 'active',
       })
       .select()
@@ -174,9 +175,11 @@ async function runRLSVerification() {
     if (mErr) throw new Error(`Admin insert into household_members failed: ${mErr.message}`);
     console.log(`   ✅ Admin successfully created member (id: ${member.id})`);
 
-    // Admin CANNOT read or insert into session-content tables without unlock
-    console.log('   -> Verifying Admin CANNOT access session tables without unlock...');
+    // Admin CANNOT read or insert into session-content and clinical tables without unlock
+    console.log('   -> Verifying Admin CANNOT access clinical and session tables without unlock...');
     const sessionTables = [
+      'household_clinical',
+      'member_personas',
       'case_sessions',
       'session_attendees',
       'session_content',
@@ -190,7 +193,11 @@ async function runRLSVerification() {
       assert.equal(sData?.length || 0, 0, `Admin without unlock should read 0 rows in ${st}`);
 
       let dummyPayload = {};
-      if (st === 'case_sessions') {
+      if (st === 'household_clinical') {
+        dummyPayload = { household_id: household.id, presenting_issue: 'Blocked clinical focus' };
+      } else if (st === 'member_personas') {
+        dummyPayload = { household_member_id: member.id, persona_summary: 'Blocked persona' };
+      } else if (st === 'case_sessions') {
         dummyPayload = { household_id: household.id, session_date: new Date().toISOString() };
       } else if (st === 'session_attendees') {
         dummyPayload = { session_id: household.id, household_member_id: member.id };
@@ -385,8 +392,82 @@ async function runRLSVerification() {
     assert.equal(chatRead.sender, 'admin');
     console.log(`      ✅ SELECT succeeded: chat sender = "${chatRead.sender}"`);
 
-    // Clean up created session rows with Admin client
-    console.log('\n   -> Testing DELETE permissions on session tables (Admin with unlock)...');
+    // 7. household_clinical CRUD
+    console.log('   -> Testing household_clinical CRUD with active unlock...');
+    const { data: clinical, error: clinErr } = await adminClient
+      .from('household_clinical')
+      .insert({
+        household_id: household.id,
+        presenting_issue: 'Bedtime anxiety and emotional regulation',
+        working_plan: 'Calm evening sensory routine',
+        next_step: 'Parent check-in in 2 weeks',
+      })
+      .select()
+      .single();
+    if (clinErr) throw new Error(`Unlocked Admin insert into household_clinical failed: ${clinErr.message}`);
+    console.log(`      ✅ INSERT succeeded: household_clinical for household = ${clinical.household_id}`);
+
+    const { data: clinRead, error: clinReadErr } = await adminClient
+      .from('household_clinical')
+      .select('*')
+      .eq('household_id', household.id)
+      .single();
+    if (clinReadErr) throw clinReadErr;
+    assert.equal(clinRead.presenting_issue, 'Bedtime anxiety and emotional regulation');
+    console.log(`      ✅ SELECT succeeded: presenting_issue = "${clinRead.presenting_issue}"`);
+
+    const { data: clinUpdate, error: clinUpdateErr } = await adminClient
+      .from('household_clinical')
+      .update({ working_plan: 'Revised sensory diet with weighted blanket' })
+      .eq('household_id', household.id)
+      .select()
+      .single();
+    if (clinUpdateErr) throw clinUpdateErr;
+    assert.equal(clinUpdate.working_plan, 'Revised sensory diet with weighted blanket');
+    console.log(`      ✅ UPDATE succeeded: working_plan = "${clinUpdate.working_plan}"`);
+
+    // 8. member_personas CRUD
+    console.log('   -> Testing member_personas CRUD with active unlock...');
+    const { data: persona, error: perErr } = await adminClient
+      .from('member_personas')
+      .insert({
+        household_member_id: member.id,
+        persona_summary: 'Highly observant, deeply empathetic mother',
+        temperament_traits: ['empathetic', 'sensory_sensitive'],
+        known_triggers: ['bedtime_transitions'],
+        strengths: ['protective_presence'],
+        concern_level: 'moderate',
+        family_dynamic_role: 'primary_anchor',
+        notes: 'Initial clinical observation notes',
+      })
+      .select()
+      .single();
+    if (perErr) throw new Error(`Unlocked Admin insert into member_personas failed: ${perErr.message}`);
+    console.log(`      ✅ INSERT succeeded: member_personas for member = ${persona.household_member_id}`);
+
+    const { data: perRead, error: perReadErr } = await adminClient
+      .from('member_personas')
+      .select('*')
+      .eq('household_member_id', member.id)
+      .single();
+    if (perReadErr) throw perReadErr;
+    assert.equal(perRead.persona_summary, 'Highly observant, deeply empathetic mother');
+    console.log(`      ✅ SELECT succeeded: persona_summary = "${perRead.persona_summary}"`);
+
+    const { data: perUpdate, error: perUpdateErr } = await adminClient
+      .from('member_personas')
+      .update({ notes: 'Updated observation notes after intake' })
+      .eq('household_member_id', member.id)
+      .select()
+      .single();
+    if (perUpdateErr) throw perUpdateErr;
+    assert.equal(perUpdate.notes, 'Updated observation notes after intake');
+    console.log(`      ✅ UPDATE succeeded: notes = "${perUpdate.notes}"`);
+
+    // Clean up created session & clinical rows with Admin client
+    console.log('\n   -> Testing DELETE permissions on session & clinical tables (Admin with unlock)...');
+    await adminClient.from('member_personas').delete().eq('household_member_id', member.id);
+    await adminClient.from('household_clinical').delete().eq('household_id', household.id);
     await adminClient.from('session_chat_messages').delete().eq('id', chatMsg.id);
     await adminClient.from('member_action_items').delete().eq('id', actionItem.id);
     await adminClient.from('member_notes').delete().eq('id', note.id);

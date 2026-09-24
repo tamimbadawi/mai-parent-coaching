@@ -82,10 +82,12 @@ Deno.serve(async (request: Request) => {
       return json({ error: 'householdId and memberId are both required.', code: 'INVALID_PAYLOAD' }, 400);
     }
 
-    // 1. Fetch household and member details
-    const [{ data: household, error: householdErr }, { data: member, error: memberErr }] = await Promise.all([
-      adminClient.from('households').select('id, family_name, presenting_issue, working_plan').eq('id', householdId).maybeSingle(),
+    // 1. Fetch household and member details along with gated clinical & persona data
+    const [{ data: household, error: householdErr }, { data: member, error: memberErr }, { data: clinical }, { data: persona }] = await Promise.all([
+      adminClient.from('households').select('id, family_name').eq('id', householdId).maybeSingle(),
       adminClient.from('household_members').select('*').eq('id', memberId).eq('household_id', householdId).maybeSingle(),
+      adminClient.from('household_clinical').select('presenting_issue, working_plan').eq('household_id', householdId).maybeSingle(),
+      adminClient.from('member_personas').select('notes, persona_summary').eq('household_member_id', memberId).maybeSingle(),
     ]);
 
     if (householdErr || !household) return json({ error: 'Family case household not found.', code: 'HOUSEHOLD_NOT_FOUND' }, 404);
@@ -155,10 +157,10 @@ Deno.serve(async (request: Request) => {
 - Full Name: ${member.full_name}
 - Role in Family: ${member.role}
 - Age: ${ageContext}
-- Member Notes on File: ${member.notes || 'None recorded'}
+- Member Notes on File: ${persona?.notes || 'None recorded'}
 - Family Case: ${household.family_name}
-${household.presenting_issue ? `- Presenting Issue: ${household.presenting_issue}` : ''}
-${household.working_plan ? `- Working Plan: ${household.working_plan}` : ''}
+${clinical?.presenting_issue ? `- Presenting Issue: ${clinical.presenting_issue}` : ''}
+${clinical?.working_plan ? `- Working Plan: ${clinical.working_plan}` : ''}
 
 Attended Coaching Sessions (${sessions?.length ?? 0} sessions, in chronological order):
 ${sessionsBlock}

@@ -14,7 +14,7 @@ import { supabase } from '../../lib/supabase';
 import type { ClientSessionSummary, SessionTranscript, TranscriptUtterance, EmotionalObservation } from '../../types/session';
 import type { CustomerJourneyState } from '../../types';
 import type { WorkflowStep } from '../../components/sessions/SessionWorkflowTabs';
-import type { Household, HouseholdMember, MemberActionItem, MemberNote, SessionAttendee, MemberNoteType, CaseSession, HouseholdStatus, HouseholdMemberRole } from '../../types/family';
+import type { Household, HouseholdMember, MemberActionItem, MemberNote, SessionAttendee, MemberNoteType, CaseSession, HouseholdStatus, HouseholdMemberRole, MemberPersona } from '../../types/family';
 import type { InkPage } from '../../types/ink';
 
 export const AdminSessions: React.FC = () => {
@@ -136,6 +136,7 @@ export const AdminSessions: React.FC = () => {
       const [
         { data: profilesData },
         { data: householdsData },
+        { data: clinicalData },
         { data: sessionsData },
         { data: bookingsData },
       ] = await Promise.all([
@@ -145,7 +146,10 @@ export const AdminSessions: React.FC = () => {
           .order('created_at', { ascending: false }),
         supabase
           .from('households')
-          .select('id, primary_contact_profile_id, family_name, presenting_issue, working_plan, next_step, status, household_members(id, full_name, role, birth_year, notes)'),
+          .select('id, primary_contact_profile_id, family_name, status, household_members(id, full_name, role, birth_year)'),
+        supabase
+          .from('household_clinical')
+          .select('household_id, presenting_issue, working_plan, next_step'),
         supabase
           .from('case_sessions')
           .select('id, household_id, booking_id, session_date, duration_minutes, google_meet_url, drive_web_view_url, status, session_content(id, content_type, content, source_metadata)')
@@ -156,8 +160,21 @@ export const AdminSessions: React.FC = () => {
           .order('appointment_date', { ascending: false }),
       ]);
 
+      const clinicalByHouseholdId = new Map<string, { presenting_issue: string | null; working_plan: string | null; next_step: string | null }>();
+      for (const c of clinicalData || []) {
+        clinicalByHouseholdId.set(c.household_id, c);
+      }
+
       const profiles = profilesData || [];
-      const households = householdsData || [];
+      const households = (householdsData || []).map((h) => {
+        const c = clinicalByHouseholdId.get(h.id);
+        return {
+          ...h,
+          presenting_issue: c?.presenting_issue ?? null,
+          working_plan: c?.working_plan ?? null,
+          next_step: c?.next_step ?? null,
+        };
+      });
       const dbSessions = sessionsData || [];
       const bookings = bookingsData || [];
 
@@ -446,20 +463,33 @@ export const AdminSessions: React.FC = () => {
   const fetchHouseholdData = useCallback(async (hId: string) => {
     loadedHouseholdIdRef.current = hId;
     try {
-      // 1. Get household with members
-      const { data: hData } = await supabase
-        .from('households')
-        .select('id, primary_contact_profile_id, family_name, presenting_issue, working_plan, next_step, status, created_at, updated_at, household_members(*)')
-        .eq('id', hId)
-        .maybeSingle();
+      // 1. Get household with members and gated clinical data
+      const [{ data: hData }, { data: cData }] = await Promise.all([
+        supabase
+          .from('households')
+          .select('id, primary_contact_profile_id, family_name, status, created_at, updated_at, household_members(*)')
+          .eq('id', hId)
+          .maybeSingle(),
+        supabase
+          .from('household_clinical')
+          .select('presenting_issue, working_plan, next_step')
+          .eq('household_id', hId)
+          .maybeSingle(),
+      ]);
 
       if (!hData) return;
 
       const members: HouseholdMember[] = (hData.household_members as any[]) || [];
       const memberIds = members.map((m) => m.id);
 
-      // 2. Fetch member_action_items, member_notes, and session_attendees in Promise.all (3 queries)
-      const [actionsRes, notesRes, attendeesRes] = await Promise.all([
+      // 2. Fetch member_personas, member_action_items, member_notes, and session_attendees in Promise.all
+      const [personasRes, actionsRes, notesRes, attendeesRes] = await Promise.all([
+        memberIds.length > 0
+          ? supabase
+              .from('member_personas')
+              .select('*')
+              .in('household_member_id', memberIds)
+          : Promise.resolve({ data: [] }),
         memberIds.length > 0
           ? supabase
               .from('member_action_items')
@@ -488,20 +518,40 @@ export const AdminSessions: React.FC = () => {
           }),
       ]);
 
+      const personaByMemberId = new Map<string, MemberPersona>();
+      for (const p of (personasRes.data as MemberPersona[]) || []) {
+        personaByMemberId.set(p.household_member_id, p);
+      }
+
+      const enrichedMembers: HouseholdMember[] = members.map((m) => {
+        const persona = personaByMemberId.get(m.id);
+        return {
+          ...m,
+          persona: persona || null,
+          notes: persona?.notes ?? null,
+          persona_summary: persona?.persona_summary ?? null,
+          temperament_traits: persona?.temperament_traits ?? [],
+          known_triggers: persona?.known_triggers ?? [],
+          strengths: persona?.strengths ?? [],
+          concern_level: persona?.concern_level ?? null,
+          family_dynamic_role: persona?.family_dynamic_role ?? null,
+        };
+      });
+
       setHouseholdData({
         householdId: hId,
         household: {
           id: hData.id,
           primary_contact_profile_id: hData.primary_contact_profile_id,
           family_name: hData.family_name,
-          presenting_issue: hData.presenting_issue,
-          working_plan: hData.working_plan,
-          next_step: hData.next_step,
+          presenting_issue: cData?.presenting_issue ?? null,
+          working_plan: cData?.working_plan ?? null,
+          next_step: cData?.next_step ?? null,
           status: hData.status,
           created_at: hData.created_at,
           updated_at: hData.updated_at,
         },
-        members,
+        members: enrichedMembers,
         actionItems: (actionsRes.data as MemberActionItem[]) || [],
         notes: (notesRes.data as MemberNote[]) || [],
         attendees: (attendeesRes.data as SessionAttendee[]) || [],
@@ -1272,14 +1322,49 @@ export const AdminSessions: React.FC = () => {
     status?: HouseholdStatus;
   }): Promise<boolean> => {
     if (!householdData.householdId) return false;
-    const { error } = await supabase
-      .from('households')
-      .update(updated)
-      .eq('id', householdData.householdId);
-    if (error) {
-      console.error('Failed to update household:', error);
-      return false;
+
+    // 1. If status changed, update households table
+    if (updated.status !== undefined) {
+      const { error: hErr } = await supabase
+        .from('households')
+        .update({ status: updated.status, updated_at: new Date().toISOString() })
+        .eq('id', householdData.householdId);
+      if (hErr) {
+        console.error('Failed to update household status:', hErr);
+        return false;
+      }
     }
+
+    // 2. Upsert clinical fields to household_clinical table
+    const hasClinicalFields =
+      updated.presenting_issue !== undefined ||
+      updated.working_plan !== undefined ||
+      updated.next_step !== undefined;
+
+    if (hasClinicalFields) {
+      const clinicalPayload: {
+        household_id: string;
+        presenting_issue?: string | null;
+        working_plan?: string | null;
+        next_step?: string | null;
+        updated_at: string;
+      } = {
+        household_id: householdData.householdId,
+        updated_at: new Date().toISOString(),
+      };
+      if (updated.presenting_issue !== undefined) clinicalPayload.presenting_issue = updated.presenting_issue;
+      if (updated.working_plan !== undefined) clinicalPayload.working_plan = updated.working_plan;
+      if (updated.next_step !== undefined) clinicalPayload.next_step = updated.next_step;
+
+      const { error: cErr } = await supabase
+        .from('household_clinical')
+        .upsert(clinicalPayload, { onConflict: 'household_id' });
+      if (cErr) {
+        console.error('Failed to update household clinical data:', cErr);
+        return false;
+      }
+    }
+
     await fetchHouseholdData(householdData.householdId);
     return true;
   };
@@ -1291,19 +1376,37 @@ export const AdminSessions: React.FC = () => {
     notes?: string | null;
   }): Promise<boolean> => {
     if (!householdData.householdId) return false;
-    const { error } = await supabase
+    const { data: memberData, error } = await supabase
       .from('household_members')
       .insert({
         household_id: householdData.householdId,
         full_name: draft.full_name,
         role: draft.role,
         birth_year: draft.birth_year ?? null,
-        notes: draft.notes ?? null,
-      });
-    if (error) {
+      })
+      .select('id')
+      .single();
+    if (error || !memberData) {
       console.error('Failed to add member:', error);
       return false;
     }
+
+    if (draft.notes) {
+      const { error: pErr } = await supabase
+        .from('member_personas')
+        .upsert(
+          {
+            household_member_id: memberData.id,
+            notes: draft.notes,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'household_member_id' }
+        );
+      if (pErr) {
+        console.error('Failed to save member notes in member_personas:', pErr);
+      }
+    }
+
     await fetchHouseholdData(householdData.householdId);
     return true;
   };

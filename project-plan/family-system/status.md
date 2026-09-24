@@ -80,3 +80,19 @@ Session Notes (`/admin/sessions`) is now the single consolidated workspace for a
 - `MemberStudyModal` Persona tab supports editing core member identity (name, role, birth year) and removing members with confirmation.
 - "+ New session" button next to session dropdown allows creating blank sessions or converting unconverted bookings.
 - "Start family case" modal is available from Users CRM, Client Dossier, and Session Notes when a client has no household.
+
+---
+
+## Shared Admin Password Gate & Clinical Data Segregation (Live & Verified)
+
+- **Single Shared Password**: Any admin enters the shared practice password (`FAMILY_SESSIONS_PASSWORD` in Edge Function secrets) to unlock family clinical data for 8 hours.
+- **Brute-Force Guard**: Failed attempt tracking in `family_unlock_attempts` (max 5 per 15 min per admin, fails closed on error).
+- **Lock Button & Sign-Out Invalidation**: Admins can lock their active session at any time or automatically on sign-out via self-delete RLS on `family_unlocks`.
+- **Clinical Field Segregation**:
+  - `households` and `household_members` hold strictly non-clinical data (family name, member names, roles, birth years, case status).
+  - Clinical fields (`presenting_issue`, `working_plan`, `next_step`) segregated into `household_clinical`.
+  - Persona & observation notes (`persona_summary`, `temperament_traits`, `known_triggers`, `strengths`, `concern_level`, `family_dynamic_role`, `notes`) segregated into `member_personas`.
+  - Both tables protected by `is_admin() AND has_family_unlock()` RLS.
+  - Readers and writers updated across `AdminSessions.tsx`, `MemberStudyModal.tsx`, `FamilyGlancePanel.tsx`, `ClientDossierModal.tsx`, `session-chat`, and `family-member-study`.
+  - Non-gated views (Client Dossier, CRM) render gracefully without clinical fields and without RLS violation errors.
+- **Automated Verification**: `scripts/verify-family-system-rls.js` confirms student denial, admin locked denial (0 rows read, inserts blocked), and admin unlocked full CRUD across all clinical and session tables.
