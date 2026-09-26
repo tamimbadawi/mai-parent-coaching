@@ -313,3 +313,89 @@ export async function getClientAvailableSlots(options: {
     availabilityRequests.delete(key);
   }
 }
+
+const MONTH_AVAILABILITY_CACHE_PREFIX = 'mai-booking-month-availability:';
+
+interface MonthAvailabilityCacheEntry {
+  days: Record<string, number>;
+  fetchedAt: number;
+}
+
+interface MonthAvailabilityResponse {
+  days?: Record<string, { totalSlots: number; isFullyBooked: boolean }>;
+  error?: string;
+}
+
+const monthAvailabilityCache = new Map<string, MonthAvailabilityCacheEntry>();
+const monthAvailabilityRequests = new Map<string, Promise<Record<string, number>>>();
+
+export async function getMonthAvailability(options: {
+  month: string;
+  appointmentTypeId?: string;
+  timeZone?: string;
+}): Promise<Record<string, number>> {
+  const { month, appointmentTypeId = 'initial', timeZone = 'Africa/Cairo' } = options;
+  const key = `${month}|${appointmentTypeId}|${timeZone}`;
+
+  const cached = monthAvailabilityCache.get(key);
+  if (cached && Date.now() - cached.fetchedAt < AVAILABILITY_CACHE_TTL_MS) {
+    return cached.days;
+  }
+
+  try {
+    const sessionVal = sessionStorage.getItem(`${MONTH_AVAILABILITY_CACHE_PREFIX}${key}`);
+    if (sessionVal) {
+      const parsed = JSON.parse(sessionVal) as MonthAvailabilityCacheEntry;
+      if (
+        parsed &&
+        typeof parsed.fetchedAt === 'number' &&
+        parsed.days &&
+        Date.now() - parsed.fetchedAt < AVAILABILITY_CACHE_TTL_MS
+      ) {
+        monthAvailabilityCache.set(key, parsed);
+        return parsed.days;
+      }
+    }
+  } catch {
+    // Memory cache fallback
+  }
+
+  const pendingRequest = monthAvailabilityRequests.get(key);
+  if (pendingRequest) return pendingRequest;
+
+  const request = (async (): Promise<Record<string, number>> => {
+    const { data, error } = await Promise.race([
+      supabase.functions.invoke<MonthAvailabilityResponse>('get-availability', {
+        body: { month, appointmentTypeId, timeZone },
+      }),
+      rejectAfterTimeout(AVAILABILITY_REQUEST_TIMEOUT_MS),
+    ]);
+
+    if (error) throw new Error(error.message || 'Could not load month availability.');
+    if (data?.error) throw new Error(data.error);
+
+    const days: Record<string, number> = {};
+    if (data?.days && typeof data.days === 'object') {
+      for (const [dateKey, dayData] of Object.entries(data.days)) {
+        days[dateKey] = typeof dayData?.totalSlots === 'number' ? dayData.totalSlots : 0;
+      }
+    }
+
+    const cacheEntry = { days, fetchedAt: Date.now() };
+    monthAvailabilityCache.set(key, cacheEntry);
+    try {
+      sessionStorage.setItem(`${MONTH_AVAILABILITY_CACHE_PREFIX}${key}`, JSON.stringify(cacheEntry));
+    } catch {
+      // Memory caching still works
+    }
+    return days;
+  })();
+
+  monthAvailabilityRequests.set(key, request);
+  try {
+    return await request;
+  } finally {
+    monthAvailabilityRequests.delete(key);
+  }
+}
+

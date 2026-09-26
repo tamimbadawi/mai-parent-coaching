@@ -1,25 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import {
-  addMonths,
-  eachDayOfInterval,
-  endOfMonth,
-  endOfWeek,
-  format,
-  isBefore,
-  isSameMonth,
-  isToday,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
-  subMonths,
-} from 'date-fns';
+import { format } from 'date-fns';
 import {
   Calendar,
   Check,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   CreditCard,
   ArrowRight,
@@ -47,10 +32,10 @@ import { ClientRescheduleModal } from '../components/booking/ClientRescheduleMod
 import { ClientCancelModal } from '../components/booking/ClientCancelModal';
 import { BookingStepper } from '../components/booking/BookingStepper';
 import { getClientAvailableSlots } from '../lib/bookingAvailability';
+import { BookableMonthCalendar } from '../components/booking/BookableMonthCalendar';
 import { DiscoveryIntakeModal, ConfettiBurst } from '../components/booking/DiscoveryIntakeModal';
 import type { DiscoveryIntake } from '../types';
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const SESSION_ICONS: Record<string, { icon: React.ReactNode; bg: string; text: string }> = {
   initial: { icon: <Sparkles className="h-3.5 w-3.5" />, bg: 'bg-sage/15', text: 'text-sage-dark' },
@@ -116,9 +101,6 @@ const SESSION_META: Record<
   },
 };
 
-function toDateKey(date: Date): string {
-  return format(date, 'yyyy-MM-dd');
-}
 
 function resolveBookingName(profile: UserProfile | null, user: SupabaseUser | null): string {
   if (profile?.full_name?.trim()) return profile.full_name.trim();
@@ -143,7 +125,6 @@ export default function Booking() {
     return format(d, 'yyyy-MM-dd');
   });
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', notes: '' });
   const [submitted, setSubmitted] = useState(false);
@@ -153,7 +134,6 @@ export default function Booking() {
   const [hoveredSession, setHoveredSession] = useState<{ id: string; rect: DOMRect } | null>(null);
 
   const selectedAppointment = appointmentTypes.find((a) => a.id === selectedType);
-  const today = startOfDay(new Date());
 
   const userTimeZone = useMemo(() => {
     try {
@@ -163,14 +143,6 @@ export default function Booking() {
       return 'Africa/Cairo';
     }
   }, []);
-
-  const calendarDays = useMemo(() => {
-    const monthStart = startOfMonth(calendarMonth);
-    const monthEnd = endOfMonth(calendarMonth);
-    return eachDayOfInterval({ start: startOfWeek(monthStart), end: endOfWeek(monthEnd) });
-  }, [calendarMonth]);
-
-  const isBookable = (date: Date) => !isBefore(date, today);
 
   const handleSelectDate = (key: string) => {
     setSelectedDate(key);
@@ -419,7 +391,10 @@ export default function Booking() {
                   <button
                     key={type.id}
                     type="button"
-                    onClick={() => setSelectedType(type.id)}
+                    onClick={() => {
+                      setSelectedType(type.id);
+                      setSelectedTime(null);
+                    }}
                     onMouseEnter={(event) =>
                       setHoveredSession({ id: type.id, rect: event.currentTarget.getBoundingClientRect() })
                     }
@@ -492,57 +467,13 @@ export default function Booking() {
           <div className="flex flex-col gap-3.5 lg:col-span-4 xl:col-span-3">
             <div>
               <SectionHeader icon={<Calendar className="h-3 w-3 text-sage-dark" />} label="Date" />
-              <div className="mt-2 rounded-xl border border-beige bg-cream p-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setCalendarMonth((m) => subMonths(m, 1))}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-beige/50"
-                    aria-label="Previous month"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <p className="text-xs font-semibold text-charcoal">{format(calendarMonth, 'MMMM yyyy')}</p>
-                  <button
-                    type="button"
-                    onClick={() => setCalendarMonth((m) => addMonths(m, 1))}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-beige/50"
-                    aria-label="Next month"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="grid grid-cols-7 gap-0.5 text-center">
-                  {WEEKDAYS.map((day) => (
-                    <div key={day} className="py-1 text-[10px] font-semibold text-soft-gray">
-                      {day}
-                    </div>
-                  ))}
-                  {calendarDays.map((day) => {
-                    const key = toDateKey(day);
-                    const inMonth = isSameMonth(day, calendarMonth);
-                    const bookable = isBookable(day);
-                    const sel = selectedDate === key;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        disabled={!bookable}
-                        onClick={() => handleSelectDate(key)}
-                        className={cn(
-                          'flex h-10 items-center justify-center rounded-lg text-xs font-medium transition',
-                          !inMonth && 'text-soft-gray/40',
-                          inMonth && !bookable && 'cursor-not-allowed text-soft-gray/35',
-                          inMonth && bookable && !sel && 'text-charcoal hover:bg-sage/10',
-                          sel && 'bg-sage text-white',
-                          isToday(day) && !sel && bookable && 'ring-1 ring-sage/40',
-                        )}
-                      >
-                        {format(day, 'd')}
-                      </button>
-                    );
-                  })}
-                </div>
+              <div className="mt-2">
+                <BookableMonthCalendar
+                  appointmentTypeId={selectedType ?? 'initial'}
+                  timeZone={userTimeZone}
+                  selectedDate={selectedDate}
+                  onSelectDate={handleSelectDate}
+                />
               </div>
             </div>
 
