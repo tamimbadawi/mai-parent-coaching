@@ -46,6 +46,7 @@ STAGE 5: Go live — PayTabs (at launch)
 
 ## Stage 2 — Show the offer (display only)
 - [ ] Add `groupPackages` (the §4 table) to `src/data/content.ts`; `coachingPackages` already exists from Stage 1.
+- [ ] Note: `BookableMonthCalendar` (`src/components/booking/BookableMonthCalendar.tsx`) exists and must be reused for any date picking (no inline date grids or native `<input type="date">`).
 - [ ] `/booking` left column → three door cards (reuse the current card component and style; ids `discovery`, `coaching`, `groups`).
 - [ ] Discovery door → current Discovery flow (unchanged).
 - [ ] Coaching door, **new family** (guest, or logged in with no `completed` booking): show the 5 package cards with price, per-session price, "Saves x%", "Use within", plus the "Help me choose" chips inline; the only action is "Start with a Discovery Call".

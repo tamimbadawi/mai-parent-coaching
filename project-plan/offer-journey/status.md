@@ -1,7 +1,13 @@
 # Offer & Booking Journey — Status
 
-## Current Status: 🟢 Stage 1 Complete (Parts A–F finished)
+## Current Status: 🟢 Stage 1 Complete & Verified (Parts A–F + Stage 1 Fixes 1–5)
 - Stage 1 completed and verified on `feature/booking-schedule` (Parts A–F: bug fixes, intake DB migration & Edge Function validation, color-coded calendar events, 3-step intake popup with package suggestions, admin month availability calendar, documentation).
+- Stage 1 fixes (no-scroll pop-ups + calendar shows only open days):
+  - Part 1: `0fb628a` `docs(agents): no-scroll pop-up and bookable-day rules` (AGENTS.md)
+  - Part 2: `5a445b3` `fix(booking): Discovery pop-up fits every screen without scrolling` (DiscoveryIntakeModal.tsx)
+  - Part 3: `8291b38` `feat(booking): date pickers show only open days` (bookingAvailability.ts, BookableMonthCalendar.tsx, Booking.tsx, ClientRescheduleModal.tsx, BookingRescheduleModal.tsx)
+  - Part 4: `cbe6796` `fix(admin): availability pop-up fits without scrolling` (AdminAvailabilityModal.tsx, AvailabilityMonthCalendar.tsx)
+  - Part 5: `eda9d9a` `fix(booking): strict intake id validation` (create-booking/index.ts)
 - Ready for Stage 2 (Show the offer: display only).
 - Branch for implementation: `feature/booking-schedule`.
 
