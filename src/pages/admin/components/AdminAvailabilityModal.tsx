@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { format } from 'date-fns';
 import {
   CalendarClock,
   Trash2,
@@ -8,12 +7,12 @@ import {
   AlertCircle,
   X,
   Check,
-  Clock,
-  CalendarOff,
   Layers,
+  Clock,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import type { CoachAvailabilityRule } from '../../../types';
+import { AvailabilityMonthCalendar } from './AvailabilityMonthCalendar';
 
 interface AdminAvailabilityModalProps {
   isOpen: boolean;
@@ -84,24 +83,16 @@ export const AdminAvailabilityModal = ({
   onClose,
   onUpdated,
 }: AdminAvailabilityModalProps): JSX.Element | null => {
-  const [activeTab, setActiveTab] = useState<'weekly' | 'overrides'>('weekly');
+  const [activeTab, setActiveTab] = useState<'calendar' | 'weekly'>('calendar');
   const [rules, setRules] = useState<CoachAvailabilityRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // New Date Override Form State
-  const [overrideDate, setOverrideDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [overrideType, setOverrideType] = useState<'date_override' | 'date_closed'>('date_override');
-  const [overrideAppointmentType, setOverrideAppointmentType] = useState('all');
-  const [overrideStartTime, setOverrideStartTime] = useState('10:00');
-  const [overrideEndTime, setOverrideEndTime] = useState('14:00');
-  const [overrideLabel, setOverrideLabel] = useState('');
-
   // Fetch rules
-  const fetchRules = async () => {
-    setLoading(true);
+  const fetchRules = async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const { data, error: fetchErr } = await supabase
@@ -115,7 +106,7 @@ export const AdminAvailabilityModal = ({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load availability rules');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -146,11 +137,6 @@ export const AdminAvailabilityModal = ({
     return map;
   }, [rules]);
 
-  // Date specific overrides
-  const dateOverrides = useMemo(
-    () => rules.filter((r) => r.rule_type === 'date_override' || r.rule_type === 'date_closed'),
-    [rules]
-  );
 
   // Toggle whole day on / off
   const handleToggleDay = async (dayIndex: number) => {
@@ -256,44 +242,6 @@ export const AdminAvailabilityModal = ({
     }
   };
 
-  // Add Date Override
-  const handleAddDateOverride = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!overrideDate || saving) return;
-
-    if (overrideType === 'date_override' && overrideStartTime >= overrideEndTime) {
-      setError('Start time must be before end time.');
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-    try {
-      const { error: insErr } = await supabase.from('coach_availability_rules').insert([
-        {
-          rule_type: overrideType,
-          specific_date: overrideDate,
-          start_time: overrideType === 'date_override' ? overrideStartTime : null,
-          end_time: overrideType === 'date_override' ? overrideEndTime : null,
-          appointment_type_id: overrideType === 'date_override' ? overrideAppointmentType : 'all',
-          label:
-            overrideLabel.trim() ||
-            (overrideType === 'date_closed' ? 'Closed for Holiday' : 'Special Hours'),
-          is_active: true,
-        },
-      ]);
-      if (insErr) throw insErr;
-      setOverrideLabel('');
-      setSuccess('Date rule added successfully.');
-      setTimeout(() => setSuccess(null), 3000);
-      await fetchRules();
-      if (onUpdated) onUpdated();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add date override');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -350,6 +298,17 @@ export const AdminAvailabilityModal = ({
         <div className="mb-6 flex items-center gap-2 border-b border-beige/70 pb-3">
           <button
             type="button"
+            onClick={() => setActiveTab('calendar')}
+            className={`rounded-xl px-4 py-2 text-xs font-medium transition-colors ${
+              activeTab === 'calendar'
+                ? 'bg-sage text-white shadow-xs'
+                : 'text-warm-gray hover:bg-[#faf8f4] hover:text-charcoal'
+            }`}
+          >
+            Calendar
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('weekly')}
             className={`rounded-xl px-4 py-2 text-xs font-medium transition-colors ${
               activeTab === 'weekly'
@@ -357,18 +316,7 @@ export const AdminAvailabilityModal = ({
                 : 'text-warm-gray hover:bg-[#faf8f4] hover:text-charcoal'
             }`}
           >
-            Weekly Recurring Hours
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('overrides')}
-            className={`rounded-xl px-4 py-2 text-xs font-medium transition-colors ${
-              activeTab === 'overrides'
-                ? 'bg-sage text-white shadow-xs'
-                : 'text-warm-gray hover:bg-[#faf8f4] hover:text-charcoal'
-            }`}
-          >
-            Date-Specific Overrides ({dateOverrides.length})
+            Weekly hours
           </button>
         </div>
 
@@ -393,8 +341,21 @@ export const AdminAvailabilityModal = ({
             <Loader2 className="h-5 w-5 animate-spin text-sage" />
             <span className="text-xs">Loading availability rules...</span>
           </div>
-        ) : activeTab === 'weekly' ? (
-          /* ── TAB 1: WEEKLY RECURRING HOURS ────────────────────────────── */
+        ) : activeTab === 'calendar' ? (
+          /* ── TAB 1: CALENDAR (DEFAULT) ────────────────────────────── */
+          <AvailabilityMonthCalendar
+            rules={rules}
+            sessionTypeConfig={SESSION_TYPE_CONFIG}
+            onRefreshRules={() => fetchRules(true)}
+            onSuccess={(msg) => {
+              setSuccess(msg);
+              setTimeout(() => setSuccess(null), 3000);
+            }}
+            onError={(msg) => setError(msg)}
+            onUpdated={onUpdated}
+          />
+        ) : (
+          /* ── TAB 2: WEEKLY RECURRING HOURS ────────────────────────────── */
           <div className="space-y-4">
             {DAYS_OF_WEEK.map(({ dayIndex, name }) => {
               const dayRules = recurringByDay[dayIndex] || [];
@@ -526,205 +487,6 @@ export const AdminAvailabilityModal = ({
                 </div>
               );
             })}
-          </div>
-        ) : (
-          /* ── TAB 2: DATE-SPECIFIC OVERRIDES & CLOSURES ──────────────────── */
-          <div className="space-y-6">
-            {/* Add Override Form */}
-            <form
-              onSubmit={handleAddDateOverride}
-              className="rounded-2xl border border-beige/80 bg-[#faf8f4]/70 p-4 sm:p-5"
-            >
-              <p className="text-xs font-semibold text-charcoal uppercase tracking-wider mb-3">
-                Add Date Override, Session Type, or Holiday
-              </p>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium text-warm-gray">
-                    Select Date
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={overrideDate}
-                    onChange={(e) => setOverrideDate(e.target.value)}
-                    className="w-full rounded-xl border border-beige bg-white px-3 py-2 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium text-warm-gray">
-                    Action Type
-                  </label>
-                  <select
-                    value={overrideType}
-                    onChange={(e) =>
-                      setOverrideType(e.target.value as 'date_override' | 'date_closed')
-                    }
-                    className="w-full rounded-xl border border-beige bg-white px-3 py-2 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30"
-                  >
-                    <option value="date_override">Open Specific Hours</option>
-                    <option value="date_closed">Close Entire Day (Holiday/Off)</option>
-                  </select>
-                </div>
-
-                {overrideType === 'date_override' && (
-                  <div>
-                    <label className="mb-1 block text-[11px] font-medium text-warm-gray">
-                      Session Type
-                    </label>
-                    <select
-                      value={overrideAppointmentType}
-                      onChange={(e) => setOverrideAppointmentType(e.target.value)}
-                      className="w-full rounded-xl border border-beige bg-white px-3 py-2 text-xs font-medium text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30"
-                    >
-                      <option value="all">🌿 All Session Types</option>
-                      <option value="initial">💬 Discovery Call (30m)</option>
-                      <option value="coaching-60">⏱️ 60-Min Coaching</option>
-                      <option value="intensive-90">🔥 90-Min Intensive</option>
-                      <option value="family">👨‍👩‍👧 Family Consultation (75m)</option>
-                      <option value="follow-up">🔄 Follow-up Session (45m)</option>
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              {overrideType === 'date_override' && (
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1 block text-[11px] font-medium text-warm-gray">
-                      Start Time
-                    </label>
-                    <input
-                      type="time"
-                      required
-                      value={overrideStartTime}
-                      onChange={(e) => setOverrideStartTime(e.target.value)}
-                      className="w-full rounded-xl border border-beige bg-white px-3 py-2 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[11px] font-medium text-warm-gray">
-                      End Time
-                    </label>
-                    <input
-                      type="time"
-                      required
-                      value={overrideEndTime}
-                      onChange={(e) => setOverrideEndTime(e.target.value)}
-                      className="w-full rounded-xl border border-beige bg-white px-3 py-2 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-3">
-                <label className="mb-1 block text-[11px] font-medium text-warm-gray">
-                  Label / Description (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={overrideLabel}
-                  onChange={(e) => setOverrideLabel(e.target.value)}
-                  placeholder={
-                    overrideType === 'date_closed'
-                      ? 'e.g. National Holiday, Personal Vacation'
-                      : 'e.g. Special Intensive Consultation Saturday'
-                  }
-                  className="w-full rounded-xl border border-beige bg-white px-3 py-2 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-sage py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-sage-dark disabled:opacity-40"
-              >
-                {saving ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Plus className="h-3.5 w-3.5" />
-                )}
-                <span>Add Date Rule</span>
-              </button>
-            </form>
-
-            {/* Active Date Overrides List */}
-            <div>
-              <p className="mb-3 text-xs font-semibold text-charcoal uppercase tracking-wider">
-                Configured Date Overrides ({dateOverrides.length})
-              </p>
-              {dateOverrides.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-beige bg-[#faf8f4]/60 p-6 text-center text-xs text-warm-gray">
-                  No date-specific overrides set. Standard weekly recurring schedule applies.
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {dateOverrides.map((r) => {
-                    const sessionType =
-                      SESSION_TYPE_CONFIG[r.appointment_type_id || 'all'] ||
-                      SESSION_TYPE_CONFIG.all;
-
-                    return (
-                      <div
-                        key={r.id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-beige/80 bg-white p-3.5 text-xs shadow-xs"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                              r.rule_type === 'date_closed'
-                                ? 'bg-rose-50 text-rose-700 border border-rose-200/60'
-                                : 'bg-sage/15 text-sage-dark border border-sage/30'
-                            }`}
-                          >
-                            {r.rule_type === 'date_closed' ? (
-                              <CalendarOff className="h-4 w-4" />
-                            ) : (
-                              <Clock className="h-4 w-4" />
-                            )}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold text-charcoal">
-                                {r.label ||
-                                  (r.rule_type === 'date_closed' ? 'Closed' : 'Special Hours')}
-                              </p>
-                              {r.rule_type === 'date_override' && (
-                                <span
-                                  className={`rounded-full px-2 py-0.5 text-[10px] border ${sessionType.badge}`}
-                                >
-                                  {sessionType.label}
-                                </span>
-                              )}
-                            </div>
-                            <p className="mt-0.5 text-[11px] text-warm-gray">
-                              {r.specific_date &&
-                                format(
-                                  new Date(`${r.specific_date}T12:00:00`),
-                                  'EEEE, MMMM d, yyyy'
-                                )}
-                              {r.rule_type === 'date_override' &&
-                                ` · ${r.start_time} to ${r.end_time}`}
-                            </p>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteRule(r.id)}
-                          disabled={saving}
-                          className="self-end sm:self-center rounded-lg p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                          title="Delete override"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
           </div>
         )}
 
