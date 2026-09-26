@@ -32,11 +32,11 @@ let preservedIntakeState: {
   lastTopicId: null,
 };
 
-function renderTopicSvg(id: string) {
+function renderTopicSvg(id: string, iconClass = 'h-9 w-9') {
   switch (id) {
     case 'emotions':
       return (
-        <svg viewBox="0 0 52 52" className="h-11 w-11" aria-hidden="true">
+        <svg viewBox="0 0 52 52" className={iconClass} aria-hidden="true">
           <circle cx="26" cy="26" r="24" fill="rgb(var(--color-terracotta) / 0.15)" />
           <path d="M15 30a7 7 0 0 1 2-13.7A9 9 0 0 1 34 19a6 6 0 0 1 1 11.9z" fill="rgb(var(--color-terracotta))" />
           <path d="M27 31l-4 7h5l-3 7" fill="none" stroke="rgb(var(--color-gold))" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -44,7 +44,7 @@ function renderTopicSvg(id: string) {
       );
     case 'burnout':
       return (
-        <svg viewBox="0 0 52 52" className="h-11 w-11" aria-hidden="true">
+        <svg viewBox="0 0 52 52" className={iconClass} aria-hidden="true">
           <circle cx="26" cy="26" r="24" fill="rgb(var(--color-gold) / 0.2)" />
           <rect x="12" y="18" width="26" height="16" rx="4" fill="#fff" stroke="rgb(var(--color-charcoal))" strokeWidth="2" />
           <rect x="38" y="23" width="3" height="6" rx="1" fill="rgb(var(--color-charcoal))" />
@@ -53,7 +53,7 @@ function renderTopicSvg(id: string) {
       );
     case 'family':
       return (
-        <svg viewBox="0 0 52 52" className="h-11 w-11" aria-hidden="true">
+        <svg viewBox="0 0 52 52" className={iconClass} aria-hidden="true">
           <circle cx="26" cy="26" r="24" fill="rgb(var(--color-sage) / 0.2)" />
           <circle cx="19" cy="21" r="6" fill="rgb(var(--color-sage))" />
           <path d="M10 38a9 9 0 0 1 18 0z" fill="rgb(var(--color-sage))" />
@@ -63,7 +63,7 @@ function renderTopicSvg(id: string) {
       );
     case 'sleep':
       return (
-        <svg viewBox="0 0 52 52" className="h-11 w-11" aria-hidden="true">
+        <svg viewBox="0 0 52 52" className={iconClass} aria-hidden="true">
           <circle cx="26" cy="26" r="24" fill="rgb(var(--color-dusty-blue) / 0.2)" />
           <path d="M31 13a12 12 0 1 0 8 19 10 10 0 0 1-8-19z" fill="rgb(var(--color-dusty-blue))" />
           <circle cx="36" cy="16" r="1.8" fill="rgb(var(--color-gold))" />
@@ -73,7 +73,7 @@ function renderTopicSvg(id: string) {
       );
     case 'anxiety':
       return (
-        <svg viewBox="0 0 52 52" className="h-11 w-11" aria-hidden="true">
+        <svg viewBox="0 0 52 52" className={iconClass} aria-hidden="true">
           <circle cx="26" cy="26" r="24" fill="rgb(var(--color-terracotta) / 0.15)" />
           <path d="M26 39c-9-6-13-11-13-16a7 7 0 0 1 13-3.5A7 7 0 0 1 39 23c0 5-4 10-13 16z" fill="rgb(var(--color-terracotta-light))" />
           <path d="M20 26q3-3 6 0t6 0" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
@@ -81,7 +81,7 @@ function renderTopicSvg(id: string) {
       );
     case 'screens':
       return (
-        <svg viewBox="0 0 52 52" className="h-11 w-11" aria-hidden="true">
+        <svg viewBox="0 0 52 52" className={iconClass} aria-hidden="true">
           <circle cx="26" cy="26" r="24" fill="rgb(var(--color-dusty-blue) / 0.2)" />
           <rect x="14" y="16" width="24" height="17" rx="3" fill="#fff" stroke="rgb(var(--color-charcoal))" strokeWidth="2" />
           <line x1="21" y1="37" x2="31" y2="37" stroke="rgb(var(--color-charcoal))" strokeWidth="2" strokeLinecap="round" />
@@ -90,7 +90,7 @@ function renderTopicSvg(id: string) {
       );
     case 'limits':
       return (
-        <svg viewBox="0 0 52 52" className="h-11 w-11" aria-hidden="true">
+        <svg viewBox="0 0 52 52" className={iconClass} aria-hidden="true">
           <circle cx="26" cy="26" r="24" fill="rgb(var(--color-terracotta) / 0.15)" />
           <path d="M26 14c-5 2.5-9 2-9 8 0 8 5 12 9 13 4-1 9-5 9-13 0-6-4-5.5-9-8z" fill="#fff" stroke="rgb(var(--color-terracotta))" strokeWidth="2" />
           <path d="M21 24.5h10" stroke="rgb(var(--color-terracotta))" strokeWidth="2.2" strokeLinecap="round" />
@@ -98,14 +98,14 @@ function renderTopicSvg(id: string) {
       );
     case 'confidence':
       return (
-        <svg viewBox="0 0 52 52" className="h-11 w-11" aria-hidden="true">
+        <svg viewBox="0 0 52 52" className={iconClass} aria-hidden="true">
           <circle cx="26" cy="26" r="24" fill="rgb(var(--color-gold) / 0.2)" />
           <path d="M26 15l3 6.5 7 .6-5 4.8 1.4 7-6.4-3.6-6.4 3.6 1.4-7-5-4.8 7-.6z" fill="rgb(var(--color-gold))" stroke="rgb(var(--color-charcoal))" strokeWidth="1.6" strokeLinejoin="round" />
         </svg>
       );
     case 'teens':
       return (
-        <svg viewBox="0 0 52 52" className="h-11 w-11" aria-hidden="true">
+        <svg viewBox="0 0 52 52" className={iconClass} aria-hidden="true">
           <circle cx="26" cy="26" r="24" fill="rgb(var(--color-sage) / 0.2)" />
           <circle cx="19" cy="21" r="5" fill="rgb(var(--color-sage))" />
           <circle cx="33" cy="21" r="5" fill="rgb(var(--color-dusty-blue))" />
@@ -115,7 +115,7 @@ function renderTopicSvg(id: string) {
       );
     default:
       return (
-        <svg viewBox="0 0 52 52" className="h-11 w-11" aria-hidden="true">
+        <svg viewBox="0 0 52 52" className={iconClass} aria-hidden="true">
           <circle cx="26" cy="26" r="24" fill="rgb(var(--color-cream))" />
           <circle cx="26" cy="26" r="12" fill="rgb(var(--color-sage))" />
         </svg>
@@ -265,63 +265,54 @@ export function DiscoveryIntakeModal({
         aria-modal="true"
         aria-labelledby="intake-modal-title"
         tabIndex={-1}
-        className="relative flex max-h-[90vh] w-full max-w-xl flex-col rounded-3xl border border-beige bg-white p-5 sm:p-7 shadow-xl overflow-y-auto focus:outline-none"
+        className="relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-beige bg-white p-4 shadow-xl focus:outline-none sm:p-6"
       >
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-xs font-bold uppercase tracking-wider text-sage-dark">
+        {/* Header: one row — title on the left, progress + close on the right */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-sage-dark">
               Discovery Call
             </div>
             <h2
               id="intake-modal-title"
-              className="mt-1 font-serif text-2xl sm:text-3xl font-bold leading-tight text-charcoal"
+              className="font-serif text-xl font-bold leading-tight text-charcoal sm:text-2xl"
             >
               Tell Mai a little about your family
             </h2>
-            <p className="mt-1 text-xs sm:text-sm text-warm-gray">
+            <p className="mt-0.5 text-xs text-warm-gray">
               {dateLabel} · {timeLabel} · about one minute
             </p>
           </div>
 
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="rounded-full p-2 text-warm-gray transition hover:bg-ivory hover:text-charcoal disabled:opacity-50"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Step bars */}
-        <div className="mt-4 flex items-center gap-1.5" aria-hidden="true">
-          <span
-            className={`h-1.5 rounded-full transition-all duration-300 ${
-              step === 1 ? 'w-10 bg-terracotta' : step > 1 ? 'w-7 bg-sage' : 'w-7 bg-beige'
-            }`}
-          />
-          <span
-            className={`h-1.5 rounded-full transition-all duration-300 ${
-              step === 2 ? 'w-10 bg-terracotta' : step > 2 ? 'w-7 bg-sage' : 'w-7 bg-beige'
-            }`}
-          />
-          <span
-            className={`h-1.5 rounded-full transition-all duration-300 ${
-              step === 3 ? 'w-10 bg-terracotta' : 'w-7 bg-beige'
-            }`}
-          />
-          <span className="ml-2 text-xs font-medium text-warm-gray tabular-nums">
-            {step} of 3
-          </span>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <div className="hidden items-center gap-1 sm:flex" aria-hidden="true">
+              {[1, 2, 3].map((n) => (
+                <span
+                  key={n}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    step === n ? 'w-8 bg-terracotta' : step > n ? 'w-5 bg-sage' : 'w-5 bg-beige'
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="text-xs font-medium tabular-nums text-warm-gray">{step} of 3</span>
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={onClose}
+              aria-label="Close dialog"
+              className="rounded-full p-1.5 text-warm-gray transition hover:bg-ivory hover:text-charcoal disabled:opacity-50"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
         <p className="sr-only" aria-live="polite">
           Step {step} of 3
         </p>
 
         {/* Step Content */}
-        <div className="mt-6 flex-1">
+        <div className="mt-4 min-h-0 flex-1">
           <AnimatePresence mode="wait" initial={false}>
             {step === 1 && (
               <motion.div
@@ -330,19 +321,19 @@ export function DiscoveryIntakeModal({
                 animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
                 exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, x: -14 }}
                 transition={{ duration: 0.2 }}
-                className="space-y-4"
+                className="space-y-3"
               >
                 <div>
-                  <h3 className="font-serif text-lg sm:text-xl font-semibold text-charcoal">
+                  <h3 className="font-serif text-base font-semibold text-charcoal sm:text-lg">
                     What's bringing you here?
                   </h3>
-                  <p className="text-xs sm:text-sm text-warm-gray">
+                  <p className="text-xs text-warm-gray">
                     Tap everything that fits. Most families pick two or three.
                   </p>
                 </div>
 
-                {/* 9 Topics Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
+                {/* 9 topics: compact side-by-side tiles so the screen never scrolls */}
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {discoveryTopics.map((topic) => {
                     const isSelected = selectedTopics.includes(topic.id);
                     return (
@@ -351,43 +342,43 @@ export function DiscoveryIntakeModal({
                         type="button"
                         aria-pressed={isSelected}
                         onClick={() => toggleTopic(topic.id)}
-                        className={`relative flex flex-col justify-between rounded-2xl border p-3 text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gold/60 ${
+                        className={`relative flex items-center gap-2 rounded-xl border p-2 pr-6 text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gold/60 sm:gap-2.5 sm:p-2.5 sm:pr-7 ${
                           isSelected
                             ? 'border-sage-dark bg-sage/10 shadow-xs'
                             : 'border-beige bg-ivory/60 hover:border-sand hover:bg-white'
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-1.5">
-                          <div>{renderTopicSvg(topic.id)}</div>
-                          <span
-                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
-                              isSelected
-                                ? 'border-sage-dark bg-sage-dark text-white'
-                                : 'border-sand bg-white text-transparent'
-                            }`}
-                          >
-                            <Check className="h-3 w-3 stroke-[3]" />
-                          </span>
-                        </div>
-                        <div className="mt-2">
-                          <div className="text-xs sm:text-sm font-bold leading-tight text-charcoal">
+                        <span className="shrink-0">
+                          {renderTopicSvg(topic.id, 'h-7 w-7 sm:h-9 sm:w-9')}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-xs font-bold leading-tight text-charcoal sm:text-[13px]">
                             {topic.title}
-                          </div>
-                          <div className="mt-0.5 text-[11px] leading-snug text-warm-gray">
+                          </span>
+                          <span className="mt-0.5 hidden truncate text-[11px] leading-snug text-warm-gray sm:block">
                             {topic.sub}
-                          </div>
-                        </div>
+                          </span>
+                        </span>
+                        <span
+                          className={`absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${
+                            isSelected
+                              ? 'border-sage-dark bg-sage-dark text-white'
+                              : 'border-sand bg-white text-transparent'
+                          }`}
+                        >
+                          <Check className="h-2.5 w-2.5 stroke-[3]" />
+                        </span>
                       </button>
                     );
                   })}
                 </div>
 
                 {/* Yellow Note Box */}
-                <div className="flex items-start gap-3 rounded-2xl border border-gold/40 bg-gold/15 p-3 text-charcoal">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gold text-charcoal mt-0.5">
-                    <Heart className="h-3.5 w-3.5 fill-charcoal" />
+                <div className="flex items-center gap-2.5 rounded-xl border border-gold/40 bg-gold/15 px-3 py-2 text-charcoal">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gold text-charcoal">
+                    <Heart className="h-3 w-3 fill-charcoal" />
                   </span>
-                  <p className="text-xs leading-relaxed text-charcoal">{currentNote}</p>
+                  <p className="line-clamp-2 text-xs leading-snug text-charcoal">{currentNote}</p>
                 </div>
               </motion.div>
             )}
@@ -399,13 +390,13 @@ export function DiscoveryIntakeModal({
                 animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
                 exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, x: -14 }}
                 transition={{ duration: 0.2 }}
-                className="space-y-6"
+                className="space-y-4"
               >
                 <div>
-                  <h3 className="font-serif text-lg sm:text-xl font-semibold text-charcoal">
+                  <h3 className="font-serif text-base font-semibold text-charcoal sm:text-lg">
                     Two quick taps
                   </h3>
-                  <p className="text-xs sm:text-sm text-warm-gray">
+                  <p className="text-xs text-warm-gray">
                     This helps Mai understand your situation before the call.
                   </p>
                 </div>
@@ -473,17 +464,19 @@ export function DiscoveryIntakeModal({
                 animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
                 exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, x: -14 }}
                 transition={{ duration: 0.2 }}
-                className="space-y-5"
+                className="space-y-3"
               >
                 <div>
-                  <h3 className="font-serif text-lg sm:text-xl font-semibold text-charcoal">
+                  <h3 className="font-serif text-base font-semibold text-charcoal sm:text-lg">
                     Looks good?
                   </h3>
-                  <p className="text-xs sm:text-sm text-warm-gray">
+                  <p className="text-xs text-warm-gray">
                     This is what Mai will read before your call.
                   </p>
                 </div>
 
+                {/* Two columns on wider screens: answers left, suggestion right */}
+                <div className="grid gap-3 sm:grid-cols-2 sm:gap-5">
                 {/* Summary rows */}
                 <div className="divide-y divide-beige border-y border-beige text-xs sm:text-sm">
                   {/* Bringing you here */}
@@ -553,36 +546,40 @@ export function DiscoveryIntakeModal({
                   </div>
                 </div>
 
+                <div className="space-y-2.5">
                 {/* Highlighted suggestion card */}
                 {suggestedPkg && (
-                  <div className="rounded-2xl border border-terracotta/25 bg-terracotta/10 p-4 space-y-1">
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-terracotta-dark">
+                  <div className="space-y-0.5 rounded-2xl border border-terracotta/25 bg-terracotta/10 p-3">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-terracotta-dark">
                       Families like yours usually start with
                     </div>
-                    <div className="font-serif text-xl font-bold text-charcoal">
+                    <div className="font-serif text-lg font-bold leading-tight text-charcoal">
                       {suggestedPkg.title}
                     </div>
-                    <div className="text-xs sm:text-sm text-warm-gray">
-                      {suggestedPkg.sessions} sessions · EGP {suggestedPkg.price.toLocaleString()}{' '}
-                      ({Math.round(suggestedPkg.price / suggestedPkg.sessions).toLocaleString()} each)
+                    {/* No package prices before the Discovery Call (offer-journey decision, 2026-09-26) */}
+                    <div className="text-xs text-warm-gray">
+                      {suggestedPkg.sessions} {suggestedPkg.sessions === 1 ? 'session' : 'sessions'}
+                      {suggestedPkg.sessions > 1 && ` over about ${suggestedPkg.useWithinWeeks} weeks`}
                     </div>
-                    <div className="pt-1 text-xs font-medium text-charcoal">
-                      Mai will confirm the right fit on your call.
+                    <div className="pt-0.5 text-xs font-medium text-charcoal">
+                      Mai will confirm the right fit and walk you through the options on your call.
                     </div>
                   </div>
                 )}
 
                 {/* Today's booking price line */}
-                <div className="text-xs sm:text-sm font-semibold text-charcoal">
+                <div className="text-xs font-semibold text-charcoal">
                   Today you're booking: <span className="text-sage-dark">Discovery Call · 30 min · EGP 500</span>
                 </div>
 
                 {/* Privacy Line */}
-                <div className="flex items-start gap-2 text-xs text-warm-gray">
-                  <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sage-dark" />
+                <div className="flex items-start gap-2 text-[11px] leading-snug text-warm-gray">
+                  <Lock className="mt-0.5 h-3 w-3 shrink-0 text-sage-dark" />
                   <span>
                     Only Mai sees your answers. They're stored with your booking and never shared.
                   </span>
+                </div>
+                </div>
                 </div>
 
                 {/* Error alert if any */}
@@ -600,12 +597,12 @@ export function DiscoveryIntakeModal({
         </div>
 
         {/* Footer Nav */}
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-beige pt-4">
+        <div className="mt-4 flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-beige pt-3">
           <button
             type="button"
             disabled={submitting}
             onClick={handleBack}
-            className="rounded-full border border-beige bg-white px-5 py-2.5 text-xs sm:text-sm font-semibold text-warm-gray transition hover:border-sand hover:text-charcoal disabled:opacity-50"
+            className="rounded-full border border-beige bg-white px-5 py-2 text-xs sm:text-sm font-semibold text-warm-gray transition hover:border-sand hover:text-charcoal disabled:opacity-50"
           >
             {step === 1 ? 'Cancel' : 'Back'}
           </button>
@@ -625,7 +622,7 @@ export function DiscoveryIntakeModal({
                   (step === 2 && (!selectedNeed || !selectedDuration))
                 }
                 onClick={handleNext}
-                className="rounded-full bg-terracotta px-6 py-2.5 text-xs sm:text-sm font-bold text-white transition hover:bg-terracotta-dark disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
+                className="rounded-full bg-terracotta px-6 py-2 text-xs sm:text-sm font-bold text-white transition hover:bg-terracotta-dark disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
               >
                 Continue
               </button>
@@ -634,7 +631,7 @@ export function DiscoveryIntakeModal({
                 type="button"
                 disabled={submitting}
                 onClick={handleFinalSubmit}
-                className="inline-flex items-center gap-2 rounded-full bg-terracotta px-6 py-2.5 text-xs sm:text-sm font-bold text-white transition hover:bg-terracotta-dark disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+                className="inline-flex items-center gap-2 rounded-full bg-terracotta px-6 py-2 text-xs sm:text-sm font-bold text-white transition hover:bg-terracotta-dark disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
               >
                 {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 <span>{submitting ? 'Booking...' : 'Book my Discovery Call'}</span>
