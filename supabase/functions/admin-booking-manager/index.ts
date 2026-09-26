@@ -4,12 +4,17 @@ import {
   updateCalendarEvent,
   deleteCalendarEvent,
   hasGoogleCalendarCredentials,
+  SESSION_COLOR_IDS,
 } from '../_shared/google-calendar.ts';
 import {
   isValidDateKey,
   isValidTime,
   isValidTimeZone,
   zonedDateTimeToUtc,
+  DISCOVERY_TOPIC_TITLES,
+  INTAKE_NEED_LABELS,
+  INTAKE_DURATION_LABELS,
+  PACKAGE_TITLES,
 } from '../_shared/booking-scheduling.ts';
 
 const corsHeaders = {
@@ -31,6 +36,64 @@ const APPOINTMENT_DURATIONS: Record<string, { duration: number; buffer: number }
   family: { duration: 75, buffer: 15 },
   'follow-up': { duration: 45, buffer: 15 },
 };
+
+function buildCalendarEventText(booking: Record<string, any>): { summary: string; description: string } {
+  const summary = `${booking.appointment_type_title} — ${booking.parent_name}`;
+
+  const lines: string[] = [];
+
+  if (booking.appointment_type_title) lines.push(`Session: ${booking.appointment_type_title}`);
+  if (booking.parent_name) lines.push(`Parent: ${booking.parent_name}`);
+  if (booking.email) lines.push(`Email: ${booking.email}`);
+  if (booking.phone) lines.push(`Phone: ${booking.phone}`);
+  if (booking.country) lines.push(`Country: ${booking.country}`);
+
+  if (booking.child_name) {
+    lines.push(`Child: ${booking.child_name}${booking.child_age ? ` (Age: ${booking.child_age})` : ''}`);
+  } else if (booking.child_age) {
+    lines.push(`Children's ages: ${booking.child_age}`);
+  }
+
+  const topics: string[] = Array.isArray(booking.intake_topics) ? booking.intake_topics : [];
+  const validTopicTitles = topics
+    .map((t) => DISCOVERY_TOPIC_TITLES[t] || t)
+    .filter(Boolean);
+
+  const hasIntake =
+    validTopicTitles.length > 0 ||
+    Boolean(booking.intake_need) ||
+    Boolean(booking.intake_duration) ||
+    Boolean(booking.intake_suggested_package);
+
+  if (hasIntake) {
+    lines.push('');
+    if (validTopicTitles.length > 0) {
+      lines.push('Bringing them here:');
+      for (const title of validTopicTitles) {
+        lines.push(`• ${title}`);
+      }
+    }
+    if (booking.intake_need) {
+      const needLabel = INTAKE_NEED_LABELS[booking.intake_need] || booking.intake_need;
+      lines.push(`Wants: ${needLabel}`);
+    }
+    if (booking.intake_duration) {
+      const durLabel = INTAKE_DURATION_LABELS[booking.intake_duration] || booking.intake_duration;
+      lines.push(`Felt hard for: ${durLabel}`);
+    }
+    if (booking.intake_suggested_package) {
+      const pkgTitle = PACKAGE_TITLES[booking.intake_suggested_package] || booking.intake_suggested_package;
+      lines.push(`Suggested package: ${pkgTitle}`);
+    }
+  }
+
+  if (booking.notes) {
+    lines.push('');
+    lines.push(`Parent Notes:\n${booking.notes}`);
+  }
+
+  return { summary, description: lines.join('\n') };
+}
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
@@ -117,23 +180,16 @@ Deno.serve(async (request) => {
 
       if (hasGoogleCalendarCredentials()) {
         try {
+          const { summary, description } = buildCalendarEventText(booking);
           calendarEvent = await createCalendarEvent({
-            summary: `${booking.appointment_type_title} — ${booking.parent_name}`,
-            description: [
-              `Session: ${booking.appointment_type_title}`,
-              `Parent: ${booking.parent_name}`,
-              `Email: ${booking.email}`,
-              booking.phone ? `Phone: ${booking.phone}` : null,
-              booking.country ? `Country: ${booking.country}` : null,
-              booking.child_name || booking.child_age ? `Child: ${booking.child_name || 'N/A'}${booking.child_age ? ` (Age: ${booking.child_age})` : ''}` : null,
-              booking.notes ? `\nParent Notes:\n${booking.notes}` : null,
-              `\nBooking ID: ${booking.id}`,
-            ].filter(Boolean).join('\n'),
+            summary,
+            description,
             startDateTime: booking.starts_at,
             endDateTime: booking.ends_at,
             timeZone: booking.time_zone || 'Africa/Cairo',
             clientName: booking.parent_name,
             clientEmail: booking.email,
+            colorId: SESSION_COLOR_IDS[booking.appointment_type_id],
           });
         } catch (calErr) {
           console.error('Google Calendar creation error during approval:', calErr);
@@ -259,11 +315,14 @@ Deno.serve(async (request) => {
       let calendarUpdated = false;
       if (booking.google_calendar_event_id) {
         try {
+          const { summary, description } = buildCalendarEventText(updatedBooking);
           await updateCalendarEvent(booking.google_calendar_event_id, {
-            summary: `Coaching Session: ${booking.appointment_type_title} — ${booking.parent_name}`,
+            summary,
+            description,
             startDateTime: newStartsAt,
             endDateTime: newEndsAt,
             timeZone: tz,
+            colorId: SESSION_COLOR_IDS[booking.appointment_type_id],
           });
           calendarUpdated = true;
         } catch (calErr) {
@@ -411,14 +470,16 @@ Deno.serve(async (request) => {
         return json({ error: 'Booking not found' }, 404);
       }
 
+      const { summary, description } = buildCalendarEventText(booking);
       const event = await createCalendarEvent({
-        summary: `Coaching Session: ${booking.appointment_type_title} â€” ${booking.parent_name}`,
-        description: `Mai Coaching Session\nClient: ${booking.parent_name}\nEmail: ${booking.email}\nPhone: ${booking.phone || 'N/A'}\nChild: ${booking.child_name || 'N/A'} (${booking.child_age || 'N/A'})\nNotes: ${booking.notes || 'None'}`,
+        summary,
+        description,
         startDateTime: booking.starts_at,
         endDateTime: booking.ends_at,
         timeZone: booking.time_zone || 'Africa/Cairo',
         clientName: booking.parent_name,
         clientEmail: booking.email,
+        colorId: SESSION_COLOR_IDS[booking.appointment_type_id],
       });
 
       const { data: updatedBooking, error: updateErr } = await supabase

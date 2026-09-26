@@ -43,7 +43,14 @@ export interface CalendarEventPayload {
   clientName: string;
   clientEmail: string;
   coachEmail?: string;
+  colorId?: string;
 }
+
+// Google Calendar event colours by appointment type (Google's fixed palette ids).
+export const SESSION_COLOR_IDS: Record<string, string> = {
+  initial: '5',        // Banana (yellow): Discovery Call
+  'coaching-60': '2',  // Sage (green): 60-Minute Coaching
+};
 
 export interface CreatedCalendarEvent {
   id: string;
@@ -221,6 +228,7 @@ export async function createCalendarEvent(
         { method: 'popup', minutes: 30 },      // 30 mins before
       ],
     },
+    ...(payload.colorId ? { colorId: payload.colorId } : {}),
   };
 
   const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
@@ -299,6 +307,7 @@ export async function updateCalendarEvent(
   if (updates.endDateTime) {
     patchBody.end = { dateTime: updates.endDateTime, timeZone: updates.timeZone || 'UTC' };
   }
+  if (updates.colorId) patchBody.colorId = updates.colorId;
 
   const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
     targetCalendarId
