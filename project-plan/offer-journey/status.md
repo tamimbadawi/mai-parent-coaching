@@ -1,15 +1,15 @@
 # Offer & Booking Journey — Status
 
-## Current Status: 🟡 Planned — Stage 1 ready to build
-- Plan agreed with the user on 2026-09-26 (Claude Code review + user decisions). See [decisions.md](file:///d:/Cursor/Mai_Website/project-plan/offer-journey/decisions.md), [schema.md](file:///d:/Cursor/Mai_Website/project-plan/offer-journey/schema.md), [next-steps.md](file:///d:/Cursor/Mai_Website/project-plan/offer-journey/next-steps.md), [stage-1-spec.md](file:///d:/Cursor/Mai_Website/project-plan/offer-journey/stage-1-spec.md).
-- Already built and committed on `feature/booking-schedule` (commit `fe12f68`): Mai's weekly schedule migration applied, Discovery Call (`initial`) renamed and set to 30 min, "free" wording removed, slot-fit fix, hidden legacy session types, edge functions redeployed.
+## Current Status: 🟢 Stage 1 Complete (Parts A–F finished)
+- Stage 1 completed and verified on `feature/booking-schedule` (Parts A–F: bug fixes, intake DB migration & Edge Function validation, color-coded calendar events, 3-step intake popup with package suggestions, admin month availability calendar, documentation).
+- Ready for Stage 2 (Show the offer: display only).
 - Branch for implementation: `feature/booking-schedule`.
 
 ## Stage Progress
 
 | Stage | Focus | Status |
 | :--- | :--- | :--- |
-| 1 | Discovery Call complete (bug fixes, intake pop-up, calendar colours, availability calendar) | ⏳ Ready — spec in stage-1-spec.md |
+| 1 | Discovery Call complete (bug fixes, intake pop-up, calendar colours, availability calendar) | ✅ Complete (Parts A–F done) |
 | 2 | Show the offer: three doors, packages, "help me choose" (display only) | 📋 Planned |
 | 3 | Packages & balances (no real money yet) | 📋 Planned |
 | 4 | Group coaching | 📋 Planned |

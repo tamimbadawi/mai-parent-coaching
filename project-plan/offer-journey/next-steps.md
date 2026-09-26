@@ -21,24 +21,24 @@ STAGE 5: Go live — PayTabs (at launch)
 ---
 
 ## Stage 1 — Discovery Call complete
-- [ ] Prerequisite: Google Calendar connected check
-- [ ] Part A1: Booking page shows made-up times (`src/pages/Booking.tsx`)
-- [ ] Part A2: Browser copy of the schedule logic (`src/lib/bookingAvailability.ts`)
-- [ ] Part A3: Rescheduled sessions saved at the wrong hour (`supabase/functions/admin-booking-manager/index.ts`)
-- [ ] Part A4: Google Calendar failure handling (`supabase/functions/get-availability/index.ts`)
-- [ ] Part A5: Prices in EGP (`src/data/content.ts`, `src/pages/Booking.tsx`)
-- [ ] Part B1: Migration `supabase/migrations/20260926170000_booking_discovery_intake.sql`
-- [ ] Part B2: Types (`src/types/index.ts`)
-- [ ] Part B3: Content (`src/data/content.ts`)
-- [ ] Part B4: Server copy (`supabase/functions/_shared/booking-scheduling.ts`)
-- [ ] Part B5: `supabase/functions/create-booking/index.ts`
-- [ ] Part C1: Calendar colours (`supabase/functions/_shared/google-calendar.ts`)
-- [ ] Part C2: One shared event layout (`supabase/functions/admin-booking-manager/index.ts`)
-- [ ] Part D: Discovery Call pop-up (3 screens) (`src/components/booking/DiscoveryIntakeModal.tsx`)
-- [ ] Part D2: Wire modal into `src/pages/Booking.tsx`
-- [ ] Part D3: Show answers to Mai (`src/pages/admin/AdminBookings.tsx`)
-- [ ] Part E: Admin availability as a month calendar (`AdminAvailabilityModal.tsx` + `AvailabilityMonthCalendar.tsx`)
-- [ ] Part F: Docs update (`status.md`, `decisions.md`)
+- [x] Prerequisite: Google Calendar connected check
+- [x] Part A1: Booking page shows made-up times (`src/pages/Booking.tsx`)
+- [x] Part A2: Browser copy of the schedule logic (`src/lib/bookingAvailability.ts`)
+- [x] Part A3: Rescheduled sessions saved at the wrong hour (`supabase/functions/admin-booking-manager/index.ts`)
+- [x] Part A4: Google Calendar failure handling (`supabase/functions/get-availability/index.ts`)
+- [x] Part A5: Prices in EGP (`src/data/content.ts`, `src/pages/Booking.tsx`)
+- [x] Part B1: Migration `supabase/migrations/20260926170000_booking_discovery_intake.sql`
+- [x] Part B2: Types (`src/types/index.ts`)
+- [x] Part B3: Content (`src/data/content.ts`)
+- [x] Part B4: Server copy (`supabase/functions/_shared/booking-scheduling.ts`)
+- [x] Part B5: `supabase/functions/create-booking/index.ts`
+- [x] Part C1: Calendar colours (`supabase/functions/_shared/google-calendar.ts`)
+- [x] Part C2: One shared event layout (`supabase/functions/admin-booking-manager/index.ts`)
+- [x] Part D: Discovery Call pop-up (3 screens) (`src/components/booking/DiscoveryIntakeModal.tsx`)
+- [x] Part D2: Wire modal into `src/pages/Booking.tsx`
+- [x] Part D3: Show answers to Mai (`src/pages/admin/AdminBookings.tsx`)
+- [x] Part E: Admin availability as a month calendar (`AdminAvailabilityModal.tsx` + `AvailabilityMonthCalendar.tsx`)
+- [x] Part F: Docs update (`status.md`, `decisions.md`)
 - [ ] Link: [stage-1-spec.md](file:///d:/Cursor/Mai_Website/project-plan/offer-journey/stage-1-spec.md)
 - **Exit:** all Stage 1 checks in stage-1-spec.md pass and the final report is pasted to the user.
 
