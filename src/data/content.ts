@@ -369,8 +369,9 @@ export const appointmentTypes: AppointmentType[] = [
   {
     id: 'initial',
     title: 'Discovery Call',
-    description: 'A comprehensive assessment of your needs, challenges, and goals. We\'ll discuss how I can best support you.',
+    description: 'A relaxed 30-minute call to hear what is happening at home, answer your questions, and see how I can best support you.',
     duration: '30 min',
+    price: 500,
     buffer: 15,
   },
   {
@@ -378,7 +379,7 @@ export const appointmentTypes: AppointmentType[] = [
     title: '60-Minute Coaching Session',
     description: 'Regular coaching session with personalized strategies, progress review, and action planning.',
     duration: '60 min',
-    price: 150,
+    price: 3500,
     buffer: 15,
   },
   {

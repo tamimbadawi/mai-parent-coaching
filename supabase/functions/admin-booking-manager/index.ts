@@ -5,6 +5,12 @@ import {
   deleteCalendarEvent,
   hasGoogleCalendarCredentials,
 } from '../_shared/google-calendar.ts';
+import {
+  isValidDateKey,
+  isValidTime,
+  isValidTimeZone,
+  zonedDateTimeToUtc,
+} from '../_shared/booking-scheduling.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -215,14 +221,19 @@ Deno.serve(async (request) => {
       }
 
       const tz = timeZone || booking.time_zone || 'Africa/Cairo';
+      if (!isValidDateKey(newDate) || !isValidTime(newTime) || !isValidTimeZone(tz)) {
+        return json({ error: 'Invalid date, time, or timezone.' }, 400);
+      }
+
       const config = APPOINTMENT_DURATIONS[booking.appointment_type_id] || { duration: 60, buffer: 15 };
       const durationMs = config.duration * 60 * 1000;
       const totalSpanMs = (config.duration + config.buffer) * 60 * 1000;
 
-      const newStartLocal = new Date(`${newDate}T${newTime}:00`);
-      const newStartsAt = newStartLocal.toISOString();
-      const newEndsAt = new Date(newStartLocal.getTime() + durationMs).toISOString();
-      const newReservedUntil = new Date(newStartLocal.getTime() + totalSpanMs).toISOString();
+      // newDate and newTime are wall-clock values in the client's timezone (tz)
+      const newStart = zonedDateTimeToUtc(newDate, newTime, tz);
+      const newStartsAt = newStart.toISOString();
+      const newEndsAt = new Date(newStart.getTime() + durationMs).toISOString();
+      const newReservedUntil = new Date(newStart.getTime() + totalSpanMs).toISOString();
 
       // Update in Supabase
       const { data: updatedBooking, error: updateErr } = await supabase

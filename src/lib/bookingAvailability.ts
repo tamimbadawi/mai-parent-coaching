@@ -219,12 +219,8 @@ export function buildOpenIntervalsForCoachDate(
       matchesType(r)
   );
 
-  if (recurringRules.length > 0) {
-    return recurringRules.map((r) => ({ start: r.start_time!, end: r.end_time! }));
-  }
-
-  // If no specific DB rules found for this day, use default 10:00-14:00
-  return [{ start: '10:00', end: '14:00' }];
+  // Closed by default, matching the server.
+  return recurringRules.map((r) => ({ start: r.start_time!, end: r.end_time! }));
 }
 
 export interface CandidateSlot {

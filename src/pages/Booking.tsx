@@ -167,8 +167,6 @@ export default function Booking() {
     return eachDayOfInterval({ start: startOfWeek(monthStart), end: endOfWeek(monthEnd) });
   }, [calendarMonth]);
 
-  const DEFAULT_SLOTS = ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '16:00', '16:30', '17:00'];
-
   const isBookable = (date: Date) => !isBefore(date, today);
 
   const handleSelectDate = (key: string) => {
@@ -176,7 +174,8 @@ export default function Booking() {
     setSelectedTime(null);
   };
 
-  const [availableTimes, setAvailableTimes] = useState<string[]>(DEFAULT_SLOTS);
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  const [slotsError, setSlotsError] = useState<string | null>(null);
   const [userPreviousBookings, setUserPreviousBookings] = useState<BookingType[]>([]);
   const [loadingUserBookings, setLoadingUserBookings] = useState(false);
 
@@ -184,6 +183,7 @@ export default function Booking() {
     let isMounted = true;
     async function loadLiveAvailability() {
       setLoadingSlots(true);
+      setSlotsError(null);
       try {
         const slots = await getClientAvailableSlots({
           date: selectedDate || format(new Date(), 'yyyy-MM-dd'),
@@ -193,18 +193,17 @@ export default function Booking() {
 
         if (!isMounted) return;
 
-        if (slots && slots.length > 0) {
-          setAvailableTimes(slots);
-          if (selectedTime && !slots.includes(selectedTime)) {
-            setSelectedTime(null);
-          }
-        } else {
-          setAvailableTimes(DEFAULT_SLOTS);
+        const validSlots = Array.isArray(slots) ? slots : [];
+        setAvailableTimes(validSlots);
+        if (selectedTime && !validSlots.includes(selectedTime)) {
+          setSelectedTime(null);
         }
       } catch (err) {
         console.error('Error fetching live availability:', err);
         if (isMounted) {
-          setAvailableTimes(DEFAULT_SLOTS);
+          setAvailableTimes([]);
+          setSelectedTime(null);
+          setSlotsError("We couldn't load open times. Please try again in a moment.");
         }
       } finally {
         if (isMounted) {
@@ -447,7 +446,7 @@ export default function Booking() {
                           </span>
                           {typeof type.price === 'number' && type.price > 0 && (
                             <span className="flex items-center gap-1">
-                              <CreditCard className="h-2.5 w-2.5" />${type.price}
+                              <CreditCard className="h-2.5 w-2.5" />EGP {type.price.toLocaleString('en-US')}
                             </span>
                           )}
                         </div>
@@ -546,9 +545,13 @@ export default function Booking() {
                     <Loader2 className="h-4 w-4 animate-spin text-sage" />
                     <span>Loading open times...</span>
                   </div>
+                ) : slotsError ? (
+                  <p role="alert" className="py-2.5 text-center text-xs text-terracotta-dark">
+                    {slotsError}
+                  </p>
                 ) : availableTimes.length === 0 ? (
                   <p className="py-2.5 text-center text-xs text-warm-gray">
-                    No available appointments on this date. Please choose another date or session type.
+                    No open times on this date. Please try another date.
                   </p>
                 ) : (
                   <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
@@ -655,7 +658,7 @@ export default function Booking() {
                       <div className="flex justify-between gap-2 border-t border-beige/80 pt-1.5">
                         <span className="text-soft-gray">Total</span>
                         <span className="font-semibold text-charcoal">
-                          ${selectedAppointment.price}
+                          EGP {selectedAppointment.price.toLocaleString('en-US')}
                         </span>
                       </div>
                     )}

@@ -151,14 +151,13 @@ Deno.serve(async (request) => {
       reservedUntil: new Date(booking.reserved_until),
     }));
 
-    let googleCalendarConnected = false;
     if (calendarResult.error) {
-      console.warn('Google Calendar availability check failed (falling back to database schedule):', calendarResult.error);
-    } else if (hasGoogleCalendar) {
-      googleCalendarConnected = true;
-      for (const block of calendarResult.busy) {
-        busyIntervals.push({ startsAt: new Date(block.start), reservedUntil: new Date(block.end) });
-      }
+      console.error('Google Calendar availability check failed:', calendarResult.error);
+      return json({ error: 'Live calendar availability is temporarily unavailable.' }, 503);
+    }
+    const googleCalendarConnected = hasGoogleCalendar;
+    for (const block of calendarResult.busy) {
+      busyIntervals.push({ startsAt: new Date(block.start), reservedUntil: new Date(block.end) });
     }
 
     const now = new Date();
