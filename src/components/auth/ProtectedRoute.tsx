@@ -22,6 +22,10 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps): JSX.El
     return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
   }
 
+  if (profile && (!profile.phone || !profile.country)) {
+    return <Navigate to="/auth/complete-profile" replace state={{ from: location.pathname }} />;
+  }
+
   if (requiredRole === 'admin' && profile?.role !== 'admin') {
     return <Navigate to="/dashboard" replace state={{ from: location.pathname }} />;
   }

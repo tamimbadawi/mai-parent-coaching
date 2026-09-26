@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { DesignProvider } from './context/DesignContext';
 import Home from './pages/Home';
 import HomePreview from './pages/HomePreview';
@@ -55,8 +55,23 @@ function ScrollToTop() {
 
 function AppShell() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, profile, loading } = useAuth();
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isDashboardRoute = location.pathname.startsWith('/dashboard');
+
+  useEffect(() => {
+    if (!loading && user && profile) {
+      const isCompleteProfile = location.pathname === '/auth/complete-profile';
+      const isAuthRoute = location.pathname.startsWith('/auth/') && !isCompleteProfile;
+
+      if (!isCompleteProfile && !isAuthRoute) {
+        if (!profile.phone || !profile.country) {
+          navigate('/auth/complete-profile', { replace: true, state: { from: location.pathname } });
+        }
+      }
+    }
+  }, [loading, user, profile, location.pathname, navigate]);
 
   return (
     <div className="min-h-screen bg-ivory flex flex-col">
