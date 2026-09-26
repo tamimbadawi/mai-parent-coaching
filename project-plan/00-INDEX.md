@@ -14,7 +14,8 @@ This directory is the single source of truth for **project status, architectural
 
 | Feature Area | Subfolder | Status | Summary |
 | :--- | :--- | :--- | :--- |
-| **Booking System** | [`/booking`](file:///d:/Cursor/Mai_Website/project-plan/booking) | **In Progress (#1 Priority)** | Frontend built; awaiting real database persistence and Google Calendar sync. |
+| **Booking System** | [`/booking`](file:///d:/Cursor/Mai_Website/project-plan/booking) | **In Progress (#1 Priority)** | Persistence, Google Calendar sync and Mai's weekly schedule live; next work tracked in /offer-journey. |
+| **Offer & Booking Journey** | [`/offer-journey`](file:///d:/Cursor/Mai_Website/project-plan/offer-journey) | **Planned (Stage 1 ready)** | Three doors (Discovery Call, 1:1 packages, group coaching), intake pop-up, package balances, groups, PayTabs at launch. |
 | **Payments** | [`/payments`](file:///d:/Cursor/Mai_Website/project-plan/payments) | **Planned** | Gateway chosen (PayTabs); pending clean backend build after booking persistence. |
 | **Mobile App** | [`/mobile-app`](file:///d:/Cursor/Mai_Website/project-plan/mobile-app) | **Postponed** | Capacitor wrapper configured and verified; parked on dedicated branch. |
 | **Infrastructure** | [`/infrastructure`](file:///d:/Cursor/Mai_Website/project-plan/infrastructure) | **Live** | Keep-alive workflow live and confirmed working. |
@@ -40,6 +41,12 @@ This directory is the single source of truth for **project status, architectural
   - [Status](file:///d:/Cursor/Mai_Website/project-plan/booking/status.md)
   - [Decisions](file:///d:/Cursor/Mai_Website/project-plan/booking/decisions.md)
   - [Next Steps](file:///d:/Cursor/Mai_Website/project-plan/booking/next-steps.md)
+- [Offer & Booking Journey Plan](file:///d:/Cursor/Mai_Website/project-plan/offer-journey):
+  - [Status](file:///d:/Cursor/Mai_Website/project-plan/offer-journey/status.md)
+  - [Decisions](file:///d:/Cursor/Mai_Website/project-plan/offer-journey/decisions.md)
+  - [Database Schema](file:///d:/Cursor/Mai_Website/project-plan/offer-journey/schema.md)
+  - [Next Steps](file:///d:/Cursor/Mai_Website/project-plan/offer-journey/next-steps.md)
+  - [Stage 1 Spec](file:///d:/Cursor/Mai_Website/project-plan/offer-journey/stage-1-spec.md)
 - [WhatsApp Automation Plan](file:///d:/Cursor/Mai_Website/project-plan/whatsapp):
   - [Status](file:///d:/Cursor/Mai_Website/project-plan/whatsapp/status.md)
   - [Decisions](file:///d:/Cursor/Mai_Website/project-plan/whatsapp/decisions.md)

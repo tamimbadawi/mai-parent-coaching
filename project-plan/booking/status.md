@@ -60,4 +60,5 @@
     - Tuesday (11:00–11:30, 11:45–12:15, 12:30–13:00): Discovery Calls (`initial`)
     - Thursday–Sunday: Closed / unavailable by default.
   - Edge functions `get-availability`, `create-booking`, and `admin-booking-manager` redeployed.
+  - Next: see project-plan/offer-journey/ (Stage 1 ready to build).
 

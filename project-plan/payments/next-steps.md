@@ -1,5 +1,8 @@
 # Payments — Next Steps
 
+> [!NOTE]
+> At launch, PayTabs must sell three items defined in [offer-journey/decisions.md](file:///d:/Cursor/Mai_Website/project-plan/offer-journey/decisions.md) §2–§4: Discovery Call (EGP 500), 1:1 packages, group places.
+
 Follow these implementation steps in exact sequential order:
 
 > [!IMPORTANT]

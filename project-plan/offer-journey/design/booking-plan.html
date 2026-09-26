@@ -1,0 +1,585 @@
+<title>Mai's Booking Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atma:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+  /* Mai brand tokens (src/index.css). The site is light-only, so this plan is too. */
+  :root {
+    --bg: #FFF8F8; --card: #FFFFFF; --surface: #F1F0ED; --line: #E5E3DF; --sand: #D5D3CF;
+    --mint: #92CFCA; --mint-dark: #4F9C96; --mint-wash: #E4F4F2;
+    --orange: #F1873B; --orange-dark: #C9552F; --orange-wash: #FDEBDD;
+    --gold: #F4D721; --gold-wash: #FCF6D2;
+    --blue: #8FA3B8; --blue-wash: #E7EDF3;
+    --ink: #3B3638; --ink-2: #6F686A; --ink-3: #A29D9F;
+    --display: 'Atma', 'Nunito', system-ui, sans-serif;
+    --body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--ink); }
+  body { font-family: var(--body); font-size: 15px; line-height: 1.55; padding-inline: 16px; padding-block: 32px 64px; }
+  .wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 48px; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 600; margin: 0; text-wrap: balance; line-height: 1.15; }
+  h1 { font-size: clamp(30px, 5vw, 44px); }
+  h2 { font-size: clamp(22px, 3vw, 28px); }
+  h3 { font-size: 19px; }
+  p { margin: 0; }
+  .lead { color: var(--ink-2); max-width: 62ch; margin-top: 8px; font-size: 16px; }
+  .eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--mint-dark); }
+  .sec-head { display: grid; gap: 6px; margin-bottom: 18px; }
+  .sec-head p { color: var(--ink-2); max-width: 64ch; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 22px; }
+  .tabnum { font-variant-numeric: tabular-nums; }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+  /* Phase strip */
+  .phases { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 12px; margin-top: 22px; }
+  .launch { border-style: dashed; border-color: var(--orange); }
+  .launch .tag { background: var(--gold); color: var(--ink); }
+  @media (max-width: 960px) { .phases { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+  @media (max-width: 680px) { .phases { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 440px) { .phases { grid-template-columns: minmax(0,1fr); } }
+  .phase { border-radius: 18px; padding: 14px 16px; border: 1.5px solid var(--line); background: var(--card); display: grid; gap: 4px; }
+  .phase .tag { justify-self: start; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 99px; padding: 2px 9px; }
+  .phase b { font-size: 15px; }
+  .phase span.d { font-size: 13px; color: var(--ink-2); }
+  .now { border-color: var(--orange); background: var(--orange-wash); }
+  .now .tag { background: var(--orange); color: #fff; }
+  .next .tag { background: var(--mint-wash); color: var(--mint-dark); }
+  .later .tag { background: var(--surface); color: var(--ink-2); }
+
+  /* Doors */
+  .doors { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+  @media (max-width: 860px) { .doors { grid-template-columns: minmax(0,1fr); } }
+  .door { border-radius: 22px; padding: 20px; display: grid; gap: 14px; align-content: start; border: 1.5px solid transparent; }
+  .door.d1 { background: var(--gold-wash); }
+  .door.d2 { background: var(--mint-wash); }
+  .door.d3 { background: var(--blue-wash); }
+  .door .who { font-size: 12.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+  .door svg.art { width: 56px; height: 56px; }
+  .door ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; counter-reset: s; }
+  .door li { counter-increment: s; display: grid; grid-template-columns: 24px minmax(0,1fr); gap: 8px; font-size: 14px; }
+  .door li::before { content: counter(s); width: 22px; height: 22px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 800; color: var(--ink-2); }
+  .door .note { font-size: 13px; color: var(--ink-2); border-top: 1px dashed rgba(59,54,56,.18); padding-top: 10px; }
+
+  /* Pricing */
+  .pricing { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .pricing { grid-template-columns: minmax(0,1fr); } }
+  .tbl-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th { text-align: left; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); padding: 0 10px 8px; white-space: nowrap; }
+  td { padding: 9px 10px; border-top: 1px solid var(--line); white-space: nowrap; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.group-head td { border-top: 0; padding-top: 20px; font-family: var(--display); font-size: 17px; font-weight: 600; }
+  .save { display: inline-block; font-size: 12px; font-weight: 800; border-radius: 99px; padding: 1px 8px; background: var(--mint-wash); color: var(--mint-dark); }
+  .save.none { background: transparent; color: var(--ink-3); font-weight: 600; }
+  tr.hl td { background: var(--gold-wash); }
+  .chart-title { font-size: 13px; color: var(--ink-2); margin-bottom: 10px; }
+  .chart svg { width: 100%; height: auto; display: block; }
+  .chart text { font-family: var(--body); }
+
+  /* Helper */
+  .helper { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 860px) { .helper { grid-template-columns: minmax(0,1fr); } }
+  .q { display: grid; gap: 10px; }
+  .q + .q { margin-top: 18px; }
+  .q > b { font-size: 15.5px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opt { cursor: pointer; border: 1.5px solid var(--line); background: var(--bg); border-radius: 99px; padding: 8px 14px; font-weight: 700; font-size: 14px; transition: background .15s, border-color .15s; }
+  .opt:hover { border-color: var(--mint); }
+  .opt[aria-pressed="true"] { background: var(--mint-wash); border-color: var(--mint-dark); color: #2E6A65; }
+  .result { margin-top: 20px; border-radius: 18px; background: var(--orange-wash); padding: 16px 18px; display: grid; gap: 4px; }
+  .result .k { font-size: 12px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--orange-dark); }
+  .result b { font-family: var(--display); font-size: 24px; font-weight: 600; }
+  .result span { color: var(--ink-2); font-size: 14px; }
+  .matrix { display: grid; grid-template-columns: 104px repeat(5, minmax(0,1fr)); gap: 5px; font-size: 12.5px; }
+  .cell { padding: 8px 4px; }
+  .matrix .h { font-size: 11.5px; font-weight: 800; letter-spacing: .04em; color: var(--ink-2); display: flex; align-items: end; padding: 2px 4px; line-height: 1.25; }
+  .matrix .rh { justify-content: flex-start; align-items: center; }
+  .cell { border-radius: 12px; background: var(--surface); padding: 10px 8px; text-align: center; font-weight: 700; line-height: 1.25; transition: background .2s, transform .2s; }
+  .cell small { display: block; font-weight: 600; color: var(--ink-2); font-size: 11.5px; }
+  .cell.on { background: var(--orange); color: #fff; transform: scale(1.04); }
+  .cell.on small { color: rgba(255,255,255,.85); }
+  @media (max-width: 520px) { .matrix { grid-template-columns: 70px repeat(5, minmax(0,1fr)); font-size: 10.5px; gap: 3px; } .matrix .h { font-size: 10px; } .cell small { font-size: 9.5px; } }
+
+  /* Groups */
+  .groups { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 860px) { .groups { grid-template-columns: minmax(0,1fr); } }
+  .seats { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 10px; }
+  .seat { width: 34px; height: 34px; border-radius: 50%; border: 2px dashed var(--sand); display: grid; place-items: center; transition: background .2s, border-color .2s; }
+  .seat.f { background: var(--mint); border: 2px solid var(--mint); }
+  .seat.min { border-color: var(--orange); }
+  .seat.f.min { border-color: var(--mint-dark); }
+  .seat svg { width: 16px; height: 16px; opacity: 0; }
+  .seat.f svg { opacity: 1; }
+  .slider-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  input[type=range] { width: min(320px, 100%); accent-color: var(--mint-dark); }
+  .state { margin-top: 14px; border-radius: 16px; padding: 12px 14px; font-size: 14px; }
+  .state b { display: block; font-size: 15px; }
+  .st-open { background: var(--gold-wash); }
+  .st-go { background: var(--mint-wash); }
+  .st-full { background: var(--blue-wash); }
+  .lifecycle { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-top: 16px; }
+  @media (max-width: 520px) { .lifecycle { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  .lc { border-radius: 12px; padding: 8px 10px; background: var(--surface); font-size: 12.5px; color: var(--ink-2); }
+  .lc b { display: block; color: var(--ink); font-size: 13px; }
+  .lc.on { background: var(--ink); color: rgba(255,255,255,.8); }
+  .lc.on b { color: #fff; }
+  .paths { display: grid; gap: 12px; }
+  .topics { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .tp { display: inline-block; font-size: 12.5px; font-weight: 700; border-radius: 99px; padding: 3px 10px; }
+  .tp.core { background: var(--mint-wash); color: #2E6A65; }
+  .tp.new { background: var(--gold-wash); color: #6B5C05; border: 1px dashed #D9BE12; }
+  .topic-key { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .path { border-radius: 18px; padding: 16px; border: 1.5px solid var(--line); background: var(--card); display: grid; gap: 6px; }
+  .path b { font-size: 16px; }
+  .path p { font-size: 14px; color: var(--ink-2); }
+
+  /* Status + decisions */
+  .two { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; }
+  @media (max-width: 860px) { .two { grid-template-columns: minmax(0,1fr); } }
+  ul.status { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  ul.status li { display: grid; grid-template-columns: 86px minmax(0,1fr); gap: 10px; font-size: 14px; align-items: start; }
+  .pill { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; border-radius: 99px; padding: 3px 8px; text-align: center; }
+  .p-done { background: var(--mint-wash); color: var(--mint-dark); }
+  .p-wait { background: var(--gold-wash); color: #7A6A08; }
+  .p-todo { background: var(--surface); color: var(--ink-2); }
+  ol.decide { margin: 0; padding-left: 22px; display: grid; gap: 10px; font-size: 14.5px; }
+  ol.decide li::marker { font-weight: 800; color: var(--orange-dark); }
+  ol.decide em { font-style: normal; color: var(--ink-2); display: block; font-size: 13px; }
+
+  .phase-detail { display: grid; gap: 12px; }
+  .pd { display: grid; grid-template-columns: 150px minmax(0,1fr); gap: 16px; padding: 16px 0; border-top: 1px solid var(--line); }
+  .pd:first-child { border-top: 0; padding-top: 0; }
+  .pd h3 { font-size: 17px; }
+  .pd ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+  .pd .why { font-size: 13px; color: var(--ink-2); margin-top: 6px; }
+  @media (max-width: 620px) { .pd { grid-template-columns: minmax(0,1fr); gap: 8px; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Plan · 26 Sep 2026</div>
+    <h1>Mai's Booking Plan</h1>
+    <p class="lead">What a new parent sees, what Mai sells, and the order we build it in. Updated with your decisions. Online payment (PayTabs) is connected at launch, so every flow is built now with a clear spot where payment plugs in.</p>
+    <div class="phases" aria-label="Build phases">
+      <div class="phase now"><span class="tag">Now</span><b>1 · Discovery Call live</b><span class="d">Mai's schedule, 30-min call, clean calendar events</span></div>
+      <div class="phase next"><span class="tag">Next</span><b>2 · Show the offer</b><span class="d">Three doors, packages, "help me choose"</span></div>
+      <div class="phase later"><span class="tag">Later</span><b>3 · Packages &amp; balances</b><span class="d">Sessions left, book from a package, validity</span></div>
+      <div class="phase later"><span class="tag">Later</span><b>4 · Group coaching</b><span class="d">Join a group or start your own</span></div>
+      <div class="phase launch"><span class="tag">At launch</span><b>Go live · PayTabs</b><span class="d">Discovery Call, packages and groups take real payment</span></div>
+    </div>
+  </header>
+
+  <!-- DOORS -->
+  <section aria-labelledby="h-doors">
+    <div class="sec-head">
+      <div class="eyebrow">The booking page</div>
+      <h2 id="h-doors">Three doors instead of five session types</h2>
+      <p>The old list (Initial, 60-min, 90-min, Family, Follow-up) was tidy, but it described session lengths, not what a parent is trying to do. We keep the same card style and change what the cards mean.</p>
+    </div>
+    <div class="doors">
+      <article class="door d1">
+        <svg class="art" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="26" fill="#fff"/><path d="M16 20h24a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H26l-7 5v-5h-3a3 3 0 0 1-3-3V23a3 3 0 0 1 3-3z" fill="#F4D721"/><circle cx="22" cy="29" r="2" fill="#3B3638"/><circle cx="28" cy="29" r="2" fill="#3B3638"/><circle cx="34" cy="29" r="2" fill="#3B3638"/></svg>
+        <div><div class="who">New here</div><h3>Discovery Call</h3></div>
+        <ol>
+          <li>Pick a Tuesday slot (11:00, 11:45 or 12:30)</li>
+          <li>Two quick taps: what's going on, what would help</li>
+          <li>See a likely package, then book the call</li>
+          <li>Mai confirms the package on the call</li>
+        </ol>
+        <p class="note">30 min · EGP 500 · required for new families, returning clients skip it · a separate fee, not deducted from packages</p>
+      </article>
+      <article class="door d2">
+        <svg class="art" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="26" fill="#fff"/><circle cx="21" cy="23" r="6" fill="#92CFCA"/><path d="M11 42a10 10 0 0 1 20 0z" fill="#92CFCA"/><circle cx="36" cy="23" r="6" fill="#F1873B"/><path d="M26 42a10 10 0 0 1 20 0z" fill="#F1873B"/></svg>
+        <div><div class="who">Ready to work with Mai</div><h3>1:1 Coaching</h3></div>
+        <ol>
+          <li>Choose a package, or tap "help me choose"</li>
+          <li>Pay once for the package (online payment at launch)</li>
+          <li>Book each 60-min session on Mon or Wed (12:00 or 13:30)</li>
+          <li>Dashboard shows "3 of 4 sessions left"</li>
+        </ol>
+        <p class="note">New families start with a Discovery Call. Sessions must be used within about 2 weeks per session.</p>
+      </article>
+      <article class="door d3">
+        <svg class="art" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="26" fill="#fff"/><circle cx="17" cy="25" r="5" fill="#8FA3B8"/><circle cx="28" cy="21" r="5" fill="#92CFCA"/><circle cx="39" cy="25" r="5" fill="#F4D721"/><path d="M9 41a8 8 0 0 1 16 0zM20 38a8 8 0 0 1 16 0zM31 41a8 8 0 0 1 16 0z" fill="#8FA3B8" opacity=".75"/></svg>
+        <div><div class="who">Learn with other parents</div><h3>Group Coaching</h3></div>
+        <ol>
+          <li>Join one of Mai's topic groups, or start your own group</li>
+          <li>Group opens with 4 people, closes at 8</li>
+          <li>Mai sets the day and dates once it has 4 (no fixed group day)</li>
+          <li>Each parent pays their own place (per person)</li>
+        </ol>
+        <p class="note">60-min sessions · per-person prices · about half the per-session price of 1:1</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section aria-labelledby="h-price">
+    <div class="sec-head">
+      <div class="eyebrow">Mai's prices</div>
+      <h2 id="h-price">The more sessions, the lower the price per session</h2>
+      <p>From Mai's price sheet. Group prices are per person. The savings column compares each package with single sessions of the same kind. "Use within" is about 2 weeks per session. Group packages follow the group's dates. The Discovery Call (EGP 500) is separate.</p>
+    </div>
+    <div class="pricing">
+      <div class="card tbl-wrap">
+        <table>
+          <thead><tr><th>Package</th><th class="num">Sessions</th><th class="num">Total (EGP)</th><th class="num">Per session</th><th class="num">Saves</th><th class="num">Use within</th></tr></thead>
+          <tbody>
+            <tr class="group-head"><td colspan="6">1:1 coaching</td></tr>
+            <tr><td>Single Session</td><td class="num">1</td><td class="num">3,500</td><td class="num">3,500</td><td class="num"><span class="save none">none</span></td><td class="num">2 weeks</td></tr>
+            <tr><td>Starter</td><td class="num">2</td><td class="num">6,650</td><td class="num">3,325</td><td class="num"><span class="save">5%</span></td><td class="num">4 weeks</td></tr>
+            <tr class="hl"><td>Growth</td><td class="num">4</td><td class="num">11,200</td><td class="num">2,800</td><td class="num"><span class="save">20%</span></td><td class="num">8 weeks</td></tr>
+            <tr><td>Deep Work</td><td class="num">8</td><td class="num">21,000</td><td class="num">2,625</td><td class="num"><span class="save">25%</span></td><td class="num">16 weeks</td></tr>
+            <tr><td>Full Transformation</td><td class="num">12</td><td class="num">29,400</td><td class="num">2,450</td><td class="num"><span class="save">30%</span></td><td class="num">24 weeks</td></tr>
+            <tr class="group-head"><td colspan="6">Group coaching</td></tr>
+            <tr><td>Growth</td><td class="num">4</td><td class="num">7,200</td><td class="num">1,800</td><td class="num"><span class="save none">base</span></td><td class="num">group dates</td></tr>
+            <tr><td>Deep Work</td><td class="num">8</td><td class="num">12,960</td><td class="num">1,620</td><td class="num"><span class="save">10%</span></td><td class="num">group dates</td></tr>
+            <tr><td>Full Transformation</td><td class="num">12</td><td class="num">17,496</td><td class="num">1,458</td><td class="num"><span class="save">19%</span></td><td class="num">group dates</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card chart">
+        <p class="chart-title">Price per session, EGP</p>
+        <svg viewBox="0 0 360 300" role="img" aria-label="Bar chart of price per session: 1:1 from 3,500 down to 2,450; group from 1,800 down to 1,458">
+          <!-- scale: 0–3,500 EGP maps to 0–200px, bars start at x=110 -->
+          <g font-size="11" fill="#6F686A">
+            <line x1="110" y1="8" x2="110" y2="262" stroke="#E5E3DF"/>
+            <line x1="167.1" y1="8" x2="167.1" y2="262" stroke="#E5E3DF" stroke-dasharray="3 3"/>
+            <line x1="224.3" y1="8" x2="224.3" y2="262" stroke="#E5E3DF" stroke-dasharray="3 3"/>
+            <line x1="281.4" y1="8" x2="281.4" y2="262" stroke="#E5E3DF" stroke-dasharray="3 3"/>
+            <text x="110" y="280" text-anchor="middle">0</text>
+            <text x="167.1" y="280" text-anchor="middle">1,000</text>
+            <text x="224.3" y="280" text-anchor="middle">2,000</text>
+            <text x="281.4" y="280" text-anchor="middle">3,000</text>
+          </g>
+          <g font-size="12" fill="#3B3638">
+            <text x="102" y="24" text-anchor="end">1:1 · 1</text>
+            <rect x="110" y="12" width="200" height="18" rx="5" fill="#92CFCA"/><text x="316" y="25" font-weight="700">3,500</text>
+            <text x="102" y="50" text-anchor="end">1:1 · 2</text>
+            <rect x="110" y="38" width="190" height="18" rx="5" fill="#92CFCA"/><text x="306" y="51" font-weight="700">3,325</text>
+            <text x="102" y="76" text-anchor="end">1:1 · 4</text>
+            <rect x="110" y="64" width="160" height="18" rx="5" fill="#92CFCA"/><text x="276" y="77" font-weight="700">2,800</text>
+            <text x="102" y="102" text-anchor="end">1:1 · 8</text>
+            <rect x="110" y="90" width="150" height="18" rx="5" fill="#92CFCA"/><text x="266" y="103" font-weight="700">2,625</text>
+            <text x="102" y="128" text-anchor="end">1:1 · 12</text>
+            <rect x="110" y="116" width="140" height="18" rx="5" fill="#92CFCA"/><text x="256" y="129" font-weight="700">2,450</text>
+            <text x="102" y="178" text-anchor="end">Group · 4</text>
+            <rect x="110" y="166" width="102.9" height="18" rx="5" fill="#8FA3B8"/><text x="218" y="179" font-weight="700">1,800</text>
+            <text x="102" y="204" text-anchor="end">Group · 8</text>
+            <rect x="110" y="192" width="92.6" height="18" rx="5" fill="#8FA3B8"/><text x="208" y="205" font-weight="700">1,620</text>
+            <text x="102" y="230" text-anchor="end">Group · 12</text>
+            <rect x="110" y="218" width="83.3" height="18" rx="5" fill="#8FA3B8"/><text x="199" y="231" font-weight="700">1,458</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- HELPER -->
+  <section aria-labelledby="h-help">
+    <div class="sec-head">
+      <div class="eyebrow">"Help me choose"</div>
+      <h2 id="h-help">Two taps, one suggestion, no homework</h2>
+      <p>Shown inside the Discovery Call booking and next to the 1:1 packages. It only suggests. Mai confirms the right package on the call. Try it:</p>
+    </div>
+    <div class="helper">
+      <div class="card">
+        <div class="q" role="group" aria-labelledby="q1l">
+          <b id="q1l">What would help most right now?</b>
+          <div class="opts" data-q="0">
+            <button class="opt" type="button" data-v="0" aria-pressed="false">A second opinion on one thing</button>
+            <button class="opt" type="button" data-v="1" aria-pressed="false">Quick tools for one problem</button>
+            <button class="opt" type="button" data-v="2" aria-pressed="true">Steady support while we change things</button>
+            <button class="opt" type="button" data-v="3" aria-pressed="false">Help with several things at once</button>
+            <button class="opt" type="button" data-v="4" aria-pressed="false">A real reset for our family</button>
+          </div>
+        </div>
+        <div class="q" role="group" aria-labelledby="q2l">
+          <b id="q2l">How long has it felt hard?</b>
+          <div class="opts" data-q="1">
+            <button class="opt" type="button" data-v="0" aria-pressed="false">It just started</button>
+            <button class="opt" type="button" data-v="1" aria-pressed="false">A few weeks</button>
+            <button class="opt" type="button" data-v="2" aria-pressed="true">A few months</button>
+            <button class="opt" type="button" data-v="3" aria-pressed="false">About a year</button>
+            <button class="opt" type="button" data-v="4" aria-pressed="false">Longer than a year</button>
+          </div>
+        </div>
+        <div class="result" aria-live="polite">
+          <span class="k">Families like yours usually start with</span>
+          <b id="resName">Growth Package</b>
+          <span id="resDetail">4 sessions · EGP 11,200 (2,800 each)</span>
+          <span id="resGroup">Prefer a group? Group Growth: 4 sessions · EGP 7,200</span>
+        </div>
+      </div>
+      <div class="card">
+        <p class="chart-title">How answers map to a package: 5 × 5 answers, still two taps (Mai can move any cell)</p>
+        <div class="matrix" id="matrix">
+          <div class="h"></div>
+          <div class="h">Just started</div>
+          <div class="h">Few weeks</div>
+          <div class="h">Few months</div>
+          <div class="h">About a year</div>
+          <div class="h">Over a year</div>
+          <div class="h rh">One thing, 2nd opinion</div>
+          <div class="cell" data-c="0-0">Single<small>1 session</small></div>
+          <div class="cell" data-c="0-1">Single<small>1 session</small></div>
+          <div class="cell" data-c="0-2">Single<small>1 session</small></div>
+          <div class="cell" data-c="0-3">Starter<small>2 sessions</small></div>
+          <div class="cell" data-c="0-4">Starter<small>2 sessions</small></div>
+          <div class="h rh">Quick tools</div>
+          <div class="cell" data-c="1-0">Single<small>1 session</small></div>
+          <div class="cell" data-c="1-1">Starter<small>2 sessions</small></div>
+          <div class="cell" data-c="1-2">Starter<small>2 sessions</small></div>
+          <div class="cell" data-c="1-3">Growth<small>4 sessions</small></div>
+          <div class="cell" data-c="1-4">Growth<small>4 sessions</small></div>
+          <div class="h rh">Steady support</div>
+          <div class="cell" data-c="2-0">Starter<small>2 sessions</small></div>
+          <div class="cell" data-c="2-1">Growth<small>4 sessions</small></div>
+          <div class="cell" data-c="2-2">Growth<small>4 sessions</small></div>
+          <div class="cell" data-c="2-3">Growth<small>4 sessions</small></div>
+          <div class="cell" data-c="2-4">Deep Work<small>8 sessions</small></div>
+          <div class="h rh">Several things</div>
+          <div class="cell" data-c="3-0">Growth<small>4 sessions</small></div>
+          <div class="cell" data-c="3-1">Growth<small>4 sessions</small></div>
+          <div class="cell" data-c="3-2">Deep Work<small>8 sessions</small></div>
+          <div class="cell" data-c="3-3">Deep Work<small>8 sessions</small></div>
+          <div class="cell" data-c="3-4">Full<small>12 sessions</small></div>
+          <div class="h rh">Real reset</div>
+          <div class="cell" data-c="4-0">Growth<small>4 sessions</small></div>
+          <div class="cell" data-c="4-1">Deep Work<small>8 sessions</small></div>
+          <div class="cell" data-c="4-2">Deep Work<small>8 sessions</small></div>
+          <div class="cell" data-c="4-3">Full<small>12 sessions</small></div>
+          <div class="cell" data-c="4-4">Full<small>12 sessions</small></div>
+        </div>
+        <p class="lead" style="font-size:13.5px;margin-top:14px">In the Discovery Call pop-up this replaces the "three months from now" writing box, so the whole thing stays at three quick screens: topics, these two taps, review.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- GROUPS -->
+  <section aria-labelledby="h-group">
+    <div class="sec-head">
+      <div class="eyebrow">Group coaching</div>
+      <h2 id="h-group">A group needs 4 to start and closes at 8</h2>
+      <p>Drag the slider to see what a parent sees on a group's card as people join.</p>
+    </div>
+    <div class="groups">
+      <div class="card">
+        <h3>Calm Mornings group <span style="font-family:var(--body);font-size:13px;color:var(--ink-2);font-weight:600">· example topic by Mai</span></h3>
+        <div class="seats" id="seats" aria-hidden="true"></div>
+        <div class="slider-row">
+          <label for="joined" style="font-size:14px;font-weight:700">People joined</label>
+          <input id="joined" type="range" min="0" max="8" value="3">
+          <span class="tabnum" id="joinedN" style="font-weight:800">3 / 8</span>
+        </div>
+        <div class="state st-open" id="state"></div>
+        <div class="lifecycle" id="lifecycle">
+          <div class="lc" data-s="open"><b>Filling</b>0 to 3 joined</div>
+          <div class="lc" data-s="go"><b>Confirmed</b>4 to 7, Mai sets dates</div>
+          <div class="lc" data-s="full"><b>Full</b>8 joined, closed</div>
+          <div class="lc" data-s="run"><b>Running</b>sessions under way</div>
+        </div>
+      </div>
+      <div class="paths">
+        <div class="path" style="background:var(--mint-wash);border-color:transparent">
+          <b>Join one of Mai's groups</b>
+          <p>Mai posts a topic (for example Calm Mornings, Big Feelings, Parent Burnout). Parents reserve a seat. Once 4 have joined, Mai picks the dates and everyone is told.</p>
+        </div>
+        <div class="path" style="background:var(--gold-wash);border-color:transparent">
+          <b>Start your own group</b>
+          <p>A parent brings 4 to 8 people they know. They pick the focus from Mai's list, so it stays inside what Mai coaches, and can add a short note. Mai approves it and sets the dates.</p>
+        </div>
+        <div class="path">
+          <b>Group topics</b>
+          <p>Confirmed by Mai. Her own groups and "start your own" both use this list, so every group stays inside what she coaches.</p>
+          <div class="topics">
+            <span class="tp core">Big feelings &amp; tantrums</span>
+            <span class="tp core">Parent burnout</span>
+            <span class="tp core">Siblings &amp; family dynamics</span>
+            <span class="tp core">Sleep &amp; daily routines</span>
+            <span class="tp core">Worries &amp; anxiety</span>
+            <span class="tp core">Screens &amp; digital life</span>
+            <span class="tp core">Calm limits without yelling</span>
+            <span class="tp core">Confidence &amp; independence</span>
+            <span class="tp core">Teens, tech &amp; mood</span>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASES -->
+  <section aria-labelledby="h-phases">
+    <div class="sec-head">
+      <div class="eyebrow">Build order</div>
+      <h2 id="h-phases">Four phases, each one usable on its own</h2>
+    </div>
+    <div class="card phase-detail">
+      <div class="pd">
+        <div><span class="pill p-wait">Now</span><h3 style="margin-top:6px">1 · Discovery Call live</h3></div>
+        <div>
+          <ul>
+            <li>Mai's weekly hours, Discovery Call at 30 min, "free" wording removed <b>(built, not committed yet)</b></li>
+            <li>Stop the booking page showing made-up times on closed days</li>
+            <li>Fix rescheduled sessions saving at the wrong hour</li>
+            <li>Calendar colours (yellow Discovery, green coaching) and one clean event layout</li>
+            <li>Discovery pop-up: topics, the two "help me choose" taps, review</li>
+            <li>Admin availability as a month calendar with real dates</li>
+          </ul>
+          <p class="why">Discovery Call price set at EGP 500. Payment plugs in at launch.</p>
+        </div>
+      </div>
+      <div class="pd">
+        <div><span class="pill p-todo">Next</span><h3 style="margin-top:6px">2 · Show the offer</h3></div>
+        <div>
+          <ul>
+            <li>Booking page left column becomes the three doors</li>
+            <li>Package cards with Mai's prices, plus "help me choose"</li>
+            <li>New families are sent to the Discovery Call first. Returning clients see the packages directly</li>
+            <li>Group coaching shown as "coming soon"</li>
+          </ul>
+          <p class="why">Display only: parents can see the offer and the price, and nothing is charged.</p>
+        </div>
+      </div>
+      <div class="pd">
+        <div><span class="pill p-todo">Later</span><h3 style="margin-top:6px">3 · Packages &amp; balances</h3></div>
+        <div>
+          <ul>
+            <li>A package balance per client: sessions bought, used, left, and "use by" date (about 2 weeks per session)</li>
+            <li>Booking a coaching slot uses one session from the balance</li>
+            <li>Until launch, Mai can add a package to a client in admin, so the whole flow can be tested</li>
+            <li>The "Pay" step is one clearly marked spot that PayTabs fills at launch</li>
+          </ul>
+          <p class="why">Built and tested without real money, with no fake "payment successful" screens.</p>
+        </div>
+      </div>
+      <div class="pd">
+        <div><span class="pill p-todo">Later</span><h3 style="margin-top:6px">4 · Group coaching</h3></div>
+        <div>
+          <ul>
+            <li>Mai creates groups: topic, 4 to 8 seats, package length</li>
+            <li>Parents join (seat counter) or request their own group</li>
+            <li>At 4 people Mai sets dates; at 8 the group closes</li>
+            <li>60-min sessions, each parent pays their own place</li>
+          </ul>
+          <p class="why">Reuses Phase 3's package balances.</p>
+        </div>
+      </div>
+      <div class="pd">
+        <div><span class="pill p-wait">At launch</span><h3 style="margin-top:6px">Go live · PayTabs</h3></div>
+        <div>
+          <ul>
+            <li>PayTabs hosted payment page for the Discovery Call (EGP 500), packages and group places</li>
+            <li>Payment confirmed by PayTabs' server message only, never by the browser returning</li>
+            <li>A booking or package becomes active only after that confirmation</li>
+            <li>Admin Orders shows real payments</li>
+          </ul>
+          <p class="why">One integration covering all three, done once the site is ready to open.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATUS + DECISIONS -->
+  <section class="two" aria-label="Status and decisions">
+    <div class="card">
+      <div class="sec-head" style="margin-bottom:12px"><div class="eyebrow">Where the code is today</div><h2>Phase 1 status</h2></div>
+      <ul class="status">
+        <li><span class="pill p-done">Built</span><span>Mai's schedule setup, 30-min Discovery Call, "free" removed, slot-fit fix. Checked and correct, not committed yet.</span></li>
+        <li><span class="pill p-done">Built</span><span>Admin Bookings card redesign (kept, commit on its own).</span></li>
+        <li><span class="pill p-wait">Paused</span><span>Tested code for fake times, reschedule hour, calendar colours, intake pop-up and availability calendar. It type-checks cleanly in a separate copy, and I'll hand it to Antigravity once the pop-up is updated to match this plan.</span></li>
+        <li><span class="pill p-todo">To do</span><span>Apply the database changes and redeploy the booking functions.</span></li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="sec-head" style="margin-bottom:12px"><div class="eyebrow">Your answers, 26 Sep</div><h2>Decided</h2></div>
+      <ul class="status">
+        <li><span class="pill p-done">Price</span><span>Discovery Call: 30 min, EGP 500, a separate fee (not deducted from packages).</span></li>
+        <li><span class="pill p-done">Call first</span><span>New families must do a Discovery Call first. Returning clients buy packages directly.</span></li>
+        <li><span class="pill p-done">Groups</span><span>Per-person prices, 60-min sessions. Starts at 4 people, closes at 8.</span></li>
+        <li><span class="pill p-done">Topics</span><span>Nine topics, all confirmed: Mai's five core topics plus screens, calm limits, confidence, and teens &amp; tech.</span></li>
+        <li><span class="pill p-done">Schedule</span><span>1:1 sessions Mon &amp; Wed. Groups have no fixed day: Mai schedules each group once it fills.</span></li>
+        <li><span class="pill p-done">Helper</span><span>"Help me choose" gets 5 answers per question (5 × 5 table).</span></li>
+        <li><span class="pill p-done">Validity</span><span>About 2 weeks per session: Starter 4 wks, Growth 8, Deep Work 16, Full 24.</span></li>
+        <li><span class="pill p-done">Payment</span><span>PayTabs is connected at launch. Until then everything is built and tested without real money.</span></li>
+      </ul>
+      <p class="lead" style="margin-top:16px;font-size:14px">Nothing open. Mai can still move any cell in the "help me choose" table at any time.</p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(() => {
+  const PACKS = {
+    Single: { name: 'Single Session', detail: '1 session · EGP 3,500', group: 'Prefer a group? Group Growth: 4 sessions · EGP 7,200' },
+    Starter: { name: 'Starter Package', detail: '2 sessions · EGP 6,650 (3,325 each)', group: 'Prefer a group? Group Growth: 4 sessions · EGP 7,200' },
+    Growth: { name: 'Growth Package', detail: '4 sessions · EGP 11,200 (2,800 each)', group: 'Prefer a group? Group Growth: 4 sessions · EGP 7,200' },
+    Deep: { name: 'Deep Work Package', detail: '8 sessions · EGP 21,000 (2,625 each)', group: 'Prefer a group? Group Deep Work: 8 sessions · EGP 12,960' },
+    Full: { name: 'Full Transformation', detail: '12 sessions · EGP 29,400 (2,450 each)', group: 'Prefer a group? Group Full Transformation: 12 sessions · EGP 17,496' },
+  };
+  const MAP = [
+    ['Single', 'Single', 'Single', 'Starter', 'Starter'],
+    ['Single', 'Starter', 'Starter', 'Growth', 'Growth'],
+    ['Starter', 'Growth', 'Growth', 'Growth', 'Deep'],
+    ['Growth', 'Growth', 'Deep', 'Deep', 'Full'],
+    ['Growth', 'Deep', 'Deep', 'Full', 'Full'],
+  ];
+  const answers = [2, 2];
+  function renderHelper() {
+    const key = MAP[answers[0]][answers[1]];
+    const p = PACKS[key];
+    document.getElementById('resName').textContent = p.name;
+    document.getElementById('resDetail').textContent = p.detail;
+    document.getElementById('resGroup').textContent = p.group;
+    document.querySelectorAll('#matrix .cell').forEach((c) => c.classList.toggle('on', c.dataset.c === `${answers[0]}-${answers[1]}`));
+  }
+  document.querySelectorAll('.opts').forEach((group) => {
+    group.addEventListener('click', (e) => {
+      const btn = e.target.closest('.opt');
+      if (!btn) return;
+      answers[Number(group.dataset.q)] = Number(btn.dataset.v);
+      group.querySelectorAll('.opt').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+      renderHelper();
+    });
+  });
+  renderHelper();
+
+  const seatsEl = document.getElementById('seats');
+  const tick = '<svg viewBox="0 0 16 16"><path d="M3.5 8.3l3 3 6-6.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  for (let i = 0; i < 8; i++) {
+    const s = document.createElement('span');
+    s.className = 'seat' + (i === 3 ? ' min' : '');
+    s.innerHTML = tick;
+    seatsEl.appendChild(s);
+  }
+  const slider = document.getElementById('joined');
+  function renderGroup() {
+    const n = Number(slider.value);
+    document.getElementById('joinedN').textContent = `${n} / 8`;
+    seatsEl.querySelectorAll('.seat').forEach((s, i) => s.classList.toggle('f', i < n));
+    const state = document.getElementById('state');
+    let cls, html, stage;
+    if (n < 4) {
+      cls = 'st-open'; stage = 'open';
+      html = `<b>${4 - n} more ${4 - n === 1 ? 'parent' : 'parents'} needed to start</b>Your seat is held. Mai sets the dates as soon as the group reaches 4.`;
+    } else if (n < 8) {
+      cls = 'st-go'; stage = 'go';
+      html = `<b>Group confirmed · ${8 - n} ${8 - n === 1 ? 'seat' : 'seats'} left</b>Mai has enough people and schedules the sessions. New parents can still join.`;
+    } else {
+      cls = 'st-full'; stage = 'full';
+      html = '<b>Group full</b>Closed to new members. Parents can join the waitlist for the next round.';
+    }
+    state.className = 'state ' + cls;
+    state.innerHTML = html;
+    document.querySelectorAll('#lifecycle .lc').forEach((l) => l.classList.toggle('on', l.dataset.s === stage));
+  }
+  slider.addEventListener('input', renderGroup);
+  renderGroup();
+})();
+</script>

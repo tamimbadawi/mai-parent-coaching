@@ -1,5 +1,8 @@
 # Booking System — Next Steps
 
+> [!NOTE]
+> Further booking work (Discovery intake, packages, groups, go-live payments) is planned in [offer-journey/next-steps.md](file:///d:/Cursor/Mai_Website/project-plan/offer-journey/next-steps.md).
+
 Follow these implementation steps in exact sequential order:
 
 > [!IMPORTANT]

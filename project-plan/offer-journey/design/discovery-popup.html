@@ -1,0 +1,516 @@
+<title>Discovery Call Intake</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atma:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap">
+<style>
+  /* Mai brand tokens, copied from src/index.css. The site is light-only, so this prototype is too. */
+  :root {
+    --bg: #FFF8F8;
+    --surface: #F1F0ED;
+    --line: #E5E3DF;
+    --sand: #D5D3CF;
+    --mint: #92CFCA;
+    --mint-dark: #5FA9A3;
+    --mint-wash: #E4F4F2;
+    --orange: #F1873B;
+    --orange-dark: #DB623D;
+    --orange-wash: #FDEBDD;
+    --gold: #F4D721;
+    --gold-wash: #FCF6D2;
+    --blue: #8FA3B8;
+    --blue-wash: #E7EDF3;
+    --ink: #3B3638;
+    --ink-2: #7A7375;
+    --ink-3: #ACA8AA;
+    --white: #FFFFFF;
+    --display: 'Atma', 'Nunito', system-ui, sans-serif;
+    --body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --r-lg: 24px;
+    --r-md: 16px;
+    --r-sm: 12px;
+    --shadow: 0 10px 30px rgba(59, 54, 56, 0.08);
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--ink); }
+  body {
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.55;
+    padding-inline: 16px;
+    padding-block: 28px 48px;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 20px; }
+  .proto {
+    justify-self: start;
+    font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-2); background: var(--surface); border: 1px dashed var(--sand);
+    padding: 4px 10px; border-radius: 999px;
+  }
+  .layout { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr) 320px; align-items: stretch; }
+  @media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+  /* ── Intake card ─────────────────────────────── */
+  .card {
+    background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg);
+    box-shadow: var(--shadow); padding: 28px; display: flex; flex-direction: column;
+  }
+  @media (max-width: 520px) { .card { padding: 20px 16px; } }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--mint-dark); }
+  h1 { font-family: var(--display); font-weight: 600; font-size: clamp(26px, 4vw, 34px); line-height: 1.15; margin: 6px 0 6px; text-wrap: balance; }
+  .lead { color: var(--ink-2); margin: 0; max-width: 58ch; }
+  .steps { display: flex; gap: 6px; align-items: center; padding-top: 8px; }
+  .steps .bar { width: 28px; height: 6px; border-radius: 99px; background: var(--line); transition: background .3s, width .3s; }
+  .steps .bar.on { background: var(--mint); }
+  .steps .bar.now { background: var(--orange); width: 40px; }
+  .steplabel { font-size: 12px; color: var(--ink-2); margin-left: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .panel { margin-top: 24px; }
+  .panel[hidden] { display: none !important; }
+  h2 { font-family: var(--display); font-weight: 500; font-size: 22px; margin: 0 0 4px; }
+  .hint { color: var(--ink-2); margin: 0 0 16px; font-size: 14px; }
+
+  /* Topic tiles */
+  .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 620px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .tile {
+    position: relative; text-align: left; cursor: pointer; font: inherit; color: inherit;
+    background: var(--bg); border: 1.5px solid var(--line); border-radius: var(--r-md);
+    padding: 14px 14px 16px; display: grid; gap: 8px; align-content: start;
+    transition: transform .2s ease, border-color .2s, background .2s, box-shadow .2s;
+  }
+  .tile:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(59,54,56,.07); }
+  .tile:focus-visible, .chip:focus-visible, .btn:focus-visible, .step-btn:focus-visible, textarea:focus-visible, .x:focus-visible {
+    outline: 3px solid var(--gold); outline-offset: 2px;
+  }
+  .tile[aria-pressed="true"] { border-color: var(--mint-dark); background: var(--mint-wash); }
+  .tile svg { width: 52px; height: 52px; }
+  .tile b { font-weight: 700; font-size: 14.5px; line-height: 1.3; }
+  .tile small { color: var(--ink-2); font-size: 12.5px; line-height: 1.4; }
+  .tick {
+    position: absolute; top: 10px; right: 10px; width: 22px; height: 22px; border-radius: 50%;
+    border: 1.5px solid var(--sand); background: var(--white); display: grid; place-items: center;
+    transition: background .2s, border-color .2s;
+  }
+  .tick svg { width: 12px; height: 12px; opacity: 0; transition: opacity .2s; }
+  .tile[aria-pressed="true"] .tick { background: var(--mint-dark); border-color: var(--mint-dark); }
+  .tile[aria-pressed="true"] .tick svg { opacity: 1; }
+
+  .note {
+    margin-top: 16px; display: flex; gap: 12px; align-items: flex-start;
+    background: var(--gold-wash); border-radius: var(--r-md); padding: 12px 14px; font-size: 14px;
+    min-height: 48px;
+  }
+  .note .dot { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--gold); display: grid; place-items: center; }
+  .note .dot svg { width: 14px; height: 14px; }
+  .note p { margin: 2px 0 0; }
+
+  /* Children */
+  .kids { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .kid {
+    background: var(--bg); border: 1.5px solid var(--line); border-radius: var(--r-md);
+    padding: 12px; display: grid; justify-items: center; gap: 6px; position: relative;
+  }
+  .kid .stage { height: 96px; width: 100%; display: flex; align-items: flex-end; justify-content: center; border-bottom: 2px dotted var(--sand); }
+  .kid .stage svg { transition: height .35s cubic-bezier(.3,1.4,.5,1); }
+  .kid .age { font-family: var(--display); font-size: 20px; font-variant-numeric: tabular-nums; }
+  .kid .stage-name { font-size: 12px; color: var(--ink-2); }
+  .stepper { display: flex; gap: 8px; align-items: center; }
+  .step-btn {
+    width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--white);
+    font: 700 18px/1 var(--body); color: var(--ink); cursor: pointer;
+  }
+  .step-btn:hover { border-color: var(--mint-dark); color: var(--mint-dark); }
+  .x {
+    position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; border: 0;
+    background: transparent; color: var(--ink-3); cursor: pointer; font: 700 16px/1 var(--body);
+  }
+  .x:hover { background: var(--orange-wash); color: var(--orange-dark); }
+  .addkid {
+    border: 1.5px dashed var(--sand); border-radius: var(--r-md); background: transparent; cursor: pointer;
+    font: 600 14px var(--body); color: var(--mint-dark); min-height: 176px; display: grid; place-items: center; gap: 4px;
+  }
+  .addkid:hover { background: var(--mint-wash); border-color: var(--mint-dark); }
+  .addkid span { font-size: 28px; line-height: 1; }
+
+  /* Hope */
+  textarea {
+    width: 100%; min-height: 96px; resize: vertical; font: inherit; color: var(--ink);
+    border: 1.5px solid var(--line); border-radius: var(--r-md); background: var(--bg); padding: 12px 14px;
+  }
+  textarea:focus { border-color: var(--mint-dark); }
+  .count { text-align: right; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .chip {
+    font: 600 13px var(--body); color: var(--ink); cursor: pointer;
+    background: var(--white); border: 1.5px solid var(--line); border-radius: 999px; padding: 6px 12px;
+  }
+  .chip:hover { border-color: var(--orange); background: var(--orange-wash); }
+
+  /* Review */
+  .review { display: grid; gap: 12px; }
+  .row { display: grid; grid-template-columns: 120px minmax(0,1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .row dt { color: var(--ink-2); font-size: 13px; }
+  .row dd { margin: 0; }
+  .pill { display: inline-block; font-size: 12.5px; font-weight: 600; background: var(--mint-wash); color: #2F6F6A; border-radius: 99px; padding: 3px 10px; margin: 0 6px 6px 0; }
+  .empty { color: var(--ink-3); font-style: italic; }
+  .edit { font: 600 12.5px var(--body); color: var(--mint-dark); background: none; border: 0; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
+  @media (max-width: 480px) { .row { grid-template-columns: minmax(0,1fr); gap: 4px; } }
+
+  .private { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--ink-2); margin-top: 16px; }
+  .private svg { flex: none; width: 18px; height: 18px; margin-top: 1px; }
+
+  /* Footer nav */
+  .nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: auto; padding-top: 24px; flex-wrap: wrap; }
+  .btn {
+    font: 700 14.5px var(--body); border-radius: 999px; padding: 12px 22px; cursor: pointer; border: 1.5px solid transparent;
+    transition: transform .15s ease, background .2s, opacity .2s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--orange); color: var(--white); }
+  .btn.primary:hover { background: var(--orange-dark); }
+  .btn.primary:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.ghost { background: transparent; color: var(--ink-2); border-color: var(--line); }
+  .btn.ghost:hover { color: var(--ink); border-color: var(--sand); }
+  .btn.link { background: none; color: var(--ink-2); padding-inline: 6px; text-decoration: underline; text-underline-offset: 3px; }
+  .req { font-size: 12.5px; color: var(--orange-dark); }
+
+  /* Done */
+  .done { text-align: center; padding: 18px 0 6px; display: grid; justify-items: center; gap: 10px; }
+  .done svg.big { width: 120px; height: 120px; }
+  .done p { max-width: 46ch; color: var(--ink-2); margin: 0; }
+
+  /* ── Side summary ────────────────────────────── */
+  .side { display: flex; flex-direction: column; gap: 16px; }
+
+  .booking { background: var(--mint-wash); border-radius: var(--r-lg); padding: 20px; display: grid; gap: 12px; }
+  .booking h3 { font-family: var(--display); font-weight: 600; font-size: 20px; margin: 0; }
+  .booking dl { margin: 0; display: grid; gap: 8px; font-size: 14px; }
+  .booking dl div { display: flex; justify-content: space-between; gap: 12px; }
+  .booking dt { color: #4E7F7B; }
+  .booking dd { margin: 0; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+
+  .gcal { flex: 1; display: flex; flex-direction: column; background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px; box-shadow: var(--shadow); }
+  .gcal-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); margin: 0 0 10px; }
+  .event { border-left: 5px solid #F6BF26; background: #FEF7DC; border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+  .event b { display: block; font-size: 14px; }
+  .event .when { color: var(--ink-2); font-size: 12.5px; }
+  .event pre {
+    font: 12.5px/1.55 var(--body); white-space: pre-wrap; margin: 10px 0 0; color: var(--ink);
+    border-top: 1px solid rgba(59,54,56,.08); padding-top: 8px;
+  }
+  .gcal-foot { font-size: 12px; color: var(--ink-3); margin: auto 0 0; padding-top: 10px; }
+
+  .pop { animation: pop .35s ease; }
+  @keyframes pop { 0% { transform: scale(.96); opacity: .4 } 100% { transform: scale(1); opacity: 1 } }
+  .fade { animation: fade .35s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+
+  #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<div class="wrap">
+  <span class="proto">Prototype · nothing is sent or saved</span>
+
+  <div class="layout">
+    <main class="card" aria-labelledby="title">
+      <div class="head">
+        <div>
+          <div class="eyebrow">Discovery Call</div>
+          <h1 id="title">Tell Mai a little about your family</h1>
+          <p class="lead">Three quick questions so your 30 minutes go to what matters most. About one minute.</p>
+        </div>
+        <div class="steps" aria-hidden="true">
+          <span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
+          <span class="steplabel" id="stepLabel">1 of 4</span>
+        </div>
+      </div>
+      <p class="sr" aria-live="polite" id="live"></p>
+
+      <!-- Step 1 -->
+      <section class="panel" id="p1" aria-labelledby="h-p1">
+        <h2 id="h-p1">What's bringing you here?</h2>
+        <p class="hint">Tap everything that fits. Most families pick two or three.</p>
+        <div class="tiles" id="tiles"></div>
+        <div class="note" id="note">
+          <span class="dot"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.5S2 10 2 6a3 3 0 0 1 6-1 3 3 0 0 1 6 1c0 4-6 7.5-6 7.5z" fill="#3B3638"/></svg></span>
+          <p id="noteText">Whatever you pick, there are no wrong answers. Mai will take it from here.</p>
+        </div>
+      </section>
+
+      <!-- Step 2 -->
+      <section class="panel" id="p2" aria-labelledby="h-p2" hidden>
+        <h2 id="h-p2">Who's at home?</h2>
+        <p class="hint">Add each child's age. Names aren't needed yet.</p>
+        <div class="kids" id="kids"></div>
+      </section>
+
+      <!-- Step 3 -->
+      <section class="panel" id="p3" aria-labelledby="h-p3" hidden>
+        <h2 id="h-p3"><label for="hope">Three months from now, what would feel different?</label></h2>
+        <p class="hint">Optional. A few words is plenty, or tap an idea to start.</p>
+        <div class="chips" id="chips"></div>
+        <textarea id="hope" maxlength="200" placeholder="e.g. Mornings without shouting, and a bit of energy left for me."></textarea>
+        <div class="count"><span id="count">0</span> / 200</div>
+      </section>
+
+      <!-- Step 4 -->
+      <section class="panel" id="p4" aria-labelledby="h-p4" hidden>
+        <h2 id="h-p4">Looks good?</h2>
+        <p class="hint">This is what Mai will read before your call.</p>
+        <dl class="review" id="review"></dl>
+        <div class="private">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8" rx="2" fill="#92CFCA"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="#5FA9A3" stroke-width="1.8"/></svg>
+          <span>Only Mai sees your answers. They're stored with your booking, never shared, and you can ask for them to be deleted at any time.</span>
+        </div>
+      </section>
+
+      <!-- Done -->
+      <section class="panel" id="p5" hidden>
+        <div class="done">
+          <svg class="big" viewBox="0 0 120 120" aria-hidden="true">
+            <circle cx="60" cy="60" r="54" fill="#E4F4F2"/>
+            <circle cx="60" cy="60" r="36" fill="#92CFCA"/>
+            <path d="M44 61l11 11 22-24" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="22" cy="30" r="5" fill="#F4D721"/><circle cx="100" cy="36" r="4" fill="#F1873B"/><circle cx="96" cy="94" r="5" fill="#F4D721"/>
+          </svg>
+          <h2>Request sent. Mai's looking forward to meeting you.</h2>
+          <p>Mai will confirm your call shortly. Your calendar invite and Google Meet link will then go to <b>sara@example.com</b>, with a reminder the day before.</p>
+          <button class="btn ghost" id="restart" type="button">Start the prototype again</button>
+        </div>
+      </section>
+
+      <div class="nav" id="nav">
+        <button class="btn ghost" id="back" type="button">Back</button>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <span class="req" id="req" hidden>Pick at least one to continue</span>
+          <button class="btn link" id="skip" type="button" hidden>Skip</button>
+          <button class="btn primary" id="next" type="button">Continue</button>
+        </div>
+      </div>
+    </main>
+
+    <aside class="side" aria-label="Your booking">
+      <div class="booking">
+        <h3>Your Discovery Call</h3>
+        <dl>
+          <div><dt>Date</dt><dd>Tue, 6 Oct 2026</dd></div>
+          <div><dt>Time</dt><dd>11:45 – 12:15</dd></div>
+          <div><dt>Timezone</dt><dd>Africa / Cairo</dd></div>
+          <div><dt>Where</dt><dd>Google Meet</dd></div>
+          <div><dt>Name</dt><dd>Sara Ahmed</dd></div>
+        </dl>
+      </div>
+
+      <div class="gcal">
+        <p class="gcal-label">For Mai only: her Google Calendar event</p>
+        <div class="event">
+          <b>Discovery Call — Sara Ahmed</b>
+          <span class="when">Tue 6 Oct · 11:45 – 12:15 · Banana</span>
+          <pre id="eventText"></pre>
+        </div>
+        <p class="gcal-foot">Clients never see this panel. It shows how their answers reach Mai.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(() => {
+  const TOPICS = [
+    { id: 'emotions', title: 'Big feelings & tantrums', sub: 'Meltdowns, hitting, shouting', wash: '#FDEBDD',
+      note: 'Big feelings are one of the most common reasons parents reach out, especially between ages 2 and 8.',
+      art: `<circle cx="26" cy="26" r="24" fill="#FDEBDD"/><path d="M15 30a7 7 0 0 1 2-13.7A9 9 0 0 1 34 19a6 6 0 0 1 1 11.9z" fill="#F1873B"/><path d="M27 31l-4 7h5l-3 7" fill="none" stroke="#F4D721" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>` },
+    { id: 'burnout', title: 'Parent burnout', sub: 'Running on empty, short fuse', wash: '#FCF6D2',
+      note: 'Looking after yourself is part of looking after them. Mai works with parent burnout every week.',
+      art: `<circle cx="26" cy="26" r="24" fill="#FCF6D2"/><rect x="12" y="18" width="26" height="16" rx="4" fill="#fff" stroke="#3B3638" stroke-width="2"/><rect x="38" y="23" width="3" height="6" rx="1" fill="#3B3638"/><rect x="15" y="21" width="6" height="10" rx="2" fill="#F1873B"/>` },
+    { id: 'family', title: 'Siblings & family dynamics', sub: 'Rivalry, co-parenting, tension', wash: '#E4F4F2',
+      note: 'Family patterns can shift faster than people expect once everyone is working from the same page.',
+      art: `<circle cx="26" cy="26" r="24" fill="#E4F4F2"/><circle cx="19" cy="21" r="6" fill="#92CFCA"/><path d="M10 38a9 9 0 0 1 18 0z" fill="#92CFCA"/><circle cx="34" cy="24" r="5" fill="#F4D721"/><path d="M26 38a8 8 0 0 1 16 0z" fill="#F4D721"/>` },
+    { id: 'sleep', title: 'Sleep & daily routines', sub: 'Bedtime battles, mornings', wash: '#E7EDF3',
+      note: 'Routines are usually where small changes pay off quickest. Good place to start.',
+      art: `<circle cx="26" cy="26" r="24" fill="#E7EDF3"/><path d="M31 13a12 12 0 1 0 8 19 10 10 0 0 1-8-19z" fill="#8FA3B8"/><circle cx="36" cy="16" r="1.8" fill="#F4D721"/><circle cx="16" cy="14" r="1.4" fill="#F4D721"/><circle cx="40" cy="24" r="1.2" fill="#F4D721"/>` },
+    { id: 'anxiety', title: 'Worries & anxiety', sub: 'Clinginess, school, fears', wash: '#FDEBDD',
+      note: 'Anxious kids often need calm, predictable adults more than fixes. Mai will help you find what that looks like at home.',
+      art: `<circle cx="26" cy="26" r="24" fill="#FDEBDD"/><path d="M26 39c-9-6-13-11-13-16a7 7 0 0 1 13-3.5A7 7 0 0 1 39 23c0 5-4 10-13 16z" fill="#F5A870"/><path d="M20 26q3-3 6 0t6 0" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>` },
+    { id: 'other', title: 'Something else', sub: "You'll tell Mai on the call", wash: '#F1F0ED',
+      note: 'Of course. You can bring anything to the call.',
+      art: `<circle cx="26" cy="26" r="24" fill="#F1F0ED"/><path d="M14 18h24a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H24l-7 5v-5h-3a3 3 0 0 1-3-3V21a3 3 0 0 1 3-3z" fill="#fff" stroke="#3B3638" stroke-width="2"/><circle cx="20" cy="27" r="1.8" fill="#3B3638"/><circle cx="26" cy="27" r="1.8" fill="#3B3638"/><circle cx="32" cy="27" r="1.8" fill="#3B3638"/>` },
+  ];
+  const HOPES = ['Calmer mornings', 'Less shouting at home', 'More energy for me', 'Kids who get along', 'Bedtime without battles'];
+  const KID_COLORS = ['#92CFCA', '#F4D721', '#F1873B', '#8FA3B8', '#8B9A6B'];
+
+  const state = { step: 1, topics: new Set(), kids: [4], hope: '' };
+  const $ = (id) => document.getElementById(id);
+
+  // Step 1 tiles
+  const tilesEl = $('tiles');
+  TOPICS.forEach((t) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'tile'; b.setAttribute('aria-pressed', 'false'); b.dataset.id = t.id;
+    b.innerHTML = `<span class="tick" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.3 2.3 4.7-5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <svg viewBox="0 0 52 52" aria-hidden="true">${t.art}</svg><b>${t.title}</b><small>${t.sub}</small>`;
+    b.addEventListener('click', () => {
+      const on = !state.topics.has(t.id);
+      on ? state.topics.add(t.id) : state.topics.delete(t.id);
+      b.setAttribute('aria-pressed', String(on));
+      b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+      const txt = $('noteText');
+      txt.textContent = on ? t.note : (state.topics.size ? TOPICS.find(x => x.id === [...state.topics].at(-1)).note : 'Whatever you pick, there are no wrong answers. Mai will take it from here.');
+      txt.parentElement.classList.remove('fade'); void txt.offsetWidth; txt.parentElement.classList.add('fade');
+      update();
+    });
+    tilesEl.appendChild(b);
+  });
+
+  // Step 2 kids
+  function stageName(a) {
+    if (a < 1) return 'Baby'; if (a < 3) return 'Toddler'; if (a < 6) return 'Preschooler';
+    if (a < 10) return 'School age'; if (a < 13) return 'Tween'; return 'Teen';
+  }
+  function kidSvg(age, color) {
+    const h = 40 + Math.min(age, 18) * 3; // grows with age, fits the 96px stage
+    return `<svg viewBox="0 0 40 100" height="${h}" aria-hidden="true" preserveAspectRatio="xMidYMax meet">
+      <circle cx="20" cy="16" r="12" fill="${color}"/><circle cx="16" cy="15" r="1.6" fill="#3B3638"/><circle cx="24" cy="15" r="1.6" fill="#3B3638"/>
+      <path d="M15.5 20q4.5 4 9 0" fill="none" stroke="#3B3638" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M6 100V46a14 14 0 0 1 28 0v54z" fill="${color}"/></svg>`;
+  }
+  function renderKids() {
+    const el = $('kids'); el.innerHTML = '';
+    state.kids.forEach((age, i) => {
+      const c = KID_COLORS[i % KID_COLORS.length];
+      const d = document.createElement('div'); d.className = 'kid';
+      d.innerHTML = `<button class="x" type="button" aria-label="Remove child ${i + 1}">×</button>
+        <div class="stage">${kidSvg(age, c)}</div>
+        <div class="age" aria-live="polite">${age < 1 ? 'Under 1' : age + (age === 1 ? ' year' : ' years')}</div>
+        <div class="stage-name">${stageName(age)}</div>
+        <div class="stepper">
+          <button class="step-btn" type="button" data-d="-1" aria-label="Younger">−</button>
+          <button class="step-btn" type="button" data-d="1" aria-label="Older">+</button>
+        </div>`;
+      d.querySelector('.x').addEventListener('click', () => { state.kids.splice(i, 1); renderKids(); update(); });
+      d.querySelectorAll('.step-btn').forEach((s) => s.addEventListener('click', () => {
+        state.kids[i] = Math.max(0, Math.min(18, state.kids[i] + Number(s.dataset.d)));
+        const stage = d.querySelector('.stage svg'); stage.setAttribute('height', 40 + state.kids[i] * 3);
+        d.querySelector('.age').textContent = state.kids[i] < 1 ? 'Under 1' : state.kids[i] + (state.kids[i] === 1 ? ' year' : ' years');
+        d.querySelector('.stage-name').textContent = stageName(state.kids[i]);
+        update();
+      }));
+      el.appendChild(d);
+    });
+    if (state.kids.length < 5) {
+      const add = document.createElement('button'); add.type = 'button'; add.className = 'addkid';
+      add.innerHTML = '<span aria-hidden="true">+</span>Add a child';
+      add.addEventListener('click', () => { state.kids.push(6); renderKids(); update(); });
+      el.appendChild(add);
+    }
+  }
+  renderKids();
+
+  // Step 3 chips + textarea
+  HOPES.forEach((h) => {
+    const c = document.createElement('button'); c.type = 'button'; c.className = 'chip'; c.textContent = '+ ' + h;
+    c.addEventListener('click', () => {
+      const ta = $('hope');
+      if (ta.value.toLowerCase().includes(h.toLowerCase())) return;
+      const next = ta.value.trim() ? ta.value.trim().replace(/[.,]$/, '') + ', ' + h.toLowerCase() : h;
+      ta.value = next.slice(0, 200); state.hope = ta.value; $('count').textContent = ta.value.length; update();
+    });
+    $('chips').appendChild(c);
+  });
+  $('hope').addEventListener('input', (e) => { state.hope = e.target.value; $('count').textContent = e.target.value.length; update(); });
+
+  // Review
+  function renderReview() {
+    const topics = [...state.topics].map(id => TOPICS.find(t => t.id === id).title);
+    const kids = state.kids.map(a => a < 1 ? 'under 1' : a).join(', ');
+    $('review').innerHTML = `
+      <div class="row"><dt>Bringing you here</dt><dd>${topics.map(t => `<span class="pill">${t}</span>`).join('')} <button class="edit" data-go="1" type="button">Edit</button></dd></div>
+      <div class="row"><dt>Children's ages</dt><dd>${kids || '<span class="empty">Not added</span>'} <button class="edit" data-go="2" type="button">Edit</button></dd></div>
+      <div class="row"><dt>In three months</dt><dd>${state.hope.trim() ? escapeHtml(state.hope.trim()) : '<span class="empty">Skipped</span>'} <button class="edit" data-go="3" type="button">Edit</button></dd></div>`;
+    $('review').querySelectorAll('.edit').forEach(b => b.addEventListener('click', () => go(Number(b.dataset.go))));
+  }
+  function escapeHtml(s) { return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+  // Calendar preview mirrors the admin-booking-manager description format
+  function renderEvent() {
+    const topics = [...state.topics].map(id => TOPICS.find(t => t.id === id).title);
+    const lines = [
+      'Session: Discovery Call',
+      'Parent: Sara Ahmed',
+      'Email: sara@example.com',
+      state.kids.length ? `Children: ${state.kids.map(a => a < 1 ? 'under 1' : a).join(', ')}` : null,
+      topics.length ? `\nBringing them here:\n• ${topics.join('\n• ')}` : null,
+      state.hope.trim() ? `\nIn three months:\n“${state.hope.trim()}”` : null,
+    ].filter(Boolean);
+    $('eventText').textContent = lines.join('\n');
+  }
+
+  // Navigation
+  function go(n) {
+    state.step = n;
+    for (let i = 1; i <= 5; i++) $('p' + i).hidden = i !== n;
+    if (n === 4) renderReview();
+    if (n === 5) { $('nav').hidden = true; celebrate(); }
+    else $('nav').hidden = false;
+    const panel = $('p' + n); panel.classList.remove('fade'); void panel.offsetWidth; panel.classList.add('fade');
+    $('live').textContent = n <= 4 ? `Step ${n} of 4` : 'Booking confirmed';
+    update();
+  }
+  function update() {
+    const n = state.step;
+    document.querySelectorAll('.steps .bar').forEach((s, i) => {
+      s.className = 'bar' + (i + 1 < n ? ' on' : i + 1 === n ? ' now' : '');
+    });
+    $('stepLabel').textContent = n <= 4 ? `${n} of 4` : 'Done';
+    $('back').style.visibility = n > 1 ? 'visible' : 'hidden';
+    const blocked = n === 1 && state.topics.size === 0;
+    $('next').disabled = blocked;
+    $('req').hidden = !blocked;
+    $('skip').hidden = !(n === 2 || n === 3);
+    $('next').textContent = n === 4 ? 'Book my Discovery Call' : 'Continue';
+    renderEvent();
+  }
+  $('next').addEventListener('click', () => go(Math.min(5, state.step + 1)));
+  $('back').addEventListener('click', () => go(Math.max(1, state.step - 1)));
+  $('skip').addEventListener('click', () => {
+    if (state.step === 2) state.kids = [];
+    if (state.step === 3) { state.hope = ''; $('hope').value = ''; $('count').textContent = '0'; }
+    renderKids(); go(state.step + 1);
+  });
+  $('restart').addEventListener('click', () => {
+    state.topics.clear(); state.kids = [4]; state.hope = ''; $('hope').value = ''; $('count').textContent = '0';
+    tilesEl.querySelectorAll('.tile').forEach(t => t.setAttribute('aria-pressed', 'false'));
+    $('noteText').textContent = 'Whatever you pick, there are no wrong answers. Mai will take it from here.';
+    renderKids(); go(1);
+  });
+
+  // One gentle burst of brand-coloured confetti on booking
+  function celebrate() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const cv = $('confetti'), ctx = cv.getContext('2d');
+    const W = cv.width = innerWidth, H = cv.height = innerHeight;
+    const cols = ['#92CFCA', '#F1873B', '#F4D721', '#8FA3B8'];
+    const bits = Array.from({ length: 90 }, () => ({
+      x: W / 2 + (Math.random() - .5) * 120, y: H * .35, r: 3 + Math.random() * 4,
+      vx: (Math.random() - .5) * 9, vy: -4 - Math.random() * 7, c: cols[Math.floor(Math.random() * cols.length)], a: 1,
+    }));
+    let frame = 0;
+    (function tick() {
+      ctx.clearRect(0, 0, W, H);
+      bits.forEach(b => { b.x += b.vx; b.y += b.vy; b.vy += .28; b.vx *= .99; b.a = Math.max(0, 1 - frame / 110);
+        ctx.globalAlpha = b.a; ctx.fillStyle = b.c; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill(); });
+      if (++frame < 115) requestAnimationFrame(tick); else ctx.clearRect(0, 0, W, H);
+    })();
+  }
+
+  update();
+})();
+</script>
