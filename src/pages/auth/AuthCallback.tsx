@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 
 const AuthCallback = (): JSX.Element => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, profile } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const redirectedRef = useRef(false);
@@ -23,9 +24,18 @@ const AuthCallback = (): JSX.Element => {
     try {
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, phone, country')
         .eq('id', targetUser.id)
         .maybeSingle();
+
+      const phone = profileData?.phone ?? profile?.phone;
+      const country = profileData?.country ?? profile?.country;
+
+      if (!phone || !country) {
+        const from = (location.state as { from?: string } | null)?.from;
+        void navigate('/auth/complete-profile', { replace: true, state: { from } });
+        return;
+      }
 
       const role = profileData?.role ?? profile?.role;
 
