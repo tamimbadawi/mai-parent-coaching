@@ -217,12 +217,12 @@ export const ClientDossierModal = ({
             id: `booking-${b.id}`,
             category: 'booking',
             timestamp: b.starts_at || b.created_at,
-            title: b.appointment_type_title || (isPaid ? 'Coaching Session' : 'Initial Consultation'),
+            title: b.appointment_type_title || (isPaid ? 'Coaching Session' : 'Discovery Call'),
             subtitle: `${b.appointment_date || ''} at ${b.appointment_time || ''} (${b.time_zone || 'UTC'})`,
             description: b.notes ? `Client Notes: "${b.notes}"` : undefined,
             status: b.status,
             badge: {
-              text: `${isPaid ? 'Paid Session' : 'Free Consultation'} • ${b.status}`,
+              text: `${isPaid ? 'Paid Session' : 'Discovery Call'} • ${b.status}`,
               tone,
             },
             details: {
@@ -746,7 +746,7 @@ export const ClientDossierModal = ({
                   {client.completed_paid_sessions_count}
                 </p>
                 <p className="text-[11px] text-warm-gray">
-                  {client.completed_free_sessions_count} free consultations
+                  {client.completed_free_sessions_count} discovery calls
                 </p>
               </div>
 

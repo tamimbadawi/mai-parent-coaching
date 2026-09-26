@@ -47,3 +47,17 @@
   - Interactive Reschedule, Edit Details, Add Manual Booking, and Blackout Dates modals.
   - Live search, date range filters (*Today*, *This Week*, *Upcoming*, *Past*), and interactive monthly Calendar View.
   - `booking_blackouts` database table and schema migrations active and integrated.
+  - Admin bookings card layout optimized with 2-column desktop grid to eliminate empty space.
+
+---
+
+- **Mai's Weekly Schedule & Paid Discovery Call (Complete & Verified)**:
+  - **Slot-Fit Fix**: Corrected candidate slot interval check from `reservedUntil > intervalEnd` to `endsAt > intervalEnd` in both `supabase/functions/_shared/booking-scheduling.ts` and `src/lib/bookingAvailability.ts` so 60-min sessions + 15-min buffers fit exact 60-min window allocations without false drops.
+  - **Discovery Call Transition**: "Initial Consultation" renamed to "Discovery Call" (keeping id `'initial'`), duration updated to 30 minutes with 15-minute buffer. Price made optional (`price: undefined`, price TBD), removing all "Free" wording from public and booking flows.
+  - **Booking Surface Filter**: Only Discovery Call (30 min) and 60-Minute Coaching Session are displayed on `/booking`; older/extended session types marked with `hidden: true`.
+  - **Mai's Weekly Schedule Seeded**: Migration `20260926160000_seed_mai_weekly_schedule.sql` applied to live database:
+    - Monday & Wednesday (12:00–13:00, 13:30–14:30): 60-Minute Coaching (`coaching-60`)
+    - Tuesday (11:00–11:30, 11:45–12:15, 12:30–13:00): Discovery Calls (`initial`)
+    - Thursday–Sunday: Closed / unavailable by default.
+  - Edge functions `get-availability`, `create-booking`, and `admin-booking-manager` redeployed.
+

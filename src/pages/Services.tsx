@@ -92,7 +92,7 @@ export default function Services() {
             {[
               {
                 step: '01',
-                title: 'Book a Free Consultation',
+                title: 'Book a Discovery Call',
                 description: 'We start with a no-pressure conversation about your challenges, goals, and how I can help.',
               },
               {
@@ -120,8 +120,8 @@ export default function Services() {
 
       <CTASection
         title="Not Sure Where to Start?"
-        description="Book a free initial consultation. We'll talk about what's happening in your family and figure out the best path forward together."
-        primaryAction={{ label: 'Book Free Consultation', href: '/booking' }}
+        description="Book a discovery call. We'll talk about what's happening in your family and figure out the best path forward together."
+        primaryAction={{ label: 'Book a Discovery Call', href: '/booking' }}
         secondaryAction={{ label: 'Explore Courses', href: '/courses' }}
         variant="sage"
       />

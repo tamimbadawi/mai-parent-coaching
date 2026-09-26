@@ -128,8 +128,9 @@ export interface AppointmentType {
   title: string;
   description: string;
   duration: string;
-  price: number;
+  price?: number;
   buffer: number;
+  hidden?: boolean;
 }
 
 export interface Booking {

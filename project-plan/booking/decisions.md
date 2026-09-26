@@ -44,7 +44,21 @@
 
 1. **Google OAuth**: Dedicated connection for the coach's account with refresh tokens stored strictly server-side (Supabase Vault / encrypted environment variables).
 2. **Coach Availability Config**: Stored in `coach_availability_rules` supporting recurring and date-specific windows.
-3. **Session Duration & Buffers**:
-   - Dynamic session durations per session type (45–90 minutes).
-   - Enforced 10–15 minute buffer between consecutive sessions.
-4. **Timezone Display**: Explicit timezone detection and selector displayed prominently in the booking UI to serve international clients without confusion.
+5. **Session Types & Discovery Call Transition**:
+   - The initial session type preserves the identifier `'initial'`.
+   - Title: **"Discovery Call"** (formerly "Initial Consultation").
+   - Duration: **30 minutes** with a 15-minute buffer.
+   - Pricing: `price` is optional (Price TBD). The booking summary hides the "Total" row when `price === undefined`.
+   - "Free" wording is explicitly removed across all public consultation/call touchpoints (keeping Free Resources and course Free Preview).
+   - Only **Discovery Call** and **60-Minute Coaching Session** are displayed on the public `/booking` page. Other types (`intensive-90`, `family`, `follow-up`) are retained with `hidden: true` to support admin tools and historical records.
+
+---
+
+## 5. Mai's Weekly Schedule & Slot-Fitting Algorithm
+
+- **Slot-Fitting Rule**: In `candidateSlotsForClientDate`, candidate slots are validated against interval boundaries using `endsAt > intervalEnd` (rather than `reservedUntil > intervalEnd`). This ensures a 60-minute session fits a 1-hour window (e.g. 12:00–13:00) while `reservedUntil` continues to govern collision checks with adjacent bookings.
+- **Weekly Schedule Windows (Africa/Cairo)**:
+  - **Monday (1)**: 12:00–13:00 & 13:30–14:30 (60-Minute Coaching)
+  - **Tuesday (2)**: 11:00–11:30, 11:45–12:15 & 12:30–13:00 (Discovery Call)
+  - **Wednesday (3)**: 12:00–13:00 & 13:30–14:30 (60-Minute Coaching)
+  - **Thursday–Sunday**: Closed / unavailable by default.

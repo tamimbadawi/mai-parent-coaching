@@ -12,7 +12,7 @@ export default function FinalBookingCTA() {
             You do not have to carry this alone anymore.
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-white/70">
-            Start with a free consultation — calm, private, and without pressure. We will figure out together what
+            Start with a discovery call — calm, private, and without pressure. We will figure out together what
             support fits your family.
           </p>
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
@@ -20,7 +20,7 @@ export default function FinalBookingCTA() {
               to="/booking"
               className="inline-flex items-center justify-center gap-2 rounded-full bg-sage px-8 py-4 text-sm font-semibold text-white transition hover:bg-sage-dark"
             >
-              Book a free consultation
+              Book a Discovery Call
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link

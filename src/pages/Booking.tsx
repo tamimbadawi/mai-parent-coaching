@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import {
@@ -10,7 +10,6 @@ import {
   isBefore,
   isSameMonth,
   isToday,
-  isWeekend,
   startOfDay,
   startOfMonth,
   startOfWeek,
@@ -19,7 +18,6 @@ import {
 import {
   Calendar,
   Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -33,7 +31,6 @@ import {
   Brain,
   Users,
   Star,
-  CalendarDays,
   MessageCircle,
   Loader2,
   CalendarCheck,
@@ -389,7 +386,7 @@ export default function Booking() {
           <div className="flex flex-col gap-3 lg:col-span-4 xl:col-span-3">
             <SectionHeader icon={<Heart className="h-3 w-3 text-sage-dark" />} label="Session Type" />
             <div className="flex flex-col gap-2.5">
-              {appointmentTypes.map((type) => {
+              {appointmentTypes.filter((type) => !type.hidden).map((type) => {
                 const sel = selectedType === type.id;
                 const meta =
                   SESSION_ICONS[type.id] ?? {
@@ -439,11 +436,6 @@ export default function Booking() {
                           >
                             {type.title}
                           </span>
-                          {type.price === 0 && (
-                            <span className="shrink-0 rounded-full bg-sage/20 px-1.5 py-0.5 text-[9px] font-semibold text-sage-dark">
-                              Free
-                            </span>
-                          )}
                         </div>
                         <p className="line-clamp-2 text-[11px] leading-relaxed text-warm-gray">
                           {type.description}
@@ -453,7 +445,7 @@ export default function Booking() {
                             <Clock className="h-2.5 w-2.5" />
                             {type.duration}
                           </span>
-                          {type.price > 0 && (
+                          {typeof type.price === 'number' && type.price > 0 && (
                             <span className="flex items-center gap-1">
                               <CreditCard className="h-2.5 w-2.5" />${type.price}
                             </span>
@@ -659,11 +651,11 @@ export default function Booking() {
                     />
                     <SummaryRow label="Time" value={selectedTime ?? '—'} />
                     <SummaryRow label="Timezone" value={userTimeZone.replace(/_/g, ' ')} />
-                    {selectedAppointment && (
+                    {selectedAppointment && selectedAppointment.price !== undefined && (
                       <div className="flex justify-between gap-2 border-t border-beige/80 pt-1.5">
                         <span className="text-soft-gray">Total</span>
                         <span className="font-semibold text-charcoal">
-                          {selectedAppointment.price === 0 ? 'Free' : `$${selectedAppointment.price}`}
+                          ${selectedAppointment.price}
                         </span>
                       </div>
                     )}

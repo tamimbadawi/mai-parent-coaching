@@ -31,7 +31,7 @@ export default function HeroSection() {
                 to="/booking"
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-sage px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-sage-dark hover:shadow-lg"
               >
-                Book a free consultation
+                Book a Discovery Call
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <a

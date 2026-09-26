@@ -18,7 +18,7 @@ const json = (body: unknown, status = 200): Response =>
   });
 
 const APPOINTMENT_DURATIONS: Record<string, { duration: number; buffer: number }> = {
-  initial: { duration: 75, buffer: 15 },
+  initial: { duration: 30, buffer: 15 },
   'coaching-60': { duration: 60, buffer: 15 },
   'intensive-90': { duration: 90, buffer: 30 },
   family: { duration: 75, buffer: 15 },

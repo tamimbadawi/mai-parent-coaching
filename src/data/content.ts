@@ -261,7 +261,7 @@ export const faqs: FAQ[] = [
   {
     id: '2',
     question: 'How long are coaching sessions?',
-    answer: 'Initial consultations are 75 minutes to allow time for a thorough assessment. Regular coaching sessions are 60 minutes. Intensive sessions for complex issues or burnout recovery are 90 minutes. Workshop durations vary from 2-4 hours depending on the topic.',
+    answer: 'Discovery calls are 30 minutes to discuss how I can best support you. Regular coaching sessions are 60 minutes. Workshop durations vary from 2-4 hours depending on the topic.',
     category: 'Coaching',
   },
   {
@@ -368,10 +368,9 @@ export const freeResources: FreeResource[] = [
 export const appointmentTypes: AppointmentType[] = [
   {
     id: 'initial',
-    title: 'Initial Consultation',
+    title: 'Discovery Call',
     description: 'A comprehensive assessment of your needs, challenges, and goals. We\'ll discuss how I can best support you.',
-    duration: '75 min',
-    price: 0,
+    duration: '30 min',
     buffer: 15,
   },
   {
@@ -389,6 +388,7 @@ export const appointmentTypes: AppointmentType[] = [
     duration: '90 min',
     price: 200,
     buffer: 30,
+    hidden: true,
   },
   {
     id: 'family',
@@ -397,6 +397,7 @@ export const appointmentTypes: AppointmentType[] = [
     duration: '75 min',
     price: 175,
     buffer: 15,
+    hidden: true,
   },
   {
     id: 'follow-up',
@@ -405,6 +406,7 @@ export const appointmentTypes: AppointmentType[] = [
     duration: '45 min',
     price: 100,
     buffer: 15,
+    hidden: true,
   },
 ];
 

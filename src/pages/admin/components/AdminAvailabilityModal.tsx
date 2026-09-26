@@ -10,7 +10,6 @@ import {
   Check,
   Clock,
   CalendarOff,
-  Sparkles,
   Layers,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
@@ -44,11 +43,11 @@ export const SESSION_TYPE_CONFIG: Record<
     duration: 'Any',
   },
   initial: {
-    label: 'Initial Consultation',
+    label: 'Discovery Call',
     badge: 'bg-sky-50 text-sky-800 border-sky-300 font-medium',
     pill: 'bg-sky-50 text-sky-800 border-sky-200',
     dot: 'bg-sky-500',
-    duration: '75 min',
+    duration: '30 min',
   },
   'coaching-60': {
     label: '60-Min Coaching',
@@ -501,7 +500,7 @@ export const AdminAvailabilityModal = ({
                                     className={`rounded-lg border px-2.5 py-1 text-xs font-medium focus:outline-none cursor-pointer ${currentSessionType.badge}`}
                                   >
                                     <option value="all">🌿 All Session Types</option>
-                                    <option value="initial">💬 Initial Consultation (75m)</option>
+                                    <option value="initial">💬 Discovery Call (30m)</option>
                                     <option value="coaching-60">⏱️ 60-Min Coaching</option>
                                     <option value="intensive-90">🔥 90-Min Intensive</option>
                                     <option value="family">👨‍👩‍👧 Family Consultation (75m)</option>
@@ -580,7 +579,7 @@ export const AdminAvailabilityModal = ({
                       className="w-full rounded-xl border border-beige bg-white px-3 py-2 text-xs font-medium text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30"
                     >
                       <option value="all">🌿 All Session Types</option>
-                      <option value="initial">💬 Initial Consultation (75m)</option>
+                      <option value="initial">💬 Discovery Call (30m)</option>
                       <option value="coaching-60">⏱️ 60-Min Coaching</option>
                       <option value="intensive-90">🔥 90-Min Intensive</option>
                       <option value="family">👨‍👩‍👧 Family Consultation (75m)</option>

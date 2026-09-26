@@ -15,7 +15,6 @@ import {
   RefreshCw,
   Search,
   Plus,
-  CalendarOff,
   LayoutList,
   Calendar as CalendarIcon,
   Video,
@@ -455,7 +454,7 @@ const AdminBookings = (): JSX.Element => {
               description="Appointment details, child info, and timestamps will appear here in real time."
             />
           ) : (
-            <div className="space-y-4">
+            <div className="grid gap-4 xl:grid-cols-2">
               {filteredBookings.map((booking) => {
                 const config = statusConfig[booking.status] ?? statusConfig.pending;
                 const isUpdating = updatingId === booking.id;
@@ -464,47 +463,65 @@ const AdminBookings = (): JSX.Element => {
                 return (
                   <article
                     key={booking.id}
-                    className="rounded-[24px] border border-beige bg-cream/70 p-5 transition-all hover:bg-cream"
+                    className="flex flex-col justify-between rounded-[24px] border border-beige bg-cream/70 p-5 transition-all hover:bg-cream hover:shadow-xs"
                   >
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      {/* Left: Client & Session Info */}
-                      <div className="space-y-2.5">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-serif text-lg font-semibold text-charcoal">
-                            {booking.parent_name}
-                          </h3>
-                          <span
-                            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${config.badge}`}
-                          >
-                            {config.label}
-                          </span>
-                        </div>
+                    <div className="space-y-3">
+                      {/* Top Row: Client Info & Appointment Time */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-serif text-lg font-semibold text-charcoal">
+                              {booking.parent_name}
+                            </h3>
+                            <span
+                              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${config.badge}`}
+                            >
+                              {config.label}
+                            </span>
+                          </div>
 
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-warm-gray">
-                          <span className="flex items-center gap-1">
-                            <Mail className="h-3.5 w-3.5 text-soft-gray" />
-                            <a href={`mailto:${booking.email}`} className="text-charcoal hover:underline">
-                              {booking.email}
-                            </a>
-                          </span>
-                          {booking.phone && (
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-xs text-warm-gray">
                             <span className="flex items-center gap-1">
-                              <Phone className="h-3.5 w-3.5 text-soft-gray" />
-                              <a href={`tel:${booking.phone}`} className="text-charcoal hover:underline">
-                                {booking.phone}
+                              <Mail className="h-3.5 w-3.5 text-soft-gray shrink-0" />
+                              <a href={`mailto:${booking.email}`} className="text-charcoal hover:underline truncate max-w-[200px]">
+                                {booking.email}
                               </a>
                             </span>
-                          )}
-                          {booking.country && (
-                            <span className="flex items-center gap-1">
-                              <Globe className="h-3.5 w-3.5 text-soft-gray" />
-                              {booking.country}
-                            </span>
-                          )}
+                            {booking.phone && (
+                              <span className="flex items-center gap-1">
+                                <Phone className="h-3.5 w-3.5 text-soft-gray shrink-0" />
+                                <a href={`tel:${booking.phone}`} className="text-charcoal hover:underline">
+                                  {booking.phone}
+                                </a>
+                              </span>
+                            )}
+                            {booking.country && (
+                              <span className="flex items-center gap-1">
+                                <Globe className="h-3.5 w-3.5 text-soft-gray shrink-0" />
+                                {booking.country}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
-                        {/* Session Type & Child Info */}
-                        <div className="flex flex-wrap items-center gap-3 pt-1">
+                        {/* Appointment Time Badge */}
+                        <div className="shrink-0 rounded-2xl border border-beige bg-white px-3.5 py-2 text-right shadow-2xs">
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-warm-gray">
+                            Appointment
+                          </p>
+                          <p className="font-serif text-sm font-semibold text-charcoal">
+                            {booking.appointment_date}
+                          </p>
+                          <p className="text-xs font-medium text-sage-dark">
+                            {booking.appointment_time}{' '}
+                            <span className="text-[10px] text-warm-gray">({booking.time_zone})</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Middle Row: Session Type, Child Info & Status Select */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="inline-flex items-center gap-1.5 rounded-xl bg-sage/10 px-2.5 py-1 text-xs font-medium text-sage-dark">
                             <Sparkles className="h-3 w-3" />
                             {booking.appointment_type_title}
@@ -519,92 +536,6 @@ const AdminBookings = (): JSX.Element => {
                           )}
                         </div>
 
-                        {/* Notes if present */}
-                        {booking.notes && (
-                          <div className="mt-2 flex items-start gap-2 rounded-xl border border-beige bg-white p-3 text-xs text-charcoal">
-                            <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warm-gray" />
-                            <p className="whitespace-pre-wrap leading-relaxed">{booking.notes}</p>
-                          </div>
-                        )}
-
-                        {/* Quick Action Triggers */}
-                        <div className="flex flex-wrap items-center gap-2 pt-2">
-                          {booking.status === 'pending' && (
-                            <button
-                              type="button"
-                              disabled={isUpdating}
-                              onClick={() => void handleApproveBooking(booking.id)}
-                              className="inline-flex items-center gap-1.5 rounded-xl bg-sage px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sage-dark disabled:opacity-50"
-                            >
-                              {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarCheck className="h-3.5 w-3.5" />}
-                              <span>Approve Booking</span>
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => setRescheduleBooking(booking)}
-                            className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-charcoal shadow-sm transition hover:bg-beige/40"
-                          >
-                            <Calendar className="h-3.5 w-3.5 text-sage-dark" />
-                            <span>Reschedule</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditBooking(booking)}
-                            className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-charcoal shadow-sm transition hover:bg-beige/40"
-                          >
-                            <Edit2 className="h-3.5 w-3.5 text-warm-gray" />
-                            <span>Edit Info</span>
-                          </button>
-                          {booking.google_meet_url && (
-                            <a
-                              href={booking.google_meet_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 rounded-xl bg-dusty-blue/15 px-3 py-1.5 text-xs font-medium text-dusty-blue-dark transition hover:bg-dusty-blue/25"
-                            >
-                              <Video className="h-3.5 w-3.5" />
-                              <span>Join Google Meet</span>
-                            </a>
-                          )}
-                          {(booking.status === 'pending_calendar_sync' || !booking.google_calendar_event_id) && (
-                            <button
-                              type="button"
-                              onClick={() => void handleSyncCalendar(booking.id)}
-                              disabled={isSyncing}
-                              className="inline-flex items-center gap-1 rounded-xl bg-purple-100 px-3 py-1.5 text-xs font-medium text-purple-800 transition hover:bg-purple-200 disabled:opacity-50"
-                            >
-                              <RotateCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                              <span>Sync Calendar</span>
-                            </button>
-                          )}
-                          {booking.status !== 'cancelled' && (
-                            <button
-                              type="button"
-                              onClick={() => void handleCancelBooking(booking)}
-                              className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-50"
-                            >
-                              <XCircle className="h-3.5 w-3.5" />
-                              <span>Cancel</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Right: Date, Time & Status Dropdown */}
-                      <div className="flex flex-wrap items-center gap-3 lg:flex-col lg:items-end">
-                        <div className="rounded-2xl border border-beige bg-white px-4 py-2.5 text-left lg:text-right">
-                          <p className="text-[10px] font-medium uppercase tracking-wider text-warm-gray">
-                            Appointment
-                          </p>
-                          <p className="mt-0.5 font-serif text-sm font-semibold text-charcoal">
-                            {booking.appointment_date}
-                          </p>
-                          <p className="text-xs font-medium text-sage-dark">
-                            {booking.appointment_time} ({booking.time_zone})
-                          </p>
-                        </div>
-
                         {/* Status Select */}
                         <div className="relative">
                           <select
@@ -613,7 +544,7 @@ const AdminBookings = (): JSX.Element => {
                             onChange={(e) =>
                               void updateStatus(booking.id, e.target.value as Booking['status'])
                             }
-                            className="rounded-2xl border border-beige bg-white px-3.5 py-2 text-xs font-medium text-charcoal shadow-sm transition focus:outline-none focus:ring-2 focus:ring-sage/30 disabled:opacity-50"
+                            className="rounded-xl border border-beige bg-white px-3 py-1 text-xs font-semibold text-charcoal shadow-2xs transition focus:outline-none focus:ring-2 focus:ring-sage/30 disabled:opacity-50 cursor-pointer"
                           >
                             <option value="pending">Pending</option>
                             <option value="confirmed">Confirmed</option>
@@ -622,10 +553,81 @@ const AdminBookings = (): JSX.Element => {
                             <option value="pending_calendar_sync">Sync Needed</option>
                           </select>
                           {isUpdating && (
-                            <Loader2 className="absolute right-2 top-2.5 h-3.5 w-3.5 animate-spin text-sage-dark" />
+                            <Loader2 className="absolute right-2 top-2 h-3.5 w-3.5 animate-spin text-sage-dark" />
                           )}
                         </div>
                       </div>
+
+                      {/* Notes if present */}
+                      {booking.notes && (
+                        <div className="flex items-start gap-2 rounded-xl border border-beige bg-white p-2.5 text-xs text-charcoal">
+                          <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warm-gray" />
+                          <p className="whitespace-pre-wrap leading-relaxed">{booking.notes}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quick Action Triggers */}
+                    <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-beige/60 pt-3">
+                      {booking.status === 'pending' && (
+                        <button
+                          type="button"
+                          disabled={isUpdating}
+                          onClick={() => void handleApproveBooking(booking.id)}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-sage px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sage-dark disabled:opacity-50"
+                        >
+                          {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarCheck className="h-3.5 w-3.5" />}
+                          <span>Approve Booking</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setRescheduleBooking(booking)}
+                        className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-charcoal shadow-sm transition hover:bg-beige/40"
+                      >
+                        <Calendar className="h-3.5 w-3.5 text-sage-dark" />
+                        <span>Reschedule</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditBooking(booking)}
+                        className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-charcoal shadow-sm transition hover:bg-beige/40"
+                      >
+                        <Edit2 className="h-3.5 w-3.5 text-warm-gray" />
+                        <span>Edit Info</span>
+                      </button>
+                      {booking.google_meet_url && (
+                        <a
+                          href={booking.google_meet_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-xl bg-dusty-blue/15 px-3 py-1.5 text-xs font-medium text-dusty-blue-dark transition hover:bg-dusty-blue/25"
+                        >
+                          <Video className="h-3.5 w-3.5" />
+                          <span>Join Google Meet</span>
+                        </a>
+                      )}
+                      {(booking.status === 'pending_calendar_sync' || !booking.google_calendar_event_id) && (
+                        <button
+                          type="button"
+                          onClick={() => void handleSyncCalendar(booking.id)}
+                          disabled={isSyncing}
+                          className="inline-flex items-center gap-1 rounded-xl bg-purple-100 px-3 py-1.5 text-xs font-medium text-purple-800 transition hover:bg-purple-200 disabled:opacity-50"
+                        >
+                          <RotateCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                          <span>Sync Calendar</span>
+                        </button>
+                      )}
+                      {booking.status !== 'cancelled' && (
+                        <button
+                          type="button"
+                          onClick={() => void handleCancelBooking(booking)}
+                          className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-50"
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                          <span>Cancel</span>
+                        </button>
+                      )}
                     </div>
                   </article>
                 );

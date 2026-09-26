@@ -7,7 +7,7 @@ export interface AppointmentConfig {
 }
 
 export const APPOINTMENT_CONFIG: Record<string, AppointmentConfig> = {
-  initial: { title: 'Initial Consultation', durationMinutes: 75, bufferMinutes: 15 },
+  initial: { title: 'Discovery Call', durationMinutes: 30, bufferMinutes: 15 },
   'coaching-60': { title: '60-Minute Coaching Session', durationMinutes: 60, bufferMinutes: 15 },
   'intensive-90': { title: '90-Minute Intensive', durationMinutes: 90, bufferMinutes: 30 },
   family: { title: 'Family Consultation', durationMinutes: 75, bufferMinutes: 15 },
@@ -267,7 +267,7 @@ export function candidateSlotsForClientDate(options: {
       for (let startsAt = intervalStart; startsAt.getTime() < intervalEnd.getTime(); startsAt = new Date(startsAt.getTime() + intervalMinutes * 60_000)) {
         const endsAt = new Date(startsAt.getTime() + durationMinutes * 60_000);
         const reservedUntil = new Date(endsAt.getTime() + bufferMinutes * 60_000);
-        if (reservedUntil > intervalEnd || startsAt < clientDayStart || startsAt >= clientDayEnd) continue;
+        if (endsAt > intervalEnd || startsAt < clientDayStart || startsAt >= clientDayEnd) continue;
         slots.push({ label: formatTime(startsAt, clientTimeZone), startsAt, endsAt, reservedUntil });
       }
     }

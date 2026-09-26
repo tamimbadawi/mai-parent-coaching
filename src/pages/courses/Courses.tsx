@@ -182,7 +182,7 @@ export default function Courses() {
         title="Start Learning Today"
         description="Invest in yourself and your family. Every course comes with lifetime access and a 14-day satisfaction guarantee."
         primaryAction={{ label: 'Browse All Courses', href: '/courses' }}
-        secondaryAction={{ label: 'Book a Free Call', href: '/booking' }}
+        secondaryAction={{ label: 'Book a Discovery Call', href: '/booking' }}
         variant="dusty-blue"
       />
     </div>

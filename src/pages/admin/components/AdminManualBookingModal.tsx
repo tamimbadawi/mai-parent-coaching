@@ -89,7 +89,7 @@ export const AdminManualBookingModal = ({
       const { data, error: invokeErr } = await supabase.functions.invoke('create-booking', {
         body: {
           appointment_type_id: selectedType,
-          appointment_type_title: selectedAppointment?.title || 'Initial Consultation',
+          appointment_type_title: selectedAppointment?.title || 'Discovery Call',
           appointment_date: date,
           appointment_time: time,
           timeZone,
