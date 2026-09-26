@@ -1,4 +1,5 @@
 // Google Calendar API Integration Client for Supabase Edge Functions
+import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 
 interface TokenResponse {
   access_token: string;
@@ -61,17 +62,47 @@ export interface CalendarEventLookup {
   attendees?: Array<{ email?: string; responseStatus?: string }>;
 }
 
+export function hasGoogleCalendarCredentials(): boolean {
+  return Boolean(Deno.env.get('GOOGLE_CLIENT_ID') && Deno.env.get('GOOGLE_CLIENT_SECRET'));
+}
+
 /**
  * Exchange the stored refresh token for a fresh Google OAuth2 access token.
  */
 export async function getGoogleAccessToken(): Promise<string> {
   const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
   const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
-  const refreshToken = Deno.env.get('GOOGLE_REFRESH_TOKEN');
+
+  let refreshToken: string | null = null;
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (supabaseUrl && serviceRoleKey) {
+    try {
+      const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data, error } = await supabaseAdmin
+        .from('google_calendar_tokens')
+        .select('refresh_token')
+        .eq('id', 'coach')
+        .maybeSingle();
+
+      if (!error && data?.refresh_token) {
+        refreshToken = data.refresh_token;
+      }
+    } catch (err) {
+      console.error('Failed to read refresh token from database:', err);
+    }
+  }
+
+  if (!refreshToken) {
+    refreshToken = Deno.env.get('GOOGLE_REFRESH_TOKEN') ?? null;
+  }
 
   if (!clientId || !clientSecret || !refreshToken) {
     throw new Error(
-      'Missing Google Calendar credentials. Please configure GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN in Supabase secrets.'
+      'Missing Google Calendar credentials. Please configure GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and reconnect Google Calendar.'
     );
   }
 
@@ -90,9 +121,17 @@ export async function getGoogleAccessToken(): Promise<string> {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Failed to refresh Google OAuth token:', response.status, errorText);
-    throw new Error(`Google token refresh failed: ${response.statusText}`);
+    let errorCode = `HTTP ${response.status}`;
+    try {
+      const errJson = await response.json();
+      if (errJson.error) {
+        errorCode = errJson.error;
+      }
+    } catch {
+      // response might not be json
+    }
+    console.error('Failed to refresh Google OAuth token:', response.status, errorCode);
+    throw new Error(`Google token refresh failed: ${errorCode}`);
   }
 
   const data = (await response.json()) as TokenResponse;

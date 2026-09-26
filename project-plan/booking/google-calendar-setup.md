@@ -65,19 +65,18 @@ supabase secrets set BOOKING_WORKING_HOURS='{"0":[{"start":"09:00","end":"12:00"
 
 ---
 
-## 5. Authorize the Coach Account (Generate Refresh Token)
+## 5. Authorize the Coach Account (Automatic Server-Side Storage)
 
 1. Open your browser and navigate to:
    ```
    https://qqnthevakllugdlioalm.supabase.co/functions/v1/google-calendar-auth?action=auth-url
    ```
-2. Copy the `authUrl` returned in the JSON response, open it in your browser, and sign in with the coach's Google Account.
-3. Grant calendar access permissions.
-4. Google will redirect back to the callback URL, which displays your **`GOOGLE_REFRESH_TOKEN`**.
-5. Save the refresh token in Supabase secrets:
-   ```bash
-   supabase secrets set GOOGLE_REFRESH_TOKEN="your-refresh-token"
-   ```
+2. Copy the `authUrl` returned in the JSON response, open it in your browser, and sign in with the coach's Google Account set in `GOOGLE_CALENDAR_OWNER_EMAIL`.
+3. Grant calendar access permissions by clicking **Allow**.
+4. Google redirects back to the callback URL, which validates the account email, automatically stores the refresh token in `public.google_calendar_tokens`, and displays a confirmation page (no copy/pasting secrets required).
+
+> [!NOTE]
+> The OAuth consent app was published to **"In production"** status on 2026-09-26 so refresh tokens no longer expire after 7 days.
 
 ---
 

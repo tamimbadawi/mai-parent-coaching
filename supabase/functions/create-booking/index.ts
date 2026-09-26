@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { createCalendarEvent, getCalendarFreeBusy } from '../_shared/google-calendar.ts';
+import { createCalendarEvent, getCalendarFreeBusy, hasGoogleCalendarCredentials } from '../_shared/google-calendar.ts';
 import {
   APPOINTMENT_CONFIG,
   candidateSlotsForClientDate,
@@ -106,7 +106,7 @@ Deno.serve(async (request) => {
     if (conflictError) throw new Error(`Could not validate reservations: ${conflictError.message}`);
     if (conflicts?.length) return json({ error: 'This appointment overlaps another reservation. Please select another time.' }, 409);
 
-    if (Deno.env.get('GOOGLE_CLIENT_ID') && Deno.env.get('GOOGLE_CLIENT_SECRET') && Deno.env.get('GOOGLE_REFRESH_TOKEN')) {
+    if (hasGoogleCalendarCredentials()) {
       let busyBlocks;
       try {
         busyBlocks = await getCalendarFreeBusy(startsAt.toISOString(), reservedUntil.toISOString(), coachTimeZone);

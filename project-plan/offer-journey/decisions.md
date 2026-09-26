@@ -111,6 +111,7 @@ reset:       growth,  deep-work, deep-work, full,      full
 - Colours: Discovery Call `colorId 5` (Banana), 60-min coaching `colorId 2` (Sage), others default.
 - One shared title/description builder for approve, reschedule and sync. Title `<type> — <parent name>`.
 - **No internal ids (Booking ID) in the description**: the client is an attendee and can read it.
+- Before launch, set `GOOGLE_CALENDAR_OWNER_EMAIL` to Mai's Gmail and reconnect signed in as Mai.
 
 ---
 

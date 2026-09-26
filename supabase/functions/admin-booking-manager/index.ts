@@ -3,6 +3,7 @@ import {
   createCalendarEvent,
   updateCalendarEvent,
   deleteCalendarEvent,
+  hasGoogleCalendarCredentials,
 } from '../_shared/google-calendar.ts';
 
 const corsHeaders = {
@@ -108,7 +109,7 @@ Deno.serve(async (request) => {
       let calendarEvent = null;
       let finalStatus: 'confirmed' | 'pending_calendar_sync' = 'confirmed';
 
-      if (Deno.env.get('GOOGLE_CLIENT_ID') && Deno.env.get('GOOGLE_CLIENT_SECRET') && Deno.env.get('GOOGLE_REFRESH_TOKEN')) {
+      if (hasGoogleCalendarCredentials()) {
         try {
           calendarEvent = await createCalendarEvent({
             summary: `${booking.appointment_type_title} — ${booking.parent_name}`,

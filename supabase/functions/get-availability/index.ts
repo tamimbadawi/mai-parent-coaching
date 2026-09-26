@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { getCalendarFreeBusy, type FreeBusyBlock } from '../_shared/google-calendar.ts';
+import { getCalendarFreeBusy, hasGoogleCalendarCredentials, type FreeBusyBlock } from '../_shared/google-calendar.ts';
 import {
   APPOINTMENT_CONFIG,
   candidateSlotsForClientDate,
@@ -125,11 +125,7 @@ Deno.serve(async (request) => {
       .lt('starts_at', rangeEnd.toISOString())
       .gt('reserved_until', rangeStart.toISOString());
 
-    const hasGoogleCalendar = Boolean(
-      Deno.env.get('GOOGLE_CLIENT_ID') &&
-      Deno.env.get('GOOGLE_CLIENT_SECRET') &&
-      Deno.env.get('GOOGLE_REFRESH_TOKEN')
-    );
+    const hasGoogleCalendar = hasGoogleCalendarCredentials();
     const calendarRequest = hasGoogleCalendar
       ? getCalendarFreeBusy(rangeStart.toISOString(), rangeEnd.toISOString(), coachTimeZone)
           .then((busy) => ({ busy, error: null }))

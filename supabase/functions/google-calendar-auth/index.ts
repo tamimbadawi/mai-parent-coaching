@@ -124,7 +124,70 @@ Deno.serve(async (request) => {
         );
       }
 
-      // Render confirmation screen with setup instructions
+      // 1. Look up which Google account granted access
+      const calendarRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary', {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+
+      if (!calendarRes.ok) {
+        const errorText = await calendarRes.text();
+        return new Response(
+          `<html><body style="font-family:sans-serif;padding:40px;text-align:center;">` +
+            `<h2 style="color:#e11d48;">Could Not Verify Google Account</h2>` +
+            `<p>${errorText}</p></body></html>`,
+          { headers: { 'Content-Type': 'text/html' }, status: 400 }
+        );
+      }
+
+      const calendarData = await calendarRes.json();
+      const googleEmail = (calendarData.id || '').trim();
+
+      // 2. Only accept the coach account
+      const ownerEmail = (Deno.env.get('GOOGLE_CALENDAR_OWNER_EMAIL') || '').trim();
+      if (!ownerEmail || googleEmail.toLowerCase() !== ownerEmail.toLowerCase()) {
+        return new Response(
+          `<html><body style="font-family:sans-serif;padding:40px;text-align:center;">` +
+            `<h2 style="color:#e11d48;">Access Denied</h2>` +
+            `<p>This Google account is not allowed to connect the booking calendar.</p></body></html>`,
+          { headers: { 'Content-Type': 'text/html' }, status: 403 }
+        );
+      }
+
+      // 3. Upsert into public.google_calendar_tokens with service-role client
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+      if (!supabaseUrl || !serviceRoleKey) {
+        return json(
+          { error: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in secrets.' },
+          500
+        );
+      }
+
+      const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+
+      const { error: upsertError } = await adminClient
+        .from('google_calendar_tokens')
+        .upsert({
+          id: 'coach',
+          refresh_token: refreshToken,
+          google_email: googleEmail,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (upsertError) {
+        console.error('Failed to store Google refresh token in database:', upsertError.message);
+        return new Response(
+          `<html><body style="font-family:sans-serif;padding:40px;text-align:center;">` +
+            `<h2 style="color:#e11d48;">Failed to Save Token</h2>` +
+            `<p>Database error: ${upsertError.message}</p></body></html>`,
+          { headers: { 'Content-Type': 'text/html' }, status: 500 }
+        );
+      }
+
+      // 4. Return small HTML page without the token
       return new Response(
         `<!DOCTYPE html>
         <html>
@@ -134,19 +197,14 @@ Deno.serve(async (request) => {
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #FAF8F5; color: #2D2A26; padding: 40px 20px; line-height: 1.6; }
             .card { max-width: 600px; margin: 0 auto; background: white; border: 1px solid #E6DFD5; border-radius: 20px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
             h1 { font-family: Georgia, serif; font-size: 24px; color: #354F42; margin-top: 0; }
-            code { background: #F4F1EA; padding: 3px 8px; border-radius: 6px; font-size: 13px; font-family: monospace; }
-            pre { background: #2D2A26; color: #FAF8F5; padding: 14px; border-radius: 12px; overflow-x: auto; font-size: 12px; }
             .badge { display: inline-block; background: #E2EFE7; color: #354F42; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
           </style>
         </head>
         <body>
           <div class="card">
-            <span class="badge">OAuth Flow Complete</span>
-            <h1>Google Calendar Connected</h1>
-            <p>Your Google Calendar authorization code was successfully exchanged for a long-lived Refresh Token.</p>
-            <p>Set this secret in Supabase using the CLI:</p>
-            <pre>supabase secrets set GOOGLE_REFRESH_TOKEN="${refreshToken}"</pre>
-            <p style="font-size:13px;color:#736B63;">Once set, the <code>get-availability</code> and <code>create-booking</code> Edge Functions will automatically authenticate with Google Calendar.</p>
+            <span class="badge">Connected</span>
+            <h1>Google Calendar connected</h1>
+            <p>Connected as ${googleEmail}. You can close this page.</p>
           </div>
         </body>
         </html>`,
