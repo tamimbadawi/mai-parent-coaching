@@ -23,11 +23,18 @@ const AuthCallback = (): JSX.Element => {
     try {
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, phone, country')
         .eq('id', targetUser.id)
         .maybeSingle();
 
       const role = profileData?.role ?? profile?.role;
+      const phone = profileData?.phone ?? profile?.phone;
+      const country = profileData?.country ?? profile?.country;
+
+      if (!phone || !country) {
+        void navigate('/auth/complete-profile', { replace: true });
+        return;
+      }
 
       if (role === 'admin') {
         void navigate('/admin', { replace: true });
