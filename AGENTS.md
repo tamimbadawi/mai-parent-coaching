@@ -157,6 +157,11 @@ Supabase is the real backend. Treat database, auth, and RLS changes as security-
 - Confident headlines (`text-5xl` to `text-6xl` for hero, `text-3xl` to `text-4xl` for sections), short readable paragraphs (`text-base` / `text-lg`).
 - Subtle Framer Motion (fade in, slide up, gentle stagger, soft hover lift). Avoid bouncing, spinning, or distracting loops. Respect reduced motion.
 
+### Pop-ups & calendars (hard rules)
+- **Pop-ups never scroll.** No `overflow-y-auto` / `overflow-auto` / `overflow-scroll` on a dialog or on anything inside it (no inner scrolling lists either). The dialog uses `max-h-[calc(100dvh-1.5rem)] overflow-hidden` and its content is designed to fit. It must fit, on every step/tab, at **1366×768, 1440×900, 1920×1080 and 375×812**. Claude will measure `dialog.scrollHeight <= dialog.clientHeight` at each size; anything over fails.
+- Date pickers only let people pick days that actually have open times for the selected session type; closed days are visibly disabled; the picker opens on the first open day.
+- Agents that cannot run a browser mark visual checks "NOT RUN — for Claude to verify"; never claim them.
+
 ---
 
 ## 7. Forms and Validation
