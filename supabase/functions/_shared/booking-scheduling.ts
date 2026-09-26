@@ -237,3 +237,59 @@ export function candidateSlotsForClientDate(options: {
   }
   return slots.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 }
+
+// Discovery intake options and package suggestions (keep in sync with src/data/content.ts)
+export const DISCOVERY_TOPIC_TITLES: Record<string, string> = {
+  emotions: 'Big feelings & tantrums',
+  burnout: 'Parent burnout',
+  family: 'Siblings & family dynamics',
+  sleep: 'Sleep & daily routines',
+  anxiety: 'Worries & anxiety',
+  screens: 'Screens & digital life',
+  limits: 'Calm limits without yelling',
+  confidence: 'Confidence & independence',
+  teens: 'Teens, tech & mood',
+};
+
+export const INTAKE_NEED_LABELS: Record<string, string> = {
+  'one-thing': 'A second opinion on one thing',
+  'quick-tools': 'Quick tools for one problem',
+  'steady': 'Steady support while we change things',
+  'several': 'Help with several things at once',
+  'reset': 'A real reset for our family',
+};
+
+export const INTAKE_DURATION_LABELS: Record<string, string> = {
+  'just-started': 'It just started',
+  'weeks': 'A few weeks',
+  'months': 'A few months',
+  'year': 'About a year',
+  'over-year': 'Longer than a year',
+};
+
+export const PACKAGE_TITLES: Record<string, string> = {
+  single: 'Single Session (1 session)',
+  starter: 'Starter Package (2 sessions)',
+  growth: 'Growth Package (4 sessions)',
+  'deep-work': 'Deep Work Package (8 sessions)',
+  full: 'Full Transformation (12 sessions)',
+};
+
+const INTAKE_NEED_KEYS = ['one-thing', 'quick-tools', 'steady', 'several', 'reset'];
+const INTAKE_DURATION_KEYS = ['just-started', 'weeks', 'months', 'year', 'over-year'];
+
+export const PACKAGE_SUGGESTION_MATRIX: string[][] = [
+  ['single', 'single', 'single', 'starter', 'starter'],
+  ['single', 'starter', 'starter', 'growth', 'growth'],
+  ['starter', 'growth', 'growth', 'growth', 'deep-work'],
+  ['growth', 'growth', 'deep-work', 'deep-work', 'full'],
+  ['growth', 'deep-work', 'deep-work', 'full', 'full'],
+];
+
+export function suggestPackageId(need: string, duration: string): string | null {
+  const needIdx = INTAKE_NEED_KEYS.indexOf(need);
+  const durIdx = INTAKE_DURATION_KEYS.indexOf(duration);
+  if (needIdx === -1 || durIdx === -1) return null;
+  return PACKAGE_SUGGESTION_MATRIX[needIdx]?.[durIdx] ?? null;
+}
+

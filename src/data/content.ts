@@ -1,4 +1,4 @@
-import type { Service, Course, BlogPost, Testimonial, FAQ, FreeResource, AppointmentType, ShopProduct, CommunityPost } from '../types';
+import type { Service, Course, BlogPost, Testimonial, FAQ, FreeResource, AppointmentType, ShopProduct, CommunityPost, DiscoveryTopic, IntakeOption, CoachingPackage } from '../types';
 import { courseVideoIds } from './courseVideoIds';
 
 export const services: Service[] = [
@@ -410,6 +410,104 @@ export const appointmentTypes: AppointmentType[] = [
     hidden: true,
   },
 ];
+
+export const discoveryTopics: DiscoveryTopic[] = [
+  {
+    id: 'emotions',
+    title: 'Big feelings & tantrums',
+    sub: 'Meltdowns, hitting, shouting',
+    note: 'Big feelings are one of the most common reasons parents reach out, especially between ages 2 and 8.',
+  },
+  {
+    id: 'burnout',
+    title: 'Parent burnout',
+    sub: 'Running on empty, short fuse',
+    note: 'Looking after yourself is part of looking after them. Mai works with parent burnout every week.',
+  },
+  {
+    id: 'family',
+    title: 'Siblings & family dynamics',
+    sub: 'Rivalry, co-parenting, tension',
+    note: 'Family patterns can shift faster than people expect once everyone is working from the same page.',
+  },
+  {
+    id: 'sleep',
+    title: 'Sleep & daily routines',
+    sub: 'Bedtime battles, mornings',
+    note: 'Routines are usually where small changes pay off quickest. A good place to start.',
+  },
+  {
+    id: 'anxiety',
+    title: 'Worries & anxiety',
+    sub: 'Clinginess, school, fears',
+    note: 'Anxious kids often need calm, predictable adults more than fixes. Mai will help you find what that looks like at home.',
+  },
+  {
+    id: 'screens',
+    title: 'Screens & digital life',
+    sub: 'Tablets, phones, gaming battles',
+    note: 'Screen battles come up in almost every family now. Small, calm limits usually work better than big bans.',
+  },
+  {
+    id: 'limits',
+    title: 'Calm limits without yelling',
+    sub: 'Saying no without the shouting',
+    note: 'Kind and firm can go together. Mai helps you find limits that hold without the yelling.',
+  },
+  {
+    id: 'confidence',
+    title: 'Confidence & independence',
+    sub: 'Shyness, clinginess, doing it alone',
+    note: 'Confidence grows from small wins. Mai starts with everyday steps your child can manage.',
+  },
+  {
+    id: 'teens',
+    title: 'Teens, tech & mood',
+    sub: 'Moods, phones, pulling away',
+    note: 'Teens often need connection more than rules. Mai helps you stay close while they grow up.',
+  },
+];
+
+export const intakeNeeds: IntakeOption[] = [
+  { id: 'one-thing', label: 'A second opinion on one thing' },
+  { id: 'quick-tools', label: 'Quick tools for one problem' },
+  { id: 'steady', label: 'Steady support while we change things' },
+  { id: 'several', label: 'Help with several things at once' },
+  { id: 'reset', label: 'A real reset for our family' },
+];
+
+export const intakeDurations: IntakeOption[] = [
+  { id: 'just-started', label: 'It just started' },
+  { id: 'weeks', label: 'A few weeks' },
+  { id: 'months', label: 'A few months' },
+  { id: 'year', label: 'About a year' },
+  { id: 'over-year', label: 'Longer than a year' },
+];
+
+export const coachingPackages: CoachingPackage[] = [
+  { id: 'single', title: 'Single Session', sessions: 1, price: 3500, useWithinWeeks: 2 },
+  { id: 'starter', title: 'Starter Package', sessions: 2, price: 6650, useWithinWeeks: 4 },
+  { id: 'growth', title: 'Growth Package', sessions: 4, price: 11200, useWithinWeeks: 8 },
+  { id: 'deep-work', title: 'Deep Work Package', sessions: 8, price: 21000, useWithinWeeks: 16 },
+  { id: 'full', title: 'Full Transformation', sessions: 12, price: 29400, useWithinWeeks: 24 },
+];
+
+// Mai can move any cell. Keep in sync with PACKAGE_SUGGESTION_MATRIX in supabase/functions/_shared/booking-scheduling.ts.
+export const packageSuggestionMatrix: string[][] = [
+  ['single', 'single', 'single', 'starter', 'starter'],
+  ['single', 'starter', 'starter', 'growth', 'growth'],
+  ['starter', 'growth', 'growth', 'growth', 'deep-work'],
+  ['growth', 'growth', 'deep-work', 'deep-work', 'full'],
+  ['growth', 'deep-work', 'deep-work', 'full', 'full'],
+];
+
+export function suggestPackage(needId: string, durationId: string): CoachingPackage | undefined {
+  const needIdx = intakeNeeds.findIndex((n) => n.id === needId);
+  const durIdx = intakeDurations.findIndex((d) => d.id === durationId);
+  if (needIdx === -1 || durIdx === -1) return undefined;
+  const packageId = packageSuggestionMatrix[needIdx]?.[durIdx];
+  return coachingPackages.find((p) => p.id === packageId);
+}
 
 export const shopProducts: ShopProduct[] = [
   {

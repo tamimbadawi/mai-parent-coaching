@@ -154,9 +154,18 @@ export interface Booking {
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'pending_calendar_sync';
   created_at: string;
   updated_at: string;
+  intake_topics: string[] | null;
+  intake_need: string | null;
+  intake_duration: string | null;
+  intake_suggested_package: string | null;
   google_calendar_event_id: string | null;
   google_meet_url: string | null;
 }
+
+export interface DiscoveryTopic { id: string; title: string; sub: string; note: string; }
+export interface IntakeOption { id: string; label: string; }
+export interface CoachingPackage { id: string; title: string; sessions: number; price: number; useWithinWeeks: number; }
+export interface DiscoveryIntake { topics: string[]; need: string; duration: string; suggestedPackage: string; }
 
 export interface CoachAvailabilityRule {
   id: string;

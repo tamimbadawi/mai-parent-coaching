@@ -10,6 +10,10 @@ import {
   isValidTime,
   isValidTimeZone,
   zonedDateTimeToUtc,
+  DISCOVERY_TOPIC_TITLES,
+  INTAKE_NEED_LABELS,
+  INTAKE_DURATION_LABELS,
+  suggestPackageId,
 } from '../_shared/booking-scheduling.ts';
 
 const corsHeaders = {
@@ -35,6 +39,9 @@ interface BookingPayload {
   child_age?: string | null;
   notes?: string | null;
   timeZone?: string;
+  intake_topics?: unknown;
+  intake_need?: unknown;
+  intake_duration?: unknown;
 }
 
 Deno.serve(async (request) => {
@@ -119,6 +126,30 @@ Deno.serve(async (request) => {
       }
     }
 
+    let intakeTopics: string[] | null = null;
+    let intakeNeed: string | null = null;
+    let intakeDuration: string | null = null;
+    let intakeSuggestedPackage: string | null = null;
+
+    if (payload.appointment_type_id === 'initial') {
+      if (Array.isArray(payload.intake_topics)) {
+        const validTopics = Array.from(new Set(
+          payload.intake_topics
+            .filter((t): t is string => typeof t === 'string' && Boolean(DISCOVERY_TOPIC_TITLES[t]))
+        ));
+        intakeTopics = validTopics.length > 0 ? validTopics : null;
+      }
+      if (typeof payload.intake_need === 'string' && INTAKE_NEED_LABELS[payload.intake_need]) {
+        intakeNeed = payload.intake_need;
+      }
+      if (typeof payload.intake_duration === 'string' && INTAKE_DURATION_LABELS[payload.intake_duration]) {
+        intakeDuration = payload.intake_duration;
+      }
+      if (intakeNeed && intakeDuration) {
+        intakeSuggestedPackage = suggestPackageId(intakeNeed, intakeDuration);
+      }
+    }
+
     const { data: booking, error: insertError } = await supabaseAdmin.from('bookings').insert({
       user_id: userId,
       appointment_type_id: payload.appointment_type_id,
@@ -136,6 +167,10 @@ Deno.serve(async (request) => {
       child_name: payload.child_name?.trim().slice(0, 120) || null,
       child_age: payload.child_age?.trim().slice(0, 30) || null,
       notes: payload.notes?.trim().slice(0, 2_000) || null,
+      intake_topics: intakeTopics,
+      intake_need: intakeNeed,
+      intake_duration: intakeDuration,
+      intake_suggested_package: intakeSuggestedPackage,
       status: 'pending',
     }).select('id').single();
     if (insertError) {
