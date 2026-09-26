@@ -88,9 +88,14 @@ const Login = (): JSX.Element => {
       if (userId) {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, phone, country')
           .eq('id', userId)
           .maybeSingle();
+
+        if (!profileData?.phone || !profileData?.country) {
+          navigate('/auth/complete-profile', { state: { from } });
+          return;
+        }
 
         if (profileData?.role === 'admin') {
           navigate('/admin');
