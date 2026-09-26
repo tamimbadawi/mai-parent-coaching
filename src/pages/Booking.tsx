@@ -47,6 +47,8 @@ import { ClientRescheduleModal } from '../components/booking/ClientRescheduleMod
 import { ClientCancelModal } from '../components/booking/ClientCancelModal';
 import { BookingStepper } from '../components/booking/BookingStepper';
 import { getClientAvailableSlots } from '../lib/bookingAvailability';
+import { DiscoveryIntakeModal, ConfettiBurst } from '../components/booking/DiscoveryIntakeModal';
+import type { DiscoveryIntake } from '../types';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -147,6 +149,7 @@ export default function Booking() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [intakeOpen, setIntakeOpen] = useState(false);
   const [hoveredSession, setHoveredSession] = useState<{ id: string; rect: DOMRect } | null>(null);
 
   const selectedAppointment = appointmentTypes.find((a) => a.id === selectedType);
@@ -263,23 +266,29 @@ export default function Booking() {
     }));
   }, [user, profile, authLoading]);
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!canSubmit || submitting) return;
+  const submitBooking = async (intake?: DiscoveryIntake) => {
     setSubmitting(true);
     setSubmitError(null);
 
     try {
+      const body: Record<string, any> = {
+        appointment_type_id: selectedType,
+        appointment_date: selectedDate,
+        appointment_time: selectedTime,
+        parent_name: formData.name.trim(),
+        email: formData.email.trim(),
+        notes: formData.notes.trim() || null,
+        timeZone: userTimeZone,
+      };
+
+      if (intake) {
+        body.intake_topics = intake.topics;
+        body.intake_need = intake.need;
+        body.intake_duration = intake.duration;
+      }
+
       const { data, error } = await supabase.functions.invoke('create-booking', {
-        body: {
-          appointment_type_id: selectedType,
-          appointment_date: selectedDate,
-          appointment_time: selectedTime,
-          parent_name: formData.name.trim(),
-          email: formData.email.trim(),
-          notes: formData.notes.trim() || null,
-          timeZone: userTimeZone,
-        },
+        body,
       });
 
       if (error) {
@@ -297,12 +306,24 @@ export default function Booking() {
         throw new Error(data.error);
       }
 
+      setIntakeOpen(false);
       setSubmitted(true);
     } catch (err: any) {
       console.error('Booking submission error:', err);
       setSubmitError(err.message || 'Something went wrong while confirming your booking. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!canSubmit || submitting) return;
+    if (selectedType === 'initial') {
+      setSubmitError(null);
+      setIntakeOpen(true);
+    } else {
+      void submitBooking();
     }
   };
 
@@ -318,6 +339,7 @@ export default function Booking() {
   if (submitted) {
     return (
       <div className="flex h-screen items-center justify-center bg-ivory px-4">
+        {selectedType === 'initial' && <ConfettiBurst />}
         <div className="w-full max-w-sm text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-sage/15 ring-4 ring-sage/20">
             <Check className="h-6 w-6 text-sage-dark" />
@@ -692,6 +714,24 @@ export default function Booking() {
           </div>
         </div>
       </div>
+
+      <DiscoveryIntakeModal
+        isOpen={intakeOpen}
+        dateLabel={
+          selectedDate
+            ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+              })
+            : ''
+        }
+        timeLabel={selectedTime || ''}
+        submitting={submitting}
+        error={submitError}
+        onClose={() => setIntakeOpen(false)}
+        onSubmit={(intake) => void submitBooking(intake)}
+      />
 
       {hoveredType && hoveredMeta && hoveredSession &&
         createPortal(

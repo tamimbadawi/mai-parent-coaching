@@ -32,6 +32,12 @@ import { BookingEditModal } from './components/BookingEditModal';
 import { AdminManualBookingModal } from './components/AdminManualBookingModal';
 import { AdminAvailabilityModal } from './components/AdminAvailabilityModal';
 import { AdminBookingsCalendarView } from './components/AdminBookingsCalendarView';
+import {
+  discoveryTopics,
+  intakeNeeds,
+  intakeDurations,
+  coachingPackages,
+} from '../../data/content';
 
 const statusConfig: Record<
   Booking['status'],
@@ -557,6 +563,62 @@ const AdminBookings = (): JSX.Element => {
                           )}
                         </div>
                       </div>
+
+                      {/* Discovery Intake Answers if present */}
+                      {(Boolean(booking.intake_topics?.length) ||
+                        Boolean(booking.intake_need) ||
+                        Boolean(booking.intake_duration) ||
+                        Boolean(booking.intake_suggested_package)) && (
+                        <div className="space-y-1.5 rounded-xl border border-sage/30 bg-sage/5 p-2.5 text-xs text-charcoal">
+                          {booking.intake_topics && booking.intake_topics.length > 0 && (
+                            <div>
+                              <span className="font-semibold text-warm-gray block mb-1">
+                                Bringing them here:
+                              </span>
+                              <div className="flex flex-wrap gap-1">
+                                {booking.intake_topics.map((topicId) => {
+                                  const topic = discoveryTopics.find((t) => t.id === topicId);
+                                  return (
+                                    <span
+                                      key={topicId}
+                                      className="inline-block rounded-full bg-sage/20 px-2 py-0.5 text-[11px] font-semibold text-sage-dark"
+                                    >
+                                      {topic?.title || topicId}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                          {booking.intake_need && (
+                            <div>
+                              <span className="font-semibold text-warm-gray">Wants: </span>
+                              <span>
+                                {intakeNeeds.find((n) => n.id === booking.intake_need)?.label ||
+                                  booking.intake_need}
+                              </span>
+                            </div>
+                          )}
+                          {booking.intake_duration && (
+                            <div>
+                              <span className="font-semibold text-warm-gray">Felt hard for: </span>
+                              <span>
+                                {intakeDurations.find((d) => d.id === booking.intake_duration)?.label ||
+                                  booking.intake_duration}
+                              </span>
+                            </div>
+                          )}
+                          {booking.intake_suggested_package && (
+                            <div>
+                              <span className="font-semibold text-warm-gray">Suggested: </span>
+                              <span className="font-semibold text-terracotta">
+                                {coachingPackages.find((p) => p.id === booking.intake_suggested_package)?.title ||
+                                  booking.intake_suggested_package}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Notes if present */}
                       {booking.notes && (
