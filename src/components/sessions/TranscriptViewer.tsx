@@ -39,8 +39,10 @@ interface TranscriptViewerProps {
     metadata: {
       keyInsights: string[];
       emotionalObservations: EmotionalObservation;
+      inkPages?: import('../../types/ink').InkPage[];
     }
   ) => Promise<boolean>;
+  onSavePostInkPages?: (pages: import('../../types/ink').InkPage[]) => Promise<boolean>;
   onSaveTranscript?: (utterances: TranscriptUtterance[]) => Promise<boolean>;
 
   // Action items handlers
@@ -78,6 +80,7 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
   onSaveDriveLink,
   onClearDriveLink,
   onSavePostNotes,
+  onSavePostInkPages,
   onSaveTranscript,
   onToggleActionItem,
   onCreateActionItem,
@@ -136,6 +139,7 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
             sessionMemberNotes={sessionMemberNotes}
             onCreateMemberNote={onCreateMemberNote}
             onSavePostNotes={onSavePostNotes}
+            onSavePostInkPages={onSavePostInkPages}
           />
         )}
       </div>

@@ -22,6 +22,7 @@ import type { InkPage } from '../../types/ink';
 import { InkNotebook } from './InkNotebook';
 import { InkPageThumbnail } from './InkPageThumbnail';
 import { transcribeInkPage } from '../../lib/inkOcr';
+import { downscaleImageToJpeg } from '../../lib/imageUtils';
 
 interface SessionDuringStepProps {
   initialHandwrittenNotes: string;
@@ -325,53 +326,7 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
     }
   };
 
-  /* Helper to downscale image via HTML Canvas */
-  const downscaleImageToJpeg = (
-    file: File,
-    maxDim: number,
-    quality: number
-  ): Promise<{ base64Data: string; mimeType: string }> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
 
-      img.onload = () => {
-        URL.revokeObjectURL(objectUrl);
-        let { width, height } = img;
-
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('Canvas 2D context unavailable'));
-          return;
-        }
-
-        ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', quality);
-        const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
-        resolve({ base64Data, mimeType: 'image/jpeg' });
-      };
-
-      img.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
-        reject(new Error('Failed to load image file'));
-      };
-
-      img.src = objectUrl;
-    });
-  };
 
   /* ------------------------------------------------------------------ */
   /* Drive Link Handlers                                                */
@@ -524,7 +479,7 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 shrink-0 flex-nowrap overflow-x-auto py-0.5">
             {/* Write Notes (Pen Notebook) Button */}
             <button
               type="button"
@@ -532,14 +487,14 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
                 setActiveNotebookPageIndex(Math.max(0, inkPages.length - 1));
                 setIsNotebookOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-sage/60 bg-sage/10 hover:bg-sage/20 text-charcoal hover:text-sage-dark transition cursor-pointer shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-sage/60 bg-sage/10 hover:bg-sage/20 text-charcoal hover:text-sage-dark transition cursor-pointer shadow-2xs shrink-0 whitespace-nowrap"
               title="Open full-screen pen notebook for stylus/mouse drawing"
             >
               <PenLine className="w-3.5 h-3.5 text-sage-dark" />
               <span>✍️ Write notes</span>
             </button>
 
-            {/* Upload Photo Button */}
+            {/* Upload Notes Button */}
             <input
               ref={fileInputRef}
               type="file"
@@ -551,17 +506,17 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
               type="button"
               disabled={isOcrProcessing}
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border border-beige bg-[#faf8f4] hover:bg-white text-charcoal hover:text-sage-dark hover:border-sage transition cursor-pointer shadow-2xs disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border border-beige bg-[#faf8f4] hover:bg-white text-charcoal hover:text-sage-dark hover:border-sage transition cursor-pointer shadow-2xs disabled:opacity-50 shrink-0 whitespace-nowrap"
             >
               {isOcrProcessing ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-sage-dark" />
-                  <span>Transcribing Photo...</span>
+                  <span>Transcribing...</span>
                 </>
               ) : (
                 <>
                   <Upload className="w-3.5 h-3.5 text-sage-dark" />
-                  <span>Upload Photo of Notes</span>
+                  <span>Upload Notes</span>
                 </>
               )}
             </button>
@@ -727,6 +682,7 @@ export const SessionDuringStep: React.FC<SessionDuringStepProps> = ({
             rows={8}
             value={draftHandwritten}
             onChange={(e) => setDraftHandwritten(e.target.value)}
+            onBlur={handleSaveNotes}
             placeholder="Capture real-time clinical observations, phrases spoken by parent or child, behavioral shifts, or upload a photo of your paper notebook to transcribe..."
             className="w-full text-xs rounded-xl border border-beige bg-[#faf8f4] p-3 text-charcoal placeholder:text-warm-gray/60 focus:bg-white focus:border-sage focus:outline-hidden transition leading-relaxed font-sans"
           />

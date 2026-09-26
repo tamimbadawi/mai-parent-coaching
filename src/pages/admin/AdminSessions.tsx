@@ -271,10 +271,14 @@ export const AdminSessions: React.FC = () => {
               `### Session #${idx + 1} Consultation Notes\n\n**Date**: ${new Date(dbSess.session_date).toLocaleDateString()}\n**Status**: ${dbSess.status}\n\n${household.presenting_issue ? `**Presenting Focus**: ${household.presenting_issue}\n\n` : ''}${household.working_plan ? `**Working Plan**: ${household.working_plan}\n\n` : ''}No detailed clinical write-up transcribed yet. Use the editor below to document observations and action commitments.`;
 
             let keyInsights: string[] = household.presenting_issue ? [household.presenting_issue] : [];
+            let postInkPages: InkPage[] = [];
             if (postNotes?.source_metadata && typeof postNotes.source_metadata === 'object') {
               const meta = postNotes.source_metadata as Record<string, unknown>;
               if (Array.isArray(meta.keyInsights) && meta.keyInsights.length > 0) {
                 keyInsights = meta.keyInsights as string[];
+              }
+              if (Array.isArray(meta.ink_pages)) {
+                postInkPages = meta.ink_pages as InkPage[];
               }
             }
 
@@ -295,6 +299,7 @@ export const AdminSessions: React.FC = () => {
               hasRealPostNotes: Boolean(postNotes?.content),
               handwrittenNotes: handNotes?.content || '',
               inkPages: ((handNotes?.source_metadata as Record<string, unknown>)?.ink_pages as InkPage[]) || [],
+              postInkPages,
               keyInsights,
               actionItems: [],
               emotionalObservations: {
@@ -941,7 +946,11 @@ export const AdminSessions: React.FC = () => {
   // 3. Save Write-Up (session_content -> post_session_notes)
   const handleSavePostNotes = async (
     writeUp: string,
-    metadata: { keyInsights: string[]; emotionalObservations: EmotionalObservation }
+    metadata: {
+      keyInsights: string[];
+      emotionalObservations: EmotionalObservation;
+      inkPages?: InkPage[];
+    }
   ): Promise<boolean> => {
     if (!activeSession) return false;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeSession.id);
@@ -958,6 +967,7 @@ export const AdminSessions: React.FC = () => {
                       clinicalSummary: writeUp,
                       keyInsights: metadata.keyInsights,
                       emotionalObservations: metadata.emotionalObservations,
+                      postInkPages: metadata.inkPages ?? s.postInkPages,
                       hasRealPostNotes: true,
                     }
                   : s
@@ -980,6 +990,7 @@ export const AdminSessions: React.FC = () => {
           source_metadata: {
             keyInsights: metadata.keyInsights,
             emotionalObservations: metadata.emotionalObservations,
+            ink_pages: metadata.inkPages ?? activeSession.postInkPages ?? [],
           },
           updated_at: new Date().toISOString(),
         },
@@ -996,6 +1007,74 @@ export const AdminSessions: React.FC = () => {
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 3000);
     return true;
+  };
+
+  // 3b. Save Post-Session Ink Pages discretely (session_content -> post_session_notes source_metadata.ink_pages)
+  const handleSavePostInkPages = async (pages: InkPage[]): Promise<boolean> => {
+    if (!activeSession) return false;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeSession.id);
+
+    setClients((prev) =>
+      prev.map((c) =>
+        c.clientId === activeClient.clientId
+          ? {
+              ...c,
+              sessions: c.sessions.map((s) =>
+                s.id === activeSession.id
+                  ? { ...s, postInkPages: pages }
+                  : s
+              ),
+            }
+          : c
+      )
+    );
+
+    if (!isUuid) return true;
+
+    setSaveStatus('saving');
+    try {
+      const { data: existing } = await supabase
+        .from('session_content')
+        .select('id, content, source_metadata')
+        .eq('session_id', activeSession.id)
+        .eq('content_type', 'post_session_notes')
+        .maybeSingle();
+
+      const currentMeta =
+        existing?.source_metadata && typeof existing.source_metadata === 'object' && !Array.isArray(existing.source_metadata)
+          ? (existing.source_metadata as Record<string, unknown>)
+          : {};
+      const updatedMeta = { ...currentMeta, ink_pages: pages };
+
+      const { error } = await supabase
+        .from('session_content')
+        .upsert(
+          {
+            session_id: activeSession.id,
+            content_type: 'post_session_notes',
+            content: existing?.content ?? activeSession.clinicalSummary ?? '',
+            source_metadata: updatedMeta,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'session_id,content_type' }
+        );
+
+      if (error) {
+        console.error('Failed to save post ink pages:', error);
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+        return false;
+      }
+
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      return true;
+    } catch (err) {
+      console.error('Error saving post ink pages:', err);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      return false;
+    }
   };
 
   // 4. Save Drive Link (case_sessions.drive_web_view_url)
@@ -1613,6 +1692,7 @@ export const AdminSessions: React.FC = () => {
               onSaveDriveLink={handleSaveDriveLink}
               onClearDriveLink={handleClearDriveLink}
               onSavePostNotes={handleSavePostNotes}
+              onSavePostInkPages={handleSavePostInkPages}
               onSaveTranscript={handleSaveTranscript}
               onToggleActionItem={handleToggleActionItem}
               onCreateActionItem={handleCreateActionItem}
