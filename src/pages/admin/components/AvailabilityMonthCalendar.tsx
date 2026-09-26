@@ -143,13 +143,13 @@ function getHoursSourceDescription(
 
   switch (source) {
     case 'weekly':
-      return `From your weekly ${WEEKDAY_SINGULAR[dayOfWeek]} hours`;
+      return `From weekly ${WEEKDAY_SINGULAR[dayOfWeek]} hours`;
     case 'override':
       return 'Special hours for this date only';
     case 'closed':
       return 'Closed on this date';
     case 'none':
-      return `Not open. You have no weekly hours on ${WEEKDAY_PLURAL[dayOfWeek]}.`;
+      return `Not open. No weekly hours on ${WEEKDAY_PLURAL[dayOfWeek]}.`;
   }
 }
 
@@ -248,7 +248,6 @@ export function AvailabilityMonthCalendar({
 
     setSaving(true);
     try {
-      // Delete closed record first
       const { error: delErr } = await supabase
         .from('coach_availability_rules')
         .delete()
@@ -327,374 +326,393 @@ export function AvailabilityMonthCalendar({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Month Navigation */}
-      <div className="flex items-center justify-between">
-        <h3 className="font-serif text-lg font-semibold text-charcoal">
-          {format(currentMonth, 'MMMM yyyy')}
-        </h3>
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            disabled={isCurrentMonth}
-            onClick={handlePrevMonth}
-            aria-label="Previous month"
-            className="rounded-xl border border-beige bg-white p-2 text-charcoal transition hover:bg-beige/40 disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={handleNextMonth}
-            aria-label="Next month"
-            className="rounded-xl border border-beige bg-white p-2 text-charcoal transition hover:bg-beige/40"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-start">
+      {/* ── LEFT COLUMN: MONTH GRID ────────────────────────────── */}
+      <div className="lg:col-span-7 flex flex-col">
+        {/* Month Navigation */}
+        <div className="mb-1.5 flex items-center justify-between">
+          <h3 className="font-serif text-sm sm:text-base font-semibold text-charcoal">
+            {format(currentMonth, 'MMMM yyyy')}
+          </h3>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={isCurrentMonth}
+              onClick={handlePrevMonth}
+              aria-label="Previous month"
+              className="rounded-lg border border-beige bg-white p-1 text-charcoal transition hover:bg-beige/40 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              aria-label="Next month"
+              className="rounded-lg border border-beige bg-white p-1 text-charcoal transition hover:bg-beige/40"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="rounded-2xl border border-beige/80 bg-white p-2 sm:p-2.5 shadow-2xs">
+          {/* Weekday headers */}
+          <div className="grid grid-cols-7 gap-0.5 text-center mb-1">
+            {WEEKDAYS.map((wd) => (
+              <div key={wd} className="text-[10px] font-bold text-warm-gray uppercase tracking-wider py-0.5">
+                {wd}
+              </div>
+            ))}
+          </div>
+
+          {/* Days grid */}
+          <div className="grid grid-cols-7 gap-1">
+            {leadingBlanks.map((i) => (
+              <div key={`blank-${i}`} className="min-h-[40px] lg:min-h-[52px] rounded-lg bg-stone-50/30 p-1" />
+            ))}
+
+            {days.map((dayNum) => {
+              const dateKey = `${currentMonth.getFullYear()}-${String(
+                currentMonth.getMonth() + 1
+              ).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+              const isPast = dateKey < todayKey;
+              const isSelected = dateKey === selectedDateKey;
+              const avail = availabilityForDate(dateKey, rules);
+
+              return (
+                <button
+                  key={dateKey}
+                  type="button"
+                  disabled={isPast}
+                  onClick={() => {
+                    setSelectedDateKey(dateKey);
+                    setShowSpecialHoursForm(false);
+                  }}
+                  className={`min-h-[40px] lg:min-h-[52px] rounded-lg border p-1 text-left transition flex flex-col justify-between ${
+                    isPast
+                      ? 'border-beige/40 bg-stone-50/50 opacity-40 cursor-not-allowed'
+                      : isSelected
+                      ? 'border-sage-dark bg-sage/10 ring-1 ring-sage-dark/40 shadow-2xs'
+                      : avail.source === 'closed'
+                      ? 'border-rose-200/70 bg-rose-50/30 hover:border-rose-300'
+                      : avail.hasSpecialHours
+                      ? 'border-amber-200/70 bg-amber-50/30 hover:border-amber-300'
+                      : 'border-beige bg-white hover:border-sage/60 hover:bg-ivory/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span
+                      className={`text-xs font-bold leading-none ${
+                        isPast
+                          ? 'text-stone-300'
+                          : isSelected
+                          ? 'text-sage-dark'
+                          : 'text-charcoal'
+                      }`}
+                    >
+                      {dayNum}
+                    </span>
+                    {avail.hasSpecialHours && !isPast && (
+                      <Sparkles className="h-2.5 w-2.5 text-amber-500 shrink-0" aria-label="Special hours" />
+                    )}
+                  </div>
+
+                  {/* Desktop: time window snippets; Mobile: colored dots only */}
+                  <div className="mt-0.5 w-full overflow-hidden">
+                    {avail.source === 'closed' ? (
+                      <div className="flex items-center gap-1">
+                        <span className="hidden lg:inline text-[9px] font-semibold text-rose-600 leading-tight">
+                          Closed
+                        </span>
+                        <span className="lg:hidden h-1.5 w-1.5 rounded-full bg-rose-500" />
+                      </div>
+                    ) : (
+                      <>
+                        {/* lg+: show start times */}
+                        <div className="hidden lg:flex flex-col gap-0.5">
+                          {avail.windows.slice(0, 2).map((w, idx) => {
+                            const cfg =
+                              sessionTypeConfig[w.appointment_type_id || 'all'] ||
+                              sessionTypeConfig.all;
+                            return (
+                              <div
+                                key={w.id || idx}
+                                className="flex items-center gap-1 text-[9px] leading-tight text-charcoal truncate"
+                              >
+                                <span
+                                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                                    cfg?.dot || 'bg-emerald-500'
+                                  }`}
+                                />
+                                <span className="truncate">{w.start_time}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {/* < lg: dots only */}
+                        <div className="flex lg:hidden items-center gap-0.5">
+                          {avail.windows.slice(0, 3).map((w, idx) => {
+                            const cfg =
+                              sessionTypeConfig[w.appointment_type_id || 'all'] ||
+                              sessionTypeConfig.all;
+                            return (
+                              <span
+                                key={w.id || idx}
+                                className={`h-1.5 w-1.5 rounded-full ${
+                                  cfg?.dot || 'bg-emerald-500'
+                                }`}
+                              />
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Compact 1-line session-type legend under calendar */}
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[10px] text-warm-gray border-t border-beige/60 pt-1.5">
+            {Object.entries(sessionTypeConfig).map(([key, config]) => (
+              <span key={key} className="inline-flex items-center gap-1">
+                <span className={`h-1.5 w-1.5 rounded-full ${config.dot}`} />
+                <span>{config.label}</span>
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Calendar Grid */}
-      <div className="rounded-2xl border border-beige/80 bg-white p-3 sm:p-4 shadow-2xs">
-        {/* Weekday headers */}
-        <div className="grid grid-cols-7 gap-1 text-center mb-2">
-          {WEEKDAYS.map((wd) => (
-            <div key={wd} className="text-[11px] font-bold text-warm-gray uppercase tracking-wider py-1">
-              {wd}
-            </div>
-          ))}
-        </div>
+      {/* ── RIGHT COLUMN: SELECTED DAY DETAILS & ACTIONS ────────────────────────────── */}
+      <div className="lg:col-span-5 flex flex-col">
+        {selectedDateKey && (() => {
+          const [y, m, d] = selectedDateKey.split('-').map(Number);
+          const dateObj = new Date(y, m - 1, d, 12, 0, 0);
+          const fullDate = format(dateObj, 'EEE, MMM d, yyyy');
+          const avail = availabilityForDate(selectedDateKey, rules);
+          const sourceDesc = getHoursSourceDescription(avail.source, dateObj.getDay());
+          const isPast = selectedDateKey < todayKey;
 
-        {/* Days grid */}
-        <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-          {leadingBlanks.map((i) => (
-            <div key={`blank-${i}`} className="min-h-[64px] rounded-xl bg-stone-50/30 p-1.5" />
-          ))}
-
-          {days.map((dayNum) => {
-            const dateKey = `${currentMonth.getFullYear()}-${String(
-              currentMonth.getMonth() + 1
-            ).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-            const isPast = dateKey < todayKey;
-            const isSelected = dateKey === selectedDateKey;
-            const avail = availabilityForDate(dateKey, rules);
-
-            return (
-              <button
-                key={dateKey}
-                type="button"
-                disabled={isPast}
-                onClick={() => {
-                  setSelectedDateKey(dateKey);
-                  setShowSpecialHoursForm(false);
-                }}
-                className={`min-h-[64px] rounded-xl border p-1.5 sm:p-2 text-left transition flex flex-col justify-between ${
-                  isPast
-                    ? 'border-beige/40 bg-stone-50/50 opacity-40 cursor-not-allowed'
-                    : isSelected
-                    ? 'border-sage-dark bg-sage/10 ring-2 ring-sage-dark/40 shadow-xs'
-                    : avail.source === 'closed'
-                    ? 'border-rose-200/70 bg-rose-50/30 hover:border-rose-300'
-                    : avail.hasSpecialHours
-                    ? 'border-amber-200/70 bg-amber-50/30 hover:border-amber-300'
-                    : 'border-beige bg-white hover:border-sage/60 hover:bg-ivory/50'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span
-                    className={`text-xs font-bold leading-none ${
-                      isPast
-                        ? 'text-stone-300'
-                        : isSelected
-                        ? 'text-sage-dark'
-                        : 'text-charcoal'
-                    }`}
-                  >
-                    {dayNum}
-                  </span>
-                  {avail.hasSpecialHours && !isPast && (
-                    <Sparkles className="h-3 w-3 text-amber-500 shrink-0" aria-label="Special hours" />
+          return (
+            <div className="rounded-2xl border border-beige/80 bg-[#faf8f4]/80 p-3 sm:p-3.5 space-y-2.5">
+              <div>
+                <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                  <h4 className="font-serif text-sm sm:text-base font-semibold text-charcoal">
+                    {fullDate}
+                  </h4>
+                  {isPast && (
+                    <span className="rounded-full bg-stone-100 border border-stone-200 px-2 py-0.5 text-[9px] text-warm-gray font-medium">
+                      Past
+                    </span>
                   )}
                 </div>
+                <p className="text-[11px] text-warm-gray">{sourceDesc}</p>
+              </div>
 
-                <div className="mt-1 flex flex-col gap-0.5 w-full overflow-hidden">
-                  {avail.source === 'closed' ? (
-                    <span className="text-[11px] font-semibold text-rose-600 leading-tight">
-                      Closed
-                    </span>
-                  ) : (
-                    avail.windows.slice(0, 3).map((w, idx) => {
+              {/* Time windows with type badges */}
+              <div>
+                {avail.windows.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {avail.windows.map((w, idx) => {
                       const cfg =
                         sessionTypeConfig[w.appointment_type_id || 'all'] ||
                         sessionTypeConfig.all;
                       return (
                         <div
                           key={w.id || idx}
-                          className="flex items-center gap-1 text-[10px] leading-tight text-charcoal truncate"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-beige bg-white px-2 py-1 text-[11px] shadow-2xs"
                         >
+                          <span className={`h-1.5 w-1.5 rounded-full ${cfg?.dot || 'bg-emerald-500'}`} />
+                          <span className="font-semibold text-charcoal">
+                            {w.start_time}–{w.end_time}
+                          </span>
                           <span
-                            className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                              cfg?.dot || 'bg-emerald-500'
-                            }`}
-                          />
-                          <span className="truncate">{w.start_time}</span>
+                            className={`rounded px-1 py-0.2 text-[9px] border ${cfg.badge}`}
+                          >
+                            {cfg.label}
+                          </span>
+                          {w.rule_type === 'date_override' && !isPast && (
+                            <button
+                              type="button"
+                              disabled={saving}
+                              onClick={() => handleDeleteRuleBlock(w.id)}
+                              className="ml-0.5 p-0.5 text-stone-400 hover:text-rose-600 transition-colors"
+                              title="Delete time block"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
                         </div>
                       );
-                    })
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Legend */}
-        <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-warm-gray border-t border-beige/60 pt-3">
-          <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            <span>Weekly hours</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="h-3 w-3 text-amber-500" />
-            <span>Special hours</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-semibold text-rose-600">Closed</span>
-            <span>Closed day</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-stone-300" />
-            <span>Not open</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Selected Date Detail Panel */}
-      {selectedDateKey && (() => {
-        const [y, m, d] = selectedDateKey.split('-').map(Number);
-        const dateObj = new Date(y, m - 1, d, 12, 0, 0);
-        const fullDate = format(dateObj, 'EEEE, MMMM d, yyyy');
-        const avail = availabilityForDate(selectedDateKey, rules);
-        const sourceDesc = getHoursSourceDescription(avail.source, dateObj.getDay());
-        const isPast = selectedDateKey < todayKey;
-
-        return (
-          <div className="rounded-2xl border border-beige/80 bg-[#faf8f4]/80 p-4 sm:p-5 space-y-3.5">
-            <div>
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <h4 className="font-serif text-base sm:text-lg font-semibold text-charcoal">
-                  {fullDate}
-                </h4>
-                {isPast && (
-                  <span className="rounded-full bg-stone-100 border border-stone-200 px-2.5 py-0.5 text-[10px] text-warm-gray font-medium">
-                    Past Date (Read-only)
-                  </span>
+                    })}
+                  </div>
+                ) : avail.source === 'closed' ? (
+                  <div className="rounded-lg border border-rose-200/80 bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700">
+                    This date is explicitly closed.
+                  </div>
+                ) : (
+                  <div className="text-xs text-warm-gray italic">
+                    No open hours scheduled for this date.
+                  </div>
                 )}
               </div>
-              <p className="text-xs text-warm-gray mt-0.5">{sourceDesc}</p>
-            </div>
 
-            {/* Time windows with type badges */}
-            <div>
-              {avail.windows.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {avail.windows.map((w, idx) => {
-                    const cfg =
-                      sessionTypeConfig[w.appointment_type_id || 'all'] ||
-                      sessionTypeConfig.all;
-                    return (
-                      <div
-                        key={w.id || idx}
-                        className="inline-flex items-center gap-2 rounded-xl border border-beige bg-white px-3 py-1.5 text-xs shadow-2xs"
-                      >
-                        <span className={`h-2 w-2 rounded-full ${cfg?.dot || 'bg-emerald-500'}`} />
-                        <span className="font-semibold text-charcoal">
-                          {w.start_time} – {w.end_time}
-                        </span>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] border ${cfg.badge}`}
-                        >
-                          {cfg.label}
-                        </span>
-                        {w.label && (
-                          <span className="text-[11px] text-warm-gray">({w.label})</span>
-                        )}
-                        {w.rule_type === 'date_override' && !isPast && (
-                          <button
-                            type="button"
-                            disabled={saving}
-                            onClick={() => handleDeleteRuleBlock(w.id)}
-                            className="ml-1 p-0.5 text-stone-400 hover:text-rose-600 transition-colors"
-                            title="Delete time block"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : avail.source === 'closed' ? (
-                <div className="rounded-xl border border-rose-200/80 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
-                  This date is explicitly closed.
-                </div>
-              ) : (
-                <div className="text-xs text-warm-gray italic">
-                  No open hours scheduled for this date.
-                </div>
-              )}
-            </div>
+              {/* Action buttons (only for present/future dates) */}
+              {!isPast && (
+                <div className="border-t border-beige/70 pt-2 space-y-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={saving || avail.source === 'closed'}
+                      onClick={() => handleCloseDay(selectedDateKey)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-rose-700 shadow-2xs hover:bg-rose-50 hover:border-rose-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {saving ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <CalendarOff className="h-3 w-3" />
+                      )}
+                      <span>Close day</span>
+                    </button>
 
-            {/* Action buttons (only for present/future dates) */}
-            {!isPast && (
-              <div className="border-t border-beige/70 pt-3 space-y-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={saving || avail.source === 'closed'}
-                    onClick={() => handleCloseDay(selectedDateKey)}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 shadow-2xs hover:bg-rose-50 hover:border-rose-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {saving ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <CalendarOff className="h-3.5 w-3.5" />
-                    )}
-                    <span>Close this day</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={saving}
-                    onClick={() => setShowSpecialHoursForm((prev) => !prev)}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-sage/40 bg-white px-3 py-2 text-xs font-semibold text-sage-dark shadow-2xs hover:bg-sage/10 transition-colors disabled:opacity-40"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Set special hours</span>
-                  </button>
-
-                  {avail.hasOverrides && (
                     <button
                       type="button"
                       disabled={saving}
-                      onClick={() => handleResetToWeekly(selectedDateKey)}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-semibold text-charcoal shadow-2xs hover:bg-stone-50 transition-colors disabled:opacity-40"
+                      onClick={() => setShowSpecialHoursForm((prev) => !prev)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-sage/40 bg-white px-2.5 py-1 text-[11px] font-semibold text-sage-dark shadow-2xs hover:bg-sage/10 transition-colors disabled:opacity-40"
                     >
-                      {saving ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <RotateCcw className="h-3.5 w-3.5" />
-                      )}
-                      <span>Reset to weekly hours</span>
+                      <Plus className="h-3 w-3" />
+                      <span>Special hours</span>
                     </button>
+
+                    {avail.hasOverrides && (
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => handleResetToWeekly(selectedDateKey)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-charcoal shadow-2xs hover:bg-stone-50 transition-colors disabled:opacity-40"
+                      >
+                        {saving ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <RotateCcw className="h-3 w-3" />
+                        )}
+                        <span>Reset to weekly</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Inline form for special hours (collapsed when not open) */}
+                  {showSpecialHoursForm && (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void handleSaveSpecialHours(selectedDateKey);
+                      }}
+                      className="rounded-xl border border-beige bg-white p-2.5 space-y-2 shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-bold text-charcoal uppercase tracking-wider">
+                          Special Hours for this Date
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setShowSpecialHoursForm(false)}
+                          className="rounded p-0.5 text-stone-400 hover:bg-beige/40 hover:text-charcoal"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <div>
+                          <label className="block text-[10px] font-medium text-warm-gray mb-0.5">
+                            Start
+                          </label>
+                          <input
+                            type="time"
+                            required
+                            value={specialStartTime}
+                            onChange={(e) => setSpecialStartTime(e.target.value)}
+                            className="w-full rounded border border-beige bg-white px-1.5 py-0.5 text-[11px] text-charcoal focus:outline-none focus:ring-1 focus:ring-sage"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-medium text-warm-gray mb-0.5">
+                            End
+                          </label>
+                          <input
+                            type="time"
+                            required
+                            value={specialEndTime}
+                            onChange={(e) => setSpecialEndTime(e.target.value)}
+                            className="w-full rounded border border-beige bg-white px-1.5 py-0.5 text-[11px] text-charcoal focus:outline-none focus:ring-1 focus:ring-sage"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <div>
+                          <label className="block text-[10px] font-medium text-warm-gray mb-0.5">
+                            Type
+                          </label>
+                          <select
+                            value={specialSessionType}
+                            onChange={(e) => setSpecialSessionType(e.target.value)}
+                            className="w-full rounded border border-beige bg-white px-1 py-0.5 text-[10px] text-charcoal focus:outline-none focus:ring-1 focus:ring-sage"
+                          >
+                            <option value="all">All Types</option>
+                            <option value="initial">Discovery (30m)</option>
+                            <option value="coaching-60">60-Min</option>
+                            <option value="intensive-90">90-Min</option>
+                            <option value="family">Family (75m)</option>
+                            <option value="follow-up">Follow-up (45m)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-medium text-warm-gray mb-0.5">
+                            Label (opt)
+                          </label>
+                          <input
+                            type="text"
+                            value={specialLabel}
+                            onChange={(e) => setSpecialLabel(e.target.value)}
+                            placeholder="e.g. Special"
+                            className="w-full rounded border border-beige bg-white px-1.5 py-0.5 text-[11px] text-charcoal focus:outline-none focus:ring-1 focus:ring-sage"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-1.5 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setShowSpecialHoursForm(false)}
+                          className="rounded border border-beige bg-white px-2 py-0.5 text-[11px] font-semibold text-warm-gray hover:text-charcoal"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={saving}
+                          className="inline-flex items-center gap-1 rounded bg-sage px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-2xs hover:bg-sage-dark disabled:opacity-40"
+                        >
+                          {saving && <Loader2 className="h-3 w-3 animate-spin" />}
+                          <span>Save</span>
+                        </button>
+                      </div>
+                    </form>
                   )}
                 </div>
-
-                {/* Inline form for special hours */}
-                {showSpecialHoursForm && (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void handleSaveSpecialHours(selectedDateKey);
-                    }}
-                    className="rounded-2xl border border-beige bg-white p-3.5 sm:p-4 space-y-3 shadow-xs"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-charcoal uppercase tracking-wider">
-                        Set Special Hours for this Date
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setShowSpecialHoursForm(false)}
-                        className="rounded-lg p-1 text-stone-400 hover:bg-beige/40 hover:text-charcoal"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      <div>
-                        <label className="block text-[11px] font-medium text-warm-gray mb-1">
-                          Start Time
-                        </label>
-                        <input
-                          type="time"
-                          required
-                          value={specialStartTime}
-                          onChange={(e) => setSpecialStartTime(e.target.value)}
-                          className="w-full rounded-xl border border-beige bg-white px-2.5 py-1.5 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-medium text-warm-gray mb-1">
-                          End Time
-                        </label>
-                        <input
-                          type="time"
-                          required
-                          value={specialEndTime}
-                          onChange={(e) => setSpecialEndTime(e.target.value)}
-                          className="w-full rounded-xl border border-beige bg-white px-2.5 py-1.5 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-medium text-warm-gray mb-1">
-                          Session Type
-                        </label>
-                        <select
-                          value={specialSessionType}
-                          onChange={(e) => setSpecialSessionType(e.target.value)}
-                          className="w-full rounded-xl border border-beige bg-white px-2.5 py-1.5 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30"
-                        >
-                          <option value="all">🌿 All Session Types</option>
-                          <option value="initial">💬 Discovery Call (30m)</option>
-                          <option value="coaching-60">⏱️ 60-Min Coaching</option>
-                          <option value="intensive-90">🔥 90-Min Intensive</option>
-                          <option value="family">👨‍👩‍👧 Family Consultation (75m)</option>
-                          <option value="follow-up">🔄 Follow-up Session (45m)</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-medium text-warm-gray mb-1">
-                        Label / Reason (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={specialLabel}
-                        onChange={(e) => setSpecialLabel(e.target.value)}
-                        placeholder="e.g. Saturday Special Consultation"
-                        className="w-full rounded-xl border border-beige bg-white px-2.5 py-1.5 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30"
-                      />
-                    </div>
-
-                    <div className="flex justify-end gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setShowSpecialHoursForm(false)}
-                        className="rounded-xl border border-beige bg-white px-3 py-1.5 text-xs font-semibold text-warm-gray hover:text-charcoal"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={saving}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-sage px-4 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-sage-dark disabled:opacity-40"
-                      >
-                        {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                        <span>Save Special Hours</span>
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })()}
+              )}
+            </div>
+          );
+        })()}
+      </div>
     </div>
   );
 }
