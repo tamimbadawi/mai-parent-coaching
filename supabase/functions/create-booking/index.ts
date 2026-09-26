@@ -54,8 +54,10 @@ Deno.serve(async (request) => {
     if (!supabaseUrl || !serviceRoleKey) return json({ error: 'Booking database configuration is missing.' }, 503);
 
     const payload = (await request.json()) as BookingPayload;
+    if (!payload.appointment_type_id || !Object.hasOwn(APPOINTMENT_CONFIG, payload.appointment_type_id)) {
+      return json({ error: 'Unknown appointment type.' }, 400);
+    }
     const appointment = APPOINTMENT_CONFIG[payload.appointment_type_id];
-    if (!appointment) return json({ error: 'Unknown appointment type.' }, 400);
     if (!isValidDateKey(payload.appointment_date) || !isValidTime(payload.appointment_time)) {
       return json({ error: 'Invalid appointment date or time.' }, 400);
     }
@@ -135,14 +137,14 @@ Deno.serve(async (request) => {
       if (Array.isArray(payload.intake_topics)) {
         const validTopics = Array.from(new Set(
           payload.intake_topics
-            .filter((t): t is string => typeof t === 'string' && Boolean(DISCOVERY_TOPIC_TITLES[t]))
+            .filter((t): t is string => typeof t === 'string' && Object.hasOwn(DISCOVERY_TOPIC_TITLES, t))
         ));
         intakeTopics = validTopics.length > 0 ? validTopics : null;
       }
-      if (typeof payload.intake_need === 'string' && INTAKE_NEED_LABELS[payload.intake_need]) {
+      if (typeof payload.intake_need === 'string' && Object.hasOwn(INTAKE_NEED_LABELS, payload.intake_need)) {
         intakeNeed = payload.intake_need;
       }
-      if (typeof payload.intake_duration === 'string' && INTAKE_DURATION_LABELS[payload.intake_duration]) {
+      if (typeof payload.intake_duration === 'string' && Object.hasOwn(INTAKE_DURATION_LABELS, payload.intake_duration)) {
         intakeDuration = payload.intake_duration;
       }
       if (intakeNeed && intakeDuration) {
