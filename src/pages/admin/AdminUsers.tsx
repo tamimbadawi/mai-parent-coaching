@@ -239,6 +239,11 @@ const AdminUsers = (): JSX.Element => {
       return;
     }
 
+    if (!draft.country?.trim()) {
+      setError('Country of residency is required.');
+      return;
+    }
+
     if (!editingUser && !draft.password.trim()) {
       setError('A password is required when creating a user.');
       return;
@@ -528,7 +533,7 @@ const AdminUsers = (): JSX.Element => {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="relative">
                   <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">
-                    Country of residency
+                    Country of residency *
                   </label>
                   <button
                     type="button"

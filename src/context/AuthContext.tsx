@@ -73,6 +73,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
         setProfile(data);
         // Sync user_metadata if different so local cached session retains full info
         const meta = currentUser.user_metadata || {};
+        const metaCleanPhone = (meta.phone ? String(meta.phone).replace(/\D/g, '') : '');
+        const metaHasPhone = Boolean(meta.phone && metaCleanPhone.length >= 7);
+        const metaHasCountry = Boolean(meta.country);
+
+        // Auto-heal profiles table if metadata contains phone/country that profiles table is currently missing
+        if ((!data.phone && metaHasPhone) || (!data.country && metaHasCountry)) {
+          const profileSelfHeal: Record<string, string> = {};
+          if (!data.phone && metaHasPhone) profileSelfHeal.phone = String(meta.phone);
+          if (!data.country && metaHasCountry) profileSelfHeal.country = String(meta.country);
+
+          void supabase
+            .from('profiles')
+            .update({ ...profileSelfHeal, updated_at: new Date().toISOString() })
+            .eq('id', currentUser.id)
+            .then(() => {
+              setProfile((prev) => (prev ? { ...prev, ...profileSelfHeal } : prev));
+            })
+            .catch(() => {});
+        }
+
         if (
           (data.phone && meta.phone !== data.phone) ||
           (data.country && meta.country !== data.country) ||
@@ -214,14 +234,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
   }, [refreshProfile, refreshEnrollments]);
 
   const signUp = useCallback(async (email: string, password: string, fullName: string, phone?: string, country?: string): Promise<{ error: Error | null }> => {
+    const cleanDigits = (phone || '').replace(/\D/g, '');
+    if (!phone?.trim() || cleanDigits.length < 7) {
+      return { error: new Error('A valid working phone number (minimum 7 digits) is required.') };
+    }
+    if (!country?.trim()) {
+      return { error: new Error('Country of residence is required.') };
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          full_name: fullName,
-          phone: phone || null,
-          country: country || null,
+          full_name: fullName.trim(),
+          phone: phone.trim(),
+          country: country.trim(),
         },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
@@ -233,14 +261,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
 
     // Upsert phone and country into the profiles table if provided and user exists
     if (data.user && (phone || country)) {
-      const updates: Record<string, string> = {};
-      if (phone) updates.phone = phone;
-      if (country) updates.country = country;
+      const updates: Record<string, string> = {
+        phone: phone.trim(),
+        country: country.trim(),
+        updated_at: new Date().toISOString(),
+      };
 
       await supabase
         .from('profiles')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', data.user.id);
+        .update(updates)
+        .eq('id', data.user.id)
+        .catch(() => {});
     }
 
     return { error: null };

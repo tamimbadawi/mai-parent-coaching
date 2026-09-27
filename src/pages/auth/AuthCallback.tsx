@@ -23,7 +23,7 @@ const AuthCallback = (): JSX.Element => {
     try {
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('role')
+        .select('phone, country, role')
         .eq('id', targetUser.id)
         .maybeSingle();
 
@@ -34,9 +34,20 @@ const AuthCallback = (): JSX.Element => {
         return;
       }
 
-      void navigate('/', { replace: true });
+      const meta = (targetUser as { user_metadata?: Record<string, unknown> })?.user_metadata || {};
+      const rawPhone = (profileData?.phone ?? profile?.phone ?? meta.phone ?? '') as string;
+      const rawCountry = (profileData?.country ?? profile?.country ?? meta.country ?? '') as string;
+      const cleanDigits = rawPhone.replace(/\D/g, '');
+
+      const isMissingDetails = !rawPhone || cleanDigits.length < 7 || !rawCountry;
+
+      if (isMissingDetails) {
+        void navigate('/auth/complete-profile', { replace: true });
+      } else {
+        void navigate('/', { replace: true });
+      }
     } catch {
-      void navigate('/', { replace: true });
+      void navigate('/auth/complete-profile', { replace: true });
     }
   };
 

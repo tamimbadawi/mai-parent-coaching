@@ -54,6 +54,7 @@ const useTypewriter = (texts: string[], typingSpeed = 55, pauseMs = 2200, delete
 };
 
 import { COUNTRIES, type CountryOption } from '../../data/countries';
+import { getDialCodeForCountry } from '../../components/ui/PhoneInput';
 
 /* ── Shared input class ───────────────────────────────────────────────────── */
 const inputCls =
@@ -79,7 +80,7 @@ const Register = (): JSX.Element => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const selectedCountry = COUNTRIES.find((c) => c.iso === country) ?? null;
+  const selectedCountry = COUNTRIES.find((c) => c.iso === country || c.name === country) ?? null;
   const filteredCountries = COUNTRIES.filter(
     (c) =>
       c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
@@ -92,7 +93,7 @@ const Register = (): JSX.Element => {
     if (!/\S+@\S+\.\S+/.test(email)) next.email = 'Enter a valid email.';
     const cleanDigits = phone.replace(/\D/g, '');
     if (!phone.trim() || cleanDigits.length < 7) next.phone = 'Enter a valid working phone number (min. 7 digits).';
-    if (!country) next.country = 'Select your country.';
+    if (!country.trim()) next.country = 'Select your country of residence.';
     if (!password) next.password = 'Enter a password.';
     if (confirmPassword !== password) next.confirmPassword = 'Passwords do not match.';
     setErrors(next);
@@ -104,7 +105,7 @@ const Register = (): JSX.Element => {
     setSubmitError(null);
     if (!validate()) return;
     setLoading(true);
-    const { error } = await signUp(email, password, fullName, phone || undefined, country || undefined);
+    const { error } = await signUp(email, password, fullName, phone.trim(), country.trim());
     setLoading(false);
     if (error) {
       const msg = error.message ?? '';
@@ -201,13 +202,17 @@ const Register = (): JSX.Element => {
                 {/* Row 1: Name + Email */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="reg-name" className="mb-1.5 block text-sm font-medium text-charcoal">Full name</label>
+                    <label htmlFor="reg-name" className="mb-1.5 block text-sm font-medium text-charcoal">
+                      Full name <span className="text-terracotta">*</span>
+                    </label>
                     <input id="reg-name" type="text" value={fullName} onChange={(e) => setFullName(e.target.value)}
                       className={inputCls} placeholder="Your name" />
                     {errors.fullName && <p className="mt-1 text-xs text-terracotta">{errors.fullName}</p>}
                   </div>
                   <div>
-                    <label htmlFor="reg-email" className="mb-1.5 block text-sm font-medium text-charcoal">Email address</label>
+                    <label htmlFor="reg-email" className="mb-1.5 block text-sm font-medium text-charcoal">
+                      Email address <span className="text-terracotta">*</span>
+                    </label>
                     <input id="reg-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                       className={inputCls} placeholder="you@example.com" />
                     {errors.email && <p className="mt-1 text-xs text-terracotta">{errors.email}</p>}
@@ -217,12 +222,29 @@ const Register = (): JSX.Element => {
                 {/* Row 2: Phone + Country */}
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-charcoal">Phone number</label>
-                    <PhoneInput value={phone} onChange={setPhone} inputClassName="py-2.5 rounded-xl text-sm" />
+                    <label className="mb-1.5 block text-sm font-medium text-charcoal">
+                      Phone number <span className="text-terracotta">*</span>
+                    </label>
+                    <PhoneInput
+                      value={phone}
+                      onChange={(val) => {
+                        setPhone(val);
+                        if (errors.phone && val.replace(/\D/g, '').length >= 7) {
+                          setErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.phone;
+                            return next;
+                          });
+                        }
+                      }}
+                      inputClassName="py-2.5 rounded-xl text-sm"
+                    />
                     {errors.phone && <p className="mt-1 text-xs text-terracotta">{errors.phone}</p>}
                   </div>
                   <div>
-                    <label htmlFor="reg-country" className="mb-1.5 block text-sm font-medium text-charcoal">Country of residency</label>
+                    <label htmlFor="reg-country" className="mb-1.5 block text-sm font-medium text-charcoal">
+                      Country of residency <span className="text-terracotta">*</span>
+                    </label>
                     <div className="relative">
                       <button id="reg-country" type="button" onClick={() => setCountryOpen((p) => !p)}
                         className={`flex w-full items-center justify-between rounded-xl border bg-white px-4 py-2.5 text-sm outline-none transition ${country ? 'text-charcoal' : 'text-warm-gray/50'} ${errors.country ? 'border-terracotta' : 'border-beige focus:border-sage'}`}
@@ -247,7 +269,23 @@ const Register = (): JSX.Element => {
                             {filteredCountries.map((c) => (
                               <li key={c.iso} role="option" aria-selected={country === c.iso}>
                                 <button type="button"
-                                  onClick={() => { setCountry(c.iso); setCountryOpen(false); setCountrySearch(''); }}
+                                  onClick={() => {
+                                    setCountry(c.iso);
+                                    setCountryOpen(false);
+                                    setCountrySearch('');
+                                    const clean = phone.replace(/\D/g, '');
+                                    if (clean.length < 4) {
+                                      const dial = getDialCodeForCountry(c.iso);
+                                      if (dial) setPhone(dial);
+                                    }
+                                    if (errors.country) {
+                                      setErrors((prev) => {
+                                        const next = { ...prev };
+                                        delete next.country;
+                                        return next;
+                                      });
+                                    }
+                                  }}
                                   className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition hover:bg-cream ${country === c.iso ? 'bg-sage/10 font-medium text-sage-dark' : 'text-charcoal'}`}>
                                   <span>{c.flag}</span>
                                   <span className="truncate">{c.name}</span>
@@ -266,7 +304,9 @@ const Register = (): JSX.Element => {
                 {/* Row 3: Password + Confirm */}
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="reg-password" className="mb-1.5 block text-sm font-medium text-charcoal">Password</label>
+                    <label htmlFor="reg-password" className="mb-1.5 block text-sm font-medium text-charcoal">
+                      Password <span className="text-terracotta">*</span>
+                    </label>
                     <div className="relative">
                       <input id="reg-password" type={showPassword ? 'text' : 'password'} value={password}
                         onChange={(e) => setPassword(e.target.value)} className={`${inputCls} pr-10`} placeholder="Create a password" />
@@ -278,7 +318,9 @@ const Register = (): JSX.Element => {
                     {errors.password && <p className="mt-1 text-xs text-terracotta">{errors.password}</p>}
                   </div>
                   <div>
-                    <label htmlFor="reg-confirm" className="mb-1.5 block text-sm font-medium text-charcoal">Confirm password</label>
+                    <label htmlFor="reg-confirm" className="mb-1.5 block text-sm font-medium text-charcoal">
+                      Confirm password <span className="text-terracotta">*</span>
+                    </label>
                     <div className="relative">
                       <input id="reg-confirm" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)} className={`${inputCls} pr-10`} placeholder="Re-enter password" />

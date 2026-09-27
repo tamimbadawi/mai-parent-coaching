@@ -84,16 +84,26 @@ const Login = (): JSX.Element => {
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
-      if (userId) {
+      const currentUser = sessionData?.session?.user;
+      if (currentUser) {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('role')
-          .eq('id', userId)
+          .select('phone, country, role')
+          .eq('id', currentUser.id)
           .maybeSingle();
 
         if (profileData?.role === 'admin') {
           navigate('/admin');
+          return;
+        }
+
+        const meta = currentUser.user_metadata || {};
+        const rawPhone = (profileData?.phone || meta.phone || '') as string;
+        const rawCountry = (profileData?.country || meta.country || '') as string;
+        const cleanDigits = rawPhone.replace(/\D/g, '');
+
+        if (!rawPhone || cleanDigits.length < 7 || !rawCountry) {
+          navigate('/auth/complete-profile', { state: { from } });
           return;
         }
       }

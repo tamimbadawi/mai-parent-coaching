@@ -22,6 +22,17 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps): JSX.El
     return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
   }
 
+  if (profile && profile.role !== 'admin') {
+    const rawPhone = profile.phone || user.user_metadata?.phone || '';
+    const cleanDigits = rawPhone.replace(/\D/g, '');
+    const hasPhone = Boolean(rawPhone && cleanDigits.length >= 7);
+    const hasCountry = Boolean(profile.country || user.user_metadata?.country);
+
+    if (!hasPhone || !hasCountry) {
+      return <Navigate to="/auth/complete-profile" replace state={{ from: location.pathname }} />;
+    }
+  }
+
   if (requiredRole === 'admin' && profile?.role !== 'admin') {
     return <Navigate to="/dashboard" replace state={{ from: location.pathname }} />;
   }

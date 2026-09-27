@@ -128,6 +128,10 @@ Deno.serve(async (request) => {
         return json({ step: 'validate_phone', error: 'A valid working phone number is required (minimum 7 digits).' }, 400);
       }
 
+      if (!payload.country?.trim()) {
+        return json({ step: 'validate_country', error: 'Country of residence is required.' }, 400);
+      }
+
       const { data, error } = await adminClient.auth.admin.createUser({
         email: payload.email,
         password: payload.password,

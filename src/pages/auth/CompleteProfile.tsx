@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Sparkles, Phone, ShieldCheck, LogOut, Loader2 } from 'lucide-react';
 import AnimatedSection from '../../components/ui/AnimatedSection';
 import { useAuth } from '../../context/AuthContext';
-import PhoneInput from '../../components/ui/PhoneInput';
+import PhoneInput, { getDialCodeForCountry } from '../../components/ui/PhoneInput';
 import { COUNTRIES, type CountryOption } from '../../data/countries';
 import { dispatchWhatsAppMessage } from '../../lib/whatsappAdmin';
 
@@ -48,7 +48,8 @@ const CompleteProfile = (): JSX.Element => {
     }
   }, [profile, phone, country]);
 
-  const selectedCountry: CountryOption | null = COUNTRIES.find((c) => c.iso === country || c.name === country) ?? null;
+  const selectedCountry: CountryOption | null =
+    COUNTRIES.find((c) => c.iso === country || c.name === country || c.name.toLowerCase() === country.toLowerCase()) ?? null;
   const filteredCountries = COUNTRIES.filter(
     (c) =>
       c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
@@ -167,7 +168,16 @@ const CompleteProfile = (): JSX.Element => {
                 </label>
                 <PhoneInput
                   value={phone}
-                  onChange={setPhone}
+                  onChange={(val) => {
+                    setPhone(val);
+                    if (errors.phone && val.replace(/\D/g, '').length >= 7) {
+                      setErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.phone;
+                        return next;
+                      });
+                    }
+                  }}
                   inputClassName="py-2.5 rounded-xl text-sm"
                 />
                 {errors.phone ? (
@@ -239,6 +249,18 @@ const CompleteProfile = (): JSX.Element => {
                                 setCountry(c.name);
                                 setCountryOpen(false);
                                 setCountrySearch('');
+                                const clean = phone.replace(/\D/g, '');
+                                if (clean.length < 4) {
+                                  const dial = getDialCodeForCountry(c.iso);
+                                  if (dial) setPhone(dial);
+                                }
+                                if (errors.country) {
+                                  setErrors((prev) => {
+                                    const next = { ...prev };
+                                    delete next.country;
+                                    return next;
+                                  });
+                                }
                               }}
                               className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition hover:bg-cream ${
                                 country === c.iso || country === c.name

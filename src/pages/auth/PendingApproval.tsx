@@ -13,6 +13,11 @@ const PendingApproval = (): JSX.Element => {
         void navigate('/admin', { replace: true });
         return;
       }
+      const cleanDigits = (profile.phone || '').replace(/\D/g, '');
+      if (!profile.phone || cleanDigits.length < 7 || !profile.country) {
+        void navigate('/auth/complete-profile', { replace: true });
+        return;
+      }
       void navigate('/dashboard', { replace: true });
     }
   }, [loading, profile, navigate]);
