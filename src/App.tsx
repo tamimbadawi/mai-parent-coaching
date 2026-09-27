@@ -15,7 +15,6 @@ import Booking from './pages/Booking';
 import Resources from './pages/Resources';
 import Blog from './pages/blog/Blog';
 import BlogPost from './pages/blog/BlogPost';
-import Community from './pages/Community';
 import FAQ from './pages/FAQ';
 import Contact from './pages/Contact';
 import Shop from './pages/Shop';
@@ -71,11 +70,18 @@ function AppShell() {
           <Route path="/services" element={<Services />} />
           <Route path="/courses" element={<Courses />} />
           <Route path="/courses/:id" element={<CourseDetail />} />
-          <Route path="/booking" element={<Booking />} />
+          <Route
+            path="/booking"
+            element={
+              <ProtectedRoute redirectTo="/auth/register">
+                <Booking />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/resources" element={<Resources />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:id" element={<BlogPost />} />
-          <Route path="/community" element={<Community />} />
+          <Route path="/community" element={<Navigate to="/" replace />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/shop" element={<Shop />} />

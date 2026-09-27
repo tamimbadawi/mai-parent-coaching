@@ -122,6 +122,9 @@ const Login = (): JSX.Element => {
 
   const handleGoogle = async (): Promise<void> => {
     setError(null);
+    if (from && from !== '/') {
+      sessionStorage.setItem('auth_redirect_to', from);
+    }
     const { error: err } = await signInWithGoogle();
     if (err) setError(err.message);
   };
@@ -129,6 +132,9 @@ const Login = (): JSX.Element => {
   const handleMagicLink = async (): Promise<void> => {
     if (!email) { setError('Please enter your email address first.'); return; }
     setError(null);
+    if (from && from !== '/') {
+      sessionStorage.setItem('auth_redirect_to', from);
+    }
     setMagicLinkLoading(true);
     const { error: err } = await signInWithMagicLink(email);
     setMagicLinkLoading(false);
@@ -197,6 +203,18 @@ const Login = (): JSX.Element => {
                 <h2 className="font-serif text-3xl text-charcoal">Welcome back</h2>
                 <p className="mt-1 text-base text-warm-gray">Log in to continue your parent coaching journey.</p>
               </div>
+
+              {from === '/booking' && (
+                <div className="mb-5 rounded-2xl border border-sage/30 bg-sage/10 p-3.5 text-xs text-charcoal">
+                  <p className="font-semibold text-sage-dark flex items-center gap-1.5 mb-1">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>Booking with Mai</span>
+                  </p>
+                  <p className="text-ink-2 leading-relaxed">
+                    Please log in to continue booking your session. Your details will be prefilled automatically.
+                  </p>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} noValidate className="space-y-4">
 
@@ -303,7 +321,7 @@ const Login = (): JSX.Element => {
               <div className="mt-6 flex items-center justify-between text-sm text-warm-gray">
                 <span>
                   Don't have an account?{' '}
-                  <Link to="/auth/register" className="font-medium text-sage-dark hover:text-sage">Sign up</Link>
+                  <Link to="/auth/register" state={{ from }} className="font-medium text-sage-dark hover:text-sage">Sign up</Link>
                 </span>
                 <span className="text-soft-gray">
                   <Link to="/terms" className="hover:text-sage">Terms</Link>

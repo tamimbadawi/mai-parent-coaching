@@ -44,15 +44,25 @@ const AuthCallback = (): JSX.Element => {
       const rawCountry = (profileData?.country ?? profile?.country ?? meta.country ?? '') as string;
       const cleanDigits = rawPhone.replace(/\D/g, '');
 
+      const savedFrom = sessionStorage.getItem('auth_redirect_to');
+      if (savedFrom) {
+        sessionStorage.removeItem('auth_redirect_to');
+      }
+      const destination = savedFrom || '/';
+
       const isMissingDetails = !rawPhone || cleanDigits.length < 7 || !rawCountry;
 
       if (isMissingDetails) {
-        void navigate('/auth/complete-profile', { replace: true });
+        void navigate('/auth/complete-profile', { replace: true, state: { from: destination } });
       } else {
-        void navigate('/', { replace: true });
+        void navigate(destination, { replace: true });
       }
     } catch {
-      void navigate('/auth/complete-profile', { replace: true });
+      const savedFrom = sessionStorage.getItem('auth_redirect_to');
+      if (savedFrom) {
+        sessionStorage.removeItem('auth_redirect_to');
+      }
+      void navigate('/auth/complete-profile', { replace: true, state: { from: savedFrom || '/' } });
     }
   };
 

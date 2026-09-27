@@ -7,6 +7,8 @@ This directory is the single source of truth for **project status, architectural
 > - [AGENTS.md](file:///d:/Cursor/Mai_Website/AGENTS.md) tracks **HOW** to code (coding standards, tech stack rules, anti-damage guidelines).
 > - **Before starting any task**, read the relevant subfolder under `project-plan/`.
 > - Decisions documented in each `decisions.md` file must be treated as **settled** unless the user explicitly instructs to revisit them.
+> - **Mockup Before Implementation (Hard Rule)**: For any upcoming plan, user journey, or major layout rework, always build an interactive visual mockup (under `project-plan/<feature>/design/`) and align with the user BEFORE completing full implementation.
+> - **Single-Screen Booking (No Vertical Scroll)**: The booking experience on `/booking` across all doors (Discovery, 1:1 Coaching/Sessions, and Small Circles/Groups) must fit in a single desktop viewport (1366×768, 1440×900, 1920×1080) without vertical scrolling.
 
 ---
 

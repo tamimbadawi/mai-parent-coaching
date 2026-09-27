@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Sparkles } from 'lucide-react';
 import AnimatedSection from '../../components/ui/AnimatedSection';
 import { useAuth } from '../../context/AuthContext';
@@ -53,7 +53,7 @@ const useTypewriter = (texts: string[], typingSpeed = 55, pauseMs = 2200, delete
   return displayed;
 };
 
-import { COUNTRIES, type CountryOption } from '../../data/countries';
+import { COUNTRIES } from '../../data/countries';
 import { getDialCodeForCountry } from '../../components/ui/PhoneInput';
 
 /* ── Shared input class ───────────────────────────────────────────────────── */
@@ -63,8 +63,11 @@ const inputCls =
 /* ── Component ────────────────────────────────────────────────────────────── */
 const Register = (): JSX.Element => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signUp, signInWithGoogle } = useAuth();
   const typedQuote = useTypewriter(QUOTES);
+
+  const from = (location.state as { from?: string } | null)?.from || new URLSearchParams(location.search).get('from') || '/';
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -125,11 +128,18 @@ const Register = (): JSX.Element => {
       }).catch((err) => console.warn('Onboarding dispatch notice:', err));
     }
 
-    navigate('/auth/verify-email', { state: { email } });
+    if (from && from !== '/') {
+      sessionStorage.setItem('auth_redirect_to', from);
+    }
+
+    navigate('/auth/verify-email', { state: { email, from } });
   };
 
   const handleGoogle = async (): Promise<void> => {
     setSubmitError(null);
+    if (from && from !== '/') {
+      sessionStorage.setItem('auth_redirect_to', from);
+    }
     const { error } = await signInWithGoogle();
     if (error) setSubmitError(error.message);
   };
@@ -196,6 +206,18 @@ const Register = (): JSX.Element => {
                 <h2 className="font-serif text-3xl text-charcoal">Create your account</h2>
                 <p className="mt-1 text-base text-warm-gray">Start your supportive coaching experience.</p>
               </div>
+
+              {from === '/booking' && (
+                <div className="mb-5 rounded-2xl border border-sage/30 bg-sage/10 p-3.5 text-xs text-charcoal">
+                  <p className="font-semibold text-sage-dark flex items-center gap-1.5 mb-1">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>One quick step before booking</span>
+                  </p>
+                  <p className="text-ink-2 leading-relaxed">
+                    Please create your free account to book your Discovery Call with Mai. Your details will be prefilled automatically on your booking.
+                  </p>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} noValidate>
 
@@ -367,7 +389,7 @@ const Register = (): JSX.Element => {
               <div className="mt-4 flex items-center justify-between text-sm text-warm-gray">
                 <span>
                   Already have an account?{' '}
-                  <Link to="/auth/login" className="font-medium text-sage-dark hover:text-sage">Log in</Link>
+                  <Link to="/auth/login" state={{ from }} className="font-medium text-sage-dark hover:text-sage">Log in</Link>
                 </span>
                 <span className="text-soft-gray">
                   <Link to="/terms" className="hover:text-sage">Terms</Link>

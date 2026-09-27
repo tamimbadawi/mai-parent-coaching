@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, Check, ArrowRight, HelpCircle, Heart, Brain, Users2, Sun } from 'lucide-react';
+import { Check, ArrowRight, HelpCircle, Heart, Brain, Users2, Sun } from 'lucide-react';
 import {
   coachingPackages,
   intakeNeeds,
@@ -68,114 +68,113 @@ export function CoachingPackagesView({
   const suggestedPkg = suggestPackage(selectedNeed, selectedDuration) || coachingPackages[2];
 
   return (
-    <div className="space-y-6">
-      {/* Overview Banner */}
-      <div className="rounded-2xl border border-beige bg-cream/90 p-4 sm:p-5 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-sage/15 px-2.5 py-0.5 text-[11px] font-semibold text-sage-dark">
-              <Sparkles className="h-3 w-3" />
-              <span>1:1 Coaching Pathways</span>
-            </div>
-            <h2 className="mt-1 font-serif text-lg sm:text-xl font-semibold text-charcoal">
-              {isReturningClient ? 'Your 1:1 Packages & Sessions' : 'Personalized 1:1 Parent Coaching'}
-            </h2>
-            <p className="mt-0.5 text-xs text-warm-gray leading-relaxed max-w-xl">
-              Dedicated, one-on-one sessions where we focus on your child's emotional needs and your peace of mind.
-              Sessions are 60 minutes each, held privately via Google Meet.
-            </p>
-          </div>
-
-          {!isReturningClient && (
-            <button
-              type="button"
-              onClick={onSelectDiscovery}
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-sage px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-sage-dark"
-            >
-              <span>Start with Discovery Call</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Gateway Callout for New Families */}
-        {!isReturningClient && (
-          <div className="mt-3.5 rounded-xl border border-sage/30 bg-sage/10 p-3.5 text-xs text-charcoal">
-            <div className="flex items-center gap-1.5 font-bold text-sage-dark mb-1">
-              <Sparkles className="h-4 w-4 shrink-0 text-sage-dark" />
-              <span>Every Family is Different — Why We Begin with a Discovery Call</span>
-            </div>
-            <p className="leading-relaxed">
-              Rather than offering a <em>generic, off-the-shelf package</em>, I listen to your family’s unique story first during an <strong>introductory Discovery Call</strong>. Every child’s nervous system is unique, and <u>no two parenting challenges are identical</u>.
-            </p>
-            <p className="leading-relaxed mt-1.5">
-              Together on our call, we will unpack what feels heaviest at home and shape a <strong>truly personalized coaching roadmap</strong> — matching the exact pace, topics, and level of support that honors your child's emotional needs and <em>restores your own inner calm</em>.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* NEW PARENT VIEW: Pathways & Methodology (Rule 1: Zero Package Prices) */}
+    <div className="w-full">
+      {/* NEW PARENT VIEW: Pathways & Methodology in compact 2-column grid */}
       {!isReturningClient ? (
-        <div className="space-y-4">
-          <div>
-            <div className="mb-2.5 flex items-center justify-between">
-              <h3 className="font-serif text-sm sm:text-base font-semibold text-charcoal">
-                Core Coaching Focus Areas
-              </h3>
-              <span className="text-[11px] text-sage-dark font-medium">Customized during your Discovery Call</span>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-stretch">
+          {/* Column 2 Equivalent: 1:1 Focus Pathways */}
+          <div className="flex flex-col justify-between rounded-2xl border border-beige bg-white p-3.5 shadow-xs">
+            <div>
+              <div className="flex items-center justify-between gap-2 border-b border-beige/80 pb-2 mb-2.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-md bg-sage/20 text-[10px] font-bold text-sage-dark">
+                    2
+                  </span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-charcoal">
+                    1:1 Focus Pathways
+                  </span>
+                </div>
+                <span className="rounded-full bg-sage/15 px-2 py-0.5 text-[9.5px] font-semibold text-sage-dark">
+                  60-min Deep Dives
+                </span>
+              </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {COACHING_PATHWAYS.map((pathway) => {
-                const Icon = pathway.icon;
-                return (
-                  <div
-                    key={pathway.id}
-                    className="flex flex-col justify-between rounded-2xl border border-beige bg-white p-4 shadow-2xs transition hover:border-sage/40"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className={cn('flex h-7 w-7 items-center justify-center rounded-lg', pathway.accent)}>
-                          <Icon className="h-3.5 w-3.5" />
+              <p className="text-[11px] text-warm-gray leading-snug">
+                Dedicated 1-on-1 sessions focused on your family's daily moments. We shape your customized focus areas together on your call.
+              </p>
+
+              <div className="mt-2.5 grid grid-cols-2 gap-2">
+                {COACHING_PATHWAYS.map((pathway) => {
+                  const Icon = pathway.icon;
+                  return (
+                    <div
+                      key={pathway.id}
+                      className="flex flex-col rounded-xl border border-beige/80 bg-cream/50 p-2 text-xs"
+                    >
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <div className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-md', pathway.accent)}>
+                          <Icon className="h-3 w-3" />
                         </div>
-                        <div>
-                          <p className="font-serif text-xs sm:text-sm font-bold text-charcoal leading-snug">
-                            {pathway.title}
-                          </p>
-                          <p className="text-[10px] text-soft-gray">{pathway.sub}</p>
-                        </div>
+                        <p className="font-serif font-bold text-charcoal text-[11px] leading-tight truncate">
+                          {pathway.title.split('&')[0].trim()}
+                        </p>
                       </div>
-                      <p className="text-xs text-warm-gray leading-relaxed mt-1">{pathway.desc}</p>
+                      <p className="text-[10px] text-soft-gray line-clamp-2 leading-relaxed">
+                        {pathway.desc}
+                      </p>
                     </div>
-
-                    <div className="mt-3 flex items-center justify-between border-t border-beige/60 pt-2 text-[11px] text-ink-2">
-                      <span className="font-medium text-charcoal">60-minute deep dive</span>
-                      <span className="text-sage-dark font-semibold">1-on-1 with Mai</span>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Under The Tab CTA for 1:1 Coaching */}
-            <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-sage/30 bg-sage/10 p-4 sm:p-5">
-              <div>
-                <h4 className="font-serif text-sm sm:text-base font-bold text-charcoal">
-                  Ready to take the first gentle step together?
-                </h4>
-                <p className="text-xs text-warm-gray mt-0.5">
-                  Schedule your <strong>introductory Discovery Call</strong> with Mai so we can talk through what you're navigating and shape a gentle roadmap for home.
+            <div className="mt-3 flex items-center justify-between border-t border-dashed border-beige/80 pt-2 text-[10px] font-medium text-sage-dark">
+              <span>✓ Tailored Boundary Scripts</span>
+              <span>✓ WhatsApp Voice Support</span>
+            </div>
+          </div>
+
+          {/* Column 3 Equivalent: How We Begin */}
+          <div className="flex flex-col justify-between rounded-2xl border border-beige bg-white p-3.5 shadow-xs">
+            <div>
+              <div className="flex items-center gap-1.5 border-b border-beige/80 pb-2 mb-2.5">
+                <span className="flex h-4 w-4 items-center justify-center rounded-md bg-dusty-blue/20 text-[10px] font-bold text-dusty-blue-dark">
+                  3
+                </span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-charcoal">
+                  How We Begin
+                </span>
+              </div>
+
+              <div className="rounded-xl border border-sage/30 bg-sage/10 p-2.5 text-xs text-charcoal mb-2.5">
+                <p className="font-bold text-sage-dark text-[11px] mb-1">🌿 Every Family is Different</p>
+                <p className="text-[11px] text-warm-gray leading-relaxed">
+                  Rather than generic packages, I listen to your family’s unique story first on an <strong>introductory Discovery Call</strong> to shape your personalized coaching roadmap.
                 </p>
               </div>
+
+              <div className="rounded-xl border border-beige bg-cream/70 p-2.5 text-[11px] space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-soft-gray">First Step</span>
+                  <span className="font-semibold text-charcoal">Discovery Call (30 min)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-soft-gray">Format</span>
+                  <span className="font-medium text-charcoal">Private Google Meet</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-soft-gray">After We Meet</span>
+                  <span className="font-semibold text-sage-dark">Custom 1:1 Packages Unlock</span>
+                </div>
+                <div className="flex justify-between border-t border-beige/80 pt-1 mt-1">
+                  <span className="text-soft-gray">Session Fee</span>
+                  <span className="font-bold text-charcoal">EGP 500</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3">
               <button
                 type="button"
                 onClick={onSelectDiscovery}
-                className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-sage px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-sage-dark"
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-sage py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-sage-dark"
               >
-                <span>Schedule a Discovery Call</span>
+                <span>Schedule Discovery Call to Begin</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
+              <p className="mt-1 text-center text-[10px] text-soft-gray">
+                Purely supportive. Zero high-pressure sales pitches ever.
+              </p>
             </div>
           </div>
         </div>

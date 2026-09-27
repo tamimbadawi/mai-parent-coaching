@@ -4,9 +4,10 @@ import { useAuth } from '../../context/AuthContext';
 interface ProtectedRouteProps {
   children: JSX.Element;
   requiredRole?: 'student' | 'admin';
+  redirectTo?: string;
 }
 
-const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps): JSX.Element => {
+const ProtectedRoute = ({ children, requiredRole, redirectTo }: ProtectedRouteProps): JSX.Element => {
   const { user, profile, loading } = useAuth();
   const location = useLocation();
 
@@ -19,7 +20,7 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps): JSX.El
   }
 
   if (!user) {
-    return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to={redirectTo || '/auth/login'} replace state={{ from: location.pathname }} />;
   }
 
   const isAdmin =

@@ -34,7 +34,6 @@ export default function HomePreview() {
         title="Start with free resources"
         description="Guides, checklists, and worksheets — no commitment, just support while you decide your next step."
         primaryAction={{ label: 'Get free resources', href: '/resources' }}
-        secondaryAction={{ label: 'Join the community', href: '/community' }}
         variant="sage"
       />
       <FinalBookingCTA />

@@ -60,6 +60,7 @@ Before starting any task, read `/project-plan/00-INDEX.md` and the relevant subf
 8. Do not introduce unnecessary dependencies or duplicate business logic.
 9. Reuse existing utilities and components before creating new ones.
 10. Never claim a feature is complete if data is only in local state, checkout/booking is unverified/unpersisted, or RLS has been neglected.
+11. **Mockup Before Implementation (Hard Rule)**: For any upcoming plan, new user-facing journey, or significant layout change, always build an interactive visual mockup (e.g. self-contained HTML/CSS prototype under `project-plan/<feature>/design/` or an isolated visual preview) and align on it BEFORE implementing the backend, database schema, or final React code. Never proceed straight to full implementation without an agreed visual mockup.
 
 ### Safe Editing (Anti-Damage)
 Never do the following without explicit permission:
@@ -157,8 +158,9 @@ Supabase is the real backend. Treat database, auth, and RLS changes as security-
 - Confident headlines (`text-5xl` to `text-6xl` for hero, `text-3xl` to `text-4xl` for sections), short readable paragraphs (`text-base` / `text-lg`).
 - Subtle Framer Motion (fade in, slide up, gentle stagger, soft hover lift). Avoid bouncing, spinning, or distracting loops. Respect reduced motion.
 
-### Pop-ups & calendars (hard rules)
+### Pop-ups, calendars & booking views (hard rules)
 - **Pop-ups never scroll.** No `overflow-y-auto` / `overflow-auto` / `overflow-scroll` on a dialog or on anything inside it (no inner scrolling lists either). The dialog uses `max-h-[calc(100dvh-1.5rem)] overflow-hidden` and its content is designed to fit. It must fit, on every step/tab, at **1366×768, 1440×900, 1920×1080 and 375×812**. Claude will measure `dialog.scrollHeight <= dialog.clientHeight` at each size; anything over fails.
+- **The booking experience (`/booking`) never requires vertical scrolling on desktop.** Just like the Discovery Call booking flow which fits in one page view without scrolling, the design for all three doors — Discovery Call, 1:1 Coaching (booking sessions & packages), and Small Parent Circles (Group Coaching) — must fit completely in one single viewport on desktop (**1366×768, 1440×900, 1920×1080**) without vertical scrollbars. Layouts must use compact, side-by-side columns rather than long vertical stacks.
 - Date pickers only let people pick days that actually have open times for the selected session type; closed days are visibly disabled; the picker opens on the first open day.
 - Agents that cannot run a browser mark visual checks "NOT RUN — for Claude to verify"; never claim them.
 

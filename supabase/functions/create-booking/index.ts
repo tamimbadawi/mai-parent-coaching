@@ -99,10 +99,31 @@ Deno.serve(async (request) => {
     if (!validSlot) return json({ error: 'The selected time is outside open booking hours.' }, 400);
 
     let userId: string | null = null;
+    let callerEmail: string | null = null;
+    let isAdmin = false;
     const authorization = request.headers.get('Authorization');
     if (authorization?.startsWith('Bearer ')) {
       const { data: { user } } = await supabaseAdmin.auth.getUser(authorization.slice(7));
-      userId = user?.id ?? null;
+      if (user) {
+        userId = user.id;
+        callerEmail = user.email ?? null;
+        const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', user.id).maybeSingle();
+        isAdmin = profile?.role === 'admin' || user.email?.toLowerCase() === 'tamimbadawi@gmail.com';
+      }
+    }
+
+    if (!userId) {
+      return json({ error: 'You must be signed in to book a session. Please sign up or log in first.' }, 401);
+    }
+
+    let bookingEmail = payload.email.trim().toLowerCase();
+    if (!isAdmin) {
+      if (callerEmail && bookingEmail !== callerEmail.toLowerCase()) {
+        bookingEmail = callerEmail.toLowerCase();
+      }
+    } else {
+      const { data: clientUser } = await supabaseAdmin.from('profiles').select('id').eq('email', bookingEmail).maybeSingle();
+      userId = clientUser?.id ?? null;
     }
 
     const { data: conflicts, error: conflictError } = await supabaseAdmin
@@ -163,7 +184,7 @@ Deno.serve(async (request) => {
       ends_at: endsAt.toISOString(),
       reserved_until: reservedUntil.toISOString(),
       parent_name: payload.parent_name.trim(),
-      email: payload.email.trim().toLowerCase(),
+      email: bookingEmail,
       phone: payload.phone?.trim().slice(0, 50) || null,
       country: payload.country?.trim().slice(0, 100) || null,
       child_name: payload.child_name?.trim().slice(0, 120) || null,

@@ -7,8 +7,9 @@ import { supabase } from '../../lib/supabase';
 const VerifyEmail = (): JSX.Element => {
   const location = useLocation();
   const [cooldown, setCooldown] = useState<number>(0);
-  const state = location.state as { email?: string } | null;
+  const state = location.state as { email?: string; from?: string } | null;
   const email = state?.email ?? '';
+  const from = state?.from ?? '/';
 
   const countdownLabel = useMemo(() => (cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend email'), [cooldown]);
 
@@ -60,10 +61,10 @@ const VerifyEmail = (): JSX.Element => {
             >
               {countdownLabel}
             </button>
-            <Link to="/auth/register" className="text-sm font-medium text-sage-dark hover:text-sage">
+            <Link to="/auth/register" state={{ from }} className="text-sm font-medium text-sage-dark hover:text-sage">
               Wrong email?
             </Link>
-            <Link to="/auth/login" className="text-sm font-medium text-sage-dark hover:text-sage">
+            <Link to="/auth/login" state={{ from }} className="text-sm font-medium text-sage-dark hover:text-sage">
               Already confirmed? Sign in
             </Link>
           </div>

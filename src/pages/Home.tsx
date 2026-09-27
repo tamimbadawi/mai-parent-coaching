@@ -232,7 +232,6 @@ export default function Home() {
         title="Start With Free Resources"
         description="Download practical guides, checklists, and worksheets to begin your journey today. No commitment, just support."
         primaryAction={{ label: 'Get Free Resources', href: '/resources' }}
-        secondaryAction={{ label: 'Join the Community', href: '/community' }}
         variant="sage"
       />
 

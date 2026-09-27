@@ -133,3 +133,33 @@ reset:       growth,  deep-work, deep-work, full,      full
 | Customer journey view | `public.customer_journey_state` (`20260923130000_...`) | Source for "new vs returning" counts in admin views |
 | Calendar helper | `_shared/google-calendar.ts` | Colours, group events |
 | Payments architecture | `project-plan/payments/decisions.md` | Stage 5 |
+
+---
+
+## 11. Mockup-first rule for all upcoming plans & stages (Settled)
+
+- Building an interactive visual mockup (e.g. self-contained HTML/CSS in `project-plan/<feature>/design/` or an isolated prototype) before completing full backend/frontend implementation is a **hard rule** for all upcoming plans.
+- This ensures complete user alignment on layouts, proportions, responsive fit, and content flow before investing engineering time in schema migrations, edge functions, and complex React state.
+
+---
+
+## 12. Single-screen view (no vertical scroll) for all booking doors (Settled)
+
+- The booking flow on `/booking` must fit in **one page view without vertical scrolling** on standard desktop viewports (1366×768, 1440×900, 1920×1080).
+- This applies to **all three doors**:
+  1. **Discovery Call**: Compact 3-column layout (Doors, Date/Time, Details/Summary).
+  2. **Book Sessions (1:1 Coaching)**:
+     - For new families: Focus pathways + Discovery first callout & action, perfectly balanced in the 3-column grid with zero scroll.
+     - For returning clients / booking 60-min sessions: Month calendar (Mon/Wed) + time slots + session details and summary in the same compact 3-column architecture.
+  3. **The Group (Small Circles)**:
+     - Interactive 3x3 topic chip selector + 4–8 rule, two ways to join, and Discovery Call action card side-by-side, matching the exact height of the Discovery view with zero scroll.
+
+---
+
+## 13. Balanced 3-Column Booking Layout & Header Gentle Promise (Settled)
+
+- **Right-side 4th column removed**: The previous 4th column (`col-quote`) was unimportant and created unnecessary horizontal crowding and vertical scrolling on laptops.
+- **"Session Care" removed**: The bullet points (`Private Google Meet`, `Calendar invitation`, `Reschedule with 24h notice`) were completely removed from the page face to reduce clutter.
+- **"A Gentle Promise" moved to the header**: Mai’s quote (*"There is no judgment here. We look together at what your nervous system and your child’s emotions are trying to tell us."*) is now embedded directly in the top sticky header beside *"Reserve Your Time with Mai"*. This ensures every parent immediately feels calm, safe, and supported without occupying valuable column grid space.
+- **Clean 3-column architecture**: All three doors now utilize a generous, balanced 3-column grid (`lg:col-span-4` for each column, or `lg:col-span-8` for expanded views), guaranteeing a seamless fit without scrolling on all standard desktop viewports.
+- **Past bookings**: If a logged-in user has confirmed bookings, they render cleanly below the grid without crowding the primary booking view.

@@ -52,7 +52,6 @@ export default function Footer() {
                 { label: 'Courses', href: '/courses' },
                 { label: 'Blog', href: '/blog' },
                 { label: 'Resources', href: '/resources' },
-                { label: 'Community', href: '/community' },
               ].map((link) => (
                 <li key={link.href}>
                   <Link to={link.href} className="text-warm-gray text-sm hover:text-sage-dark transition-colors">

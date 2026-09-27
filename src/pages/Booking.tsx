@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -110,40 +110,37 @@ export default function Booking() {
       eyebrow: 'Recommended First Step',
       title: 'Discovery Call',
       description:
-        'A calm, 30-minute private call with me. We’ll talk about what feels exhausting or confusing at home, and find a gentle, clear way forward together.',
+        'A calm 30-minute private call to find a gentle, clear way forward together.',
       meta: '30 min · EGP 500 · Tuesdays',
       badge: 'Start Here',
       icon: <Sparkles className="h-4 w-4" />,
       highlights: ['Private Google Meet', 'Zero judgment', 'Clear next steps'],
       expectations: [
-        'A safe, gentle space where you can share what feels overwhelming right now.',
-        'Understanding the root causes behind your child’s big emotions and meltdowns.',
-        'My honest advice on whether 1:1 coaching or a small group circle fits your family best.',
-        'Purely supportive guidance — zero high-pressure sales pitches ever.',
-        'A quick check-in right after booking so I can prepare specifically for our conversation.',
+        'A safe, unhurried space to share what feels heavy without judgment.',
+        'Unpack root causes behind meltdowns, emotional storms, and stress.',
+        'Clear, honest guidance on whether 1:1 or group support fits best.',
+        'Zero pressure or sales pitches — pure listening and genuine support.',
       ],
       takeaway: 'A deep breath of relief, clarity on your child’s needs, and peace of mind on what to do next.',
-      guarantee: 'Private Google Meet · Calendar invite and gentle WhatsApp reminder sent right away.',
+      guarantee: 'Private Google Meet · Calendar invite and gentle reminder sent right away.',
     },
     {
       id: 'coaching',
       eyebrow: 'Dedicated 1-on-1 Support',
       title: '1:1 Parent Coaching',
       description:
-        'Focused time together to understand your child’s world, soothe meltdowns with connection, and help you feel calm and grounded as a parent.',
-      meta: isReturningClient ? 'Single slot (EGP 3,500) & Packages' : 'Personal Roadmap · 60 min',
+        'Focused time together to soothe meltdowns & build calm at home.',
+      meta: isReturningClient ? 'Single slot (EGP 3,500) & Packages' : 'Tailored Plan · 60 min',
       badge: isReturningClient ? 'Unlocked' : undefined,
       icon: <Heart className="h-4 w-4" />,
       highlights: ['Weekly 60-min deep dives', 'Gentle, practical scripts', 'WhatsApp voice support'],
       expectations: [
-        'Dedicated 60-minute sessions focused entirely on you, your child, and your home life.',
-        'Step-by-step methods to calm big feelings without yelling, threats, or burnout.',
-        'Nervous system care to help you parent from patience rather than exhaustion.',
-        'Loving, clear boundary scripts you can use with your child right away.',
-        'WhatsApp voice check-ins between sessions so you never feel alone with a tough moment.',
-        'Opens after our Discovery Call so I know your family’s unique story personally.',
+        'Dedicated 60-minute deep dives focused entirely on your child and home.',
+        'Loving boundary scripts and practical ways to calm big meltdowns.',
+        'Nervous system care to help you parent from patience, not exhaustion.',
+        'Private WhatsApp voice check-ins between sessions whenever needed.',
       ],
-      takeaway: 'A more peaceful home where you and your child feel deeply understood and connected.',
+      takeaway: 'A calmer, more connected home where both you and your child feel deeply understood.',
       guarantee: 'Private session recording provided if you wish · Reschedule anytime with 24h notice.',
     },
     {
@@ -151,17 +148,16 @@ export default function Booking() {
       eyebrow: 'Small Parent Circles',
       title: 'Small Parent Circles',
       description:
-        'A caring circle of 4 to 8 parents walking through the same parenting moments. Guided by me, you’ll learn together and feel truly supported.',
+        'A caring circle of 4 to 8 parents walking through the same parenting moments.',
       meta: '4–8 Parents · Coming Soon',
       badge: 'Coming Soon',
       icon: <Users className="h-4 w-4" />,
       highlights: ['Small group (4–8 parents)', 'Real parent companionship', 'Practical tools for home'],
       expectations: [
-        'Small, safe circles kept to just 4 to 8 parents so everyone feels heard, supported, and unhurried.',
-        'Weekly 60-minute conversations with gentle practice and practical tools for home.',
-        'Exploring one shared topic together (such as big feelings, bedtime struggles, or parental fatigue).',
-        'The comforting relief of realizing you are not alone or failing in your parenting.',
-        'Independent from 1:1 coaching — circles open warmly once 4 parents are ready to begin.',
+        'Small, intimate circles (4–8 parents) so everyone feels heard and unhurried.',
+        'Focused topics on shared challenges (meltdowns, sleep, parental burnout).',
+        'Heartfelt reassurance and companionship — you are not alone in this.',
+        'Gentle guided practice with scripts and practical tools for everyday life.',
       ],
       takeaway: 'Practical parenting tools and a warm community of parents who truly understand.',
       guarantee: 'Group schedule arranged warmly together once 4 parents join.',
@@ -296,12 +292,17 @@ export default function Booking() {
     setSubmitError(null);
 
     try {
+      const userPhone = profile?.phone || (user?.user_metadata as any)?.phone || null;
+      const userCountry = profile?.country || (user?.user_metadata as any)?.country || null;
+
       const body: Record<string, any> = {
         appointment_type_id: selectedType,
         appointment_date: selectedDate,
         appointment_time: selectedTime,
         parent_name: formData.name.trim(),
         email: formData.email.trim(),
+        phone: userPhone,
+        country: userCountry,
         notes: formData.notes.trim() || null,
         timeZone: userTimeZone,
       };
@@ -409,14 +410,18 @@ export default function Booking() {
   return (
     <div className="flex min-h-screen flex-col bg-ivory pt-safe pb-safe" style={{ paddingTop: 'calc(64px + env(safe-area-inset-top, 0px))' }}>
       <div
-        className="sticky top-[64px] z-40 shrink-0 border-b border-beige/80 bg-ivory/95 px-3 py-2 sm:px-6 sm:py-2.5 backdrop-blur-md shadow-[0_2px_8px_rgba(0,0,0,0.03)]"
+        className="sticky top-[64px] z-40 shrink-0 border-b border-beige/80 bg-ivory/95 px-3 py-2 sm:px-6 sm:py-2 backdrop-blur-md shadow-[0_2px_8px_rgba(0,0,0,0.03)]"
         style={{ top: 'calc(64px + env(safe-area-inset-top, 0px))' }}
       >
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-2">
-          <div className="shrink-0">
-            <h1 className="font-serif text-sm sm:text-base md:text-lg leading-none text-charcoal">Reserve Your Time with Mai</h1>
-            <p className="mt-0.5 hidden text-xs text-soft-gray sm:block">Choose what feels right for your family today</p>
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <h1 className="shrink-0 font-serif text-sm sm:text-base md:text-lg leading-none font-semibold text-charcoal">
+              Reserve Your Time with Mai
+            </h1>
+            <span className="hidden lg:inline text-beige-dark font-light text-sm">|</span>
+            <GentlePromiseText />
           </div>
+
           <BookingStepper
             hasSelectedType={!!selectedType}
             hasSelectedDate={!!selectedDate}
@@ -431,11 +436,11 @@ export default function Booking() {
 
       <div className="flex-1 overflow-y-auto">
         <div
-          className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-4 py-4 sm:px-6
-          lg:grid lg:grid-cols-12 lg:items-start lg:gap-4 xl:gap-5"
+          className="mx-auto flex w-full max-w-[1440px] flex-col gap-3 px-4 py-2.5 sm:py-3 sm:px-6
+          lg:grid lg:grid-cols-12 lg:items-start lg:gap-4"
         >
           {/* Column 1: Three Doors */}
-          <div className="flex flex-col gap-3 lg:col-span-4 xl:col-span-3">
+          <div className="flex flex-col gap-2 lg:col-span-4">
             <div className="flex items-center justify-between">
               <SectionHeader
                 icon={<Heart className="h-3 w-3 text-sage-dark" />}
@@ -445,7 +450,7 @@ export default function Booking() {
                 Hover or tap (i) for details
               </span>
             </div>
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-2">
               {doors.map((door) => {
                 const sel = selectedDoor === door.id;
                 return (
@@ -459,7 +464,7 @@ export default function Booking() {
                     }}
                     onMouseLeave={() => setHoveredDoor(null)}
                     className={cn(
-                      'group relative rounded-xl border p-3.5 text-left transition-all duration-200',
+                      'group relative rounded-xl border p-2.5 px-3 text-left transition-all duration-200',
                       sel
                         ? 'border-sage bg-sage/8 shadow-sm ring-1 ring-sage/20'
                         : 'border-beige bg-cream hover:border-sage/40 hover:bg-cream/80',
@@ -468,72 +473,49 @@ export default function Booking() {
                     <div className="flex items-start gap-2.5">
                       <div
                         className={cn(
-                          'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl transition-all',
+                          'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition-all',
                           sel ? 'bg-sage/15 text-sage-dark' : 'bg-beige/60 text-soft-gray group-hover:bg-beige',
                         )}
                       >
                         {door.icon}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="mb-0.5 flex items-center justify-between gap-1">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-sage-dark">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[9.5px] font-bold uppercase tracking-wider text-sage-dark">
                             {door.eyebrow}
                           </span>
                           <div className="flex items-center gap-1.5">
                             {door.badge && (
-                              <span className="rounded-full bg-gold/30 px-1.5 py-0.2 text-[9px] font-bold text-charcoal border border-gold/40">
+                              <span className="rounded-full bg-gold/30 px-1.5 py-0.2 text-[8.5px] font-bold text-charcoal border border-gold/40">
                                 {door.badge}
                               </span>
                             )}
                             <span
                               title="Hover or tap to view full service expectations"
-                              className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-beige/80 text-warm-gray group-hover:bg-sage group-hover:text-white transition"
+                              className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-beige/80 text-warm-gray group-hover:bg-sage group-hover:text-white transition"
                             >
-                              <Info className="h-2.5 w-2.5" />
+                              <Info className="h-2 w-2" />
                             </span>
                           </div>
                         </div>
-                        <p className="font-serif text-sm font-semibold text-charcoal leading-snug">
+                        <p className="font-serif text-[13px] font-semibold text-charcoal leading-tight mt-0.5">
                           {door.title}
                         </p>
-                        <p className="line-clamp-3 text-[11px] leading-relaxed text-warm-gray mt-1">
+                        <p className="line-clamp-2 text-[11px] leading-snug text-warm-gray mt-0.5">
                           {door.description}
                         </p>
 
-                        {/* Highlight pills */}
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {door.highlights.map((h, i) => (
-                            <span
-                              key={i}
-                              className="rounded-md border border-beige/80 bg-white/80 px-1.5 py-0.5 text-[9.5px] font-medium text-warm-gray"
-                            >
-                              ✓ {h}
-                            </span>
-                          ))}
-                        </div>
-
-                        <p className="mt-2 text-[10px] text-soft-gray font-medium">
+                        <p className="mt-1 text-[10px] text-soft-gray font-medium">
                           {door.meta}
                         </p>
-
-                        {door.id === 'coaching' && !isReturningClient && (
-                          <div className="mt-2 flex items-center gap-1 rounded-md bg-sage/10 px-2 py-1 text-[10px] font-semibold text-sage-dark border border-sage/20">
-                            🌿 We'll shape your personalized coaching plan together during your Discovery Call
-                          </div>
-                        )}
-                        {door.id === 'groups' && !isReturningClient && (
-                          <div className="mt-2 flex items-center gap-1 rounded-md bg-dusty-blue/15 px-2 py-1 text-[10px] font-semibold text-dusty-blue-dark border border-dusty-blue/30">
-                            🌱 I'll help you find the right topic circle during our Discovery Call
-                          </div>
-                        )}
                       </div>
                       <div
                         className={cn(
-                          'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-all',
+                          'mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border-2 transition-all',
                           sel ? 'border-sage bg-sage' : 'border-beige group-hover:border-sage/50',
                         )}
                       >
-                        {sel && <Check className="h-2.5 w-2.5 text-white" />}
+                        {sel && <Check className="h-2 w-2 text-white" />}
                       </div>
                     </div>
                   </button>
@@ -544,21 +526,21 @@ export default function Booking() {
 
           {/* Conditional Center/Right Area */}
           {selectedDoor === 'groups' ? (
-            <div className="flex flex-col gap-4 lg:col-span-8 xl:col-span-6">
+            <div className="flex flex-col gap-4 lg:col-span-8">
               <GroupCoachingView
                 isReturningClient={isReturningClient}
                 onSelectDiscovery={() => handleSelectDoor('discovery')}
               />
             </div>
           ) : selectedDoor === 'coaching' && !isReturningClient ? (
-            <div className="flex flex-col gap-4 lg:col-span-8 xl:col-span-6">
+            <div className="flex flex-col gap-4 lg:col-span-8">
               <CoachingPackagesView
                 isReturningClient={false}
                 onSelectDiscovery={() => handleSelectDoor('discovery')}
               />
             </div>
           ) : selectedDoor === 'coaching' && isReturningClient && returningCoachingTab === 'packages' ? (
-            <div className="flex flex-col gap-4 lg:col-span-8 xl:col-span-6">
+            <div className="flex flex-col gap-4 lg:col-span-8">
               <div className="flex items-center justify-between rounded-xl border border-sage/30 bg-sage/10 p-2.5">
                 <span className="text-xs font-semibold text-charcoal">Your Unlocked 1:1 Packages</span>
                 <button
@@ -577,9 +559,9 @@ export default function Booking() {
           ) : (
             <>
               {/* Column 2: Date & Available Times */}
-              <div className="flex flex-col gap-3.5 lg:col-span-4 xl:col-span-3">
+              <div className="flex flex-col gap-2.5 lg:col-span-4">
                 {selectedDoor === 'coaching' && isReturningClient && (
-                  <div className="rounded-xl border border-sage/30 bg-sage/10 p-2.5 text-xs text-charcoal mb-1 flex items-center justify-between gap-2">
+                  <div className="rounded-xl border border-sage/30 bg-sage/10 p-2 text-xs text-charcoal mb-1 flex items-center justify-between gap-2">
                     <div>
                       <p className="font-semibold text-sage-dark text-[11px]">Single 60-Minute Session</p>
                       <p className="text-[10px] text-warm-gray mt-0.5">
@@ -597,7 +579,7 @@ export default function Booking() {
                 )}
                 <div>
                   <SectionHeader icon={<Calendar className="h-3 w-3 text-sage-dark" />} label="Choose a date" />
-                  <div className="mt-2">
+                  <div className="mt-1.5">
                     <BookableMonthCalendar
                       appointmentTypeId={selectedType ?? 'initial'}
                       timeZone={userTimeZone}
@@ -618,22 +600,22 @@ export default function Booking() {
                       <span className="truncate max-w-[130px] sm:max-w-[160px]">{userTimeZone.replace(/_/g, ' ')}</span>
                     </span>
                   </div>
-                  <div className="mt-2 rounded-xl border border-beige bg-cream p-3">
+                  <div className="mt-1.5 rounded-xl border border-beige bg-cream p-2.5">
                     {!selectedDate ? (
-                      <p className="py-2.5 text-center text-xs text-soft-gray">
+                      <p className="py-2 text-center text-xs text-soft-gray">
                         Please choose a date above to see available times.
                       </p>
                     ) : loadingSlots ? (
-                      <div className="flex items-center justify-center gap-2 py-4 text-xs font-medium text-sage-dark">
+                      <div className="flex items-center justify-center gap-2 py-3 text-xs font-medium text-sage-dark">
                         <Loader2 className="h-4 w-4 animate-spin text-sage" />
                         <span>Looking up open times for you...</span>
                       </div>
                     ) : slotsError ? (
-                      <p role="alert" className="py-2.5 text-center text-xs text-terracotta-dark">
+                      <p role="alert" className="py-2 text-center text-xs text-terracotta-dark">
                         {slotsError}
                       </p>
                     ) : availableTimes.length === 0 ? (
-                      <p className="py-2.5 text-center text-xs text-warm-gray">
+                      <p className="py-2 text-center text-xs text-warm-gray">
                         No open times on this date. Please pick another day that suits you.
                       </p>
                     ) : (
@@ -663,21 +645,26 @@ export default function Booking() {
               </div>
 
               {/* Column 3: Your Details Form */}
-              <div className="flex flex-col gap-3 lg:col-span-4 xl:col-span-3">
+              <div className="flex flex-col gap-2 lg:col-span-4">
                 <SectionHeader icon={<User className="h-3 w-3 text-dusty-blue-dark" />} label="Your details" />
                 <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-2.5">
-                  {!authLoading && !user && (
-                    <p className="text-[11px] leading-relaxed text-warm-gray">
-                      Have an account?{' '}
-                      <Link
-                        to="/auth/login"
-                        state={{ from: '/booking' }}
-                        className="font-medium text-sage-dark hover:underline"
-                      >
-                        Sign in
-                      </Link>{' '}
-                      to view your sessions and notes in one place.
-                    </p>
+                  {user && (
+                    <div className="flex items-center justify-between rounded-xl border border-sage/30 bg-sage/10 px-3 py-2 text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sage/20 text-sage-dark font-medium text-[11px]">
+                          {(formData.name || user.email || 'U')[0].toUpperCase()}
+                        </div>
+                        <div className="truncate">
+                          <p className="font-semibold text-charcoal text-[11px] truncate">
+                            {formData.name || 'Account'}
+                          </p>
+                          <p className="text-[10px] text-warm-gray truncate">{formData.email}</p>
+                        </div>
+                      </div>
+                      <span className="shrink-0 text-[10px] font-medium text-sage-dark bg-white/80 px-2 py-0.5 rounded-full border border-sage/20">
+                        Signed in
+                      </span>
+                    </div>
                   )}
                   <div className="shrink-0 flex flex-col gap-2.5">
                     <Field label="Your Name" icon={<User className="h-3 w-3" />}>
@@ -766,16 +753,17 @@ export default function Booking() {
             </>
           )}
 
-          {/* Column 4: Right Column Container with Quote and Previous Sessions */}
-          <div className="flex flex-col gap-3.5 lg:col-span-12 xl:col-span-3">
-            <BookingQuoteFooter />
-            <UserPreviousBookings
-              bookings={userPreviousBookings}
-              loading={loadingUserBookings}
-              user={user}
-              onRefresh={fetchUserBookings}
-            />
-          </div>
+          {/* Previous Sessions (If any exist for logged-in user) */}
+          {user && userPreviousBookings.length > 0 && (
+            <div className="col-span-12 mt-3">
+              <UserPreviousBookings
+                bookings={userPreviousBookings}
+                loading={loadingUserBookings}
+                user={user}
+                onRefresh={fetchUserBookings}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -1021,10 +1009,10 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-const QUOTE_TEXT =
-  "You don't have to carry this alone. Our session is your space to breathe, be heard, and leave with gentle, clear steps forward.";
+const GENTLE_PROMISE_TEXT =
+  "There is no judgment here. We look together at what your nervous system and your child’s emotions are trying to tell us.";
 
-function BookingQuoteFooter() {
+function GentlePromiseText() {
   const [displayed, setDisplayed] = useState('');
   const [done, setDone] = useState(false);
 
@@ -1032,28 +1020,27 @@ function BookingQuoteFooter() {
     let index = 0;
     const timer = window.setInterval(() => {
       index += 1;
-      setDisplayed(QUOTE_TEXT.slice(0, index));
-      if (index >= QUOTE_TEXT.length) {
+      setDisplayed(GENTLE_PROMISE_TEXT.slice(0, index));
+      if (index >= GENTLE_PROMISE_TEXT.length) {
         window.clearInterval(timer);
         setDone(true);
       }
-    }, 32);
+    }, 28);
     return () => window.clearInterval(timer);
   }, []);
 
   return (
-    <div className="shrink-0 rounded-xl border border-beige/80 bg-cream/90 px-4 py-3 shadow-sm">
-      <p className="font-serif text-sm italic leading-relaxed text-charcoal">
+    <div className="hidden lg:flex items-center min-w-0 text-left">
+      <span className="font-serif italic text-xs text-warm-gray text-left whitespace-nowrap overflow-hidden text-ellipsis">
         &ldquo;{displayed}
-        {!done && <span className="ml-0.5 inline-block animate-pulse text-sage-dark">|</span>}
+        {!done && <span className="inline-block animate-pulse text-sage-dark font-normal">|</span>}
         {done ? '\u201d' : null}
-      </p>
-      <p className="mt-2 text-[11px] text-soft-gray">
-        Have a question before booking?{' '}
-        <Link to="/contact" className="font-medium text-sage-dark hover:underline">
-          Send me a message
-        </Link>
-      </p>
+      </span>
+      {done && (
+        <span className="ml-1 text-[11px] font-semibold text-sage-dark shrink-0">
+          — Mai
+        </span>
+      )}
     </div>
   );
 }
@@ -1065,46 +1052,80 @@ function ServiceExpectationsTooltip({
   door: BookingDoorItem;
   rect: DOMRect;
 }) {
-  const width = Math.min(380, window.innerWidth - 32);
-  const margin = 16;
-  let left = rect.right + margin;
-  if (left + width > window.innerWidth - margin) {
-    left = Math.max(margin, rect.left - width - margin);
-    if (left < margin) {
-      left = Math.max(margin, (window.innerWidth - width) / 2);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const approxHeight = 280;
+  const initialTop = Math.max(
+    12,
+    Math.min(
+      rect.top + rect.height / 2 - approxHeight / 2,
+      window.innerHeight - approxHeight - 12
+    )
+  );
+  const [coords, setCoords] = useState<{ top: number; left: number }>({
+    top: Math.round(initialTop),
+    left: Math.round(rect.right + 12),
+  });
+
+  useLayoutEffect(() => {
+    if (!tooltipRef.current) return;
+    const tipHeight = tooltipRef.current.offsetHeight;
+    const tipWidth = tooltipRef.current.offsetWidth;
+    const margin = 12;
+
+    // Horizontally: position to the right of the card, or flip to left if tight
+    let left = rect.right + 12;
+    if (left + tipWidth > window.innerWidth - margin) {
+      left = Math.max(margin, rect.left - tipWidth - 12);
+      if (left < margin) {
+        left = Math.max(margin, (window.innerWidth - tipWidth) / 2);
+      }
     }
-  }
-  const top = Math.min(Math.max(margin, rect.top), window.innerHeight - 440);
+
+    // Vertically: NOT top-aligned. Center vertically with the hovered door card
+    const cardCenterY = rect.top + rect.height / 2;
+    let top = cardCenterY - tipHeight / 2;
+
+    // Clamp inside the viewport so the entire tooltip is guaranteed to fit
+    if (top + tipHeight > window.innerHeight - margin) {
+      top = window.innerHeight - tipHeight - margin;
+    }
+    if (top < margin) {
+      top = margin;
+    }
+
+    setCoords({ top: Math.round(top), left: Math.round(left) });
+  }, [rect, door]);
 
   return (
     <div
+      ref={tooltipRef}
       role="tooltip"
-      className="pointer-events-none fixed z-[300] w-[340px] sm:w-[380px] rounded-2xl border border-sage/40 bg-white p-4 sm:p-5 shadow-2xl ring-1 ring-sage/20 animate-in fade-in duration-150"
-      style={{ left, top }}
+      className="pointer-events-none fixed z-[300] w-[320px] sm:w-[350px] max-w-[calc(100vw-24px)] rounded-2xl border border-sage/40 bg-white p-3 sm:p-3.5 shadow-2xl ring-1 ring-sage/20 animate-in fade-in duration-150"
+      style={{ left: coords.left, top: coords.top }}
     >
-      <div className="flex items-start justify-between gap-2 border-b border-beige/80 pb-3">
+      <div className="flex items-start justify-between gap-2 border-b border-beige/80 pb-2">
         <div>
-          <span className="inline-block rounded-full bg-sage/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-sage-dark">
+          <span className="inline-block rounded-full bg-sage/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-sage-dark">
             {door.eyebrow}
           </span>
-          <h4 className="mt-1 font-serif text-base sm:text-lg font-bold text-charcoal leading-snug">
+          <h4 className="mt-0.5 font-serif text-sm sm:text-base font-bold text-charcoal leading-snug">
             {door.title}
           </h4>
-          <p className="text-[11px] text-warm-gray mt-0.5">{door.meta}</p>
+          <p className="text-[10px] text-warm-gray">{door.meta}</p>
         </div>
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sage/15 text-sage-dark">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-sage/15 text-sage-dark">
           {door.icon}
         </div>
       </div>
 
-      <div className="mt-3">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-sage-dark flex items-center gap-1.5">
+      <div className="mt-2">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-sage-dark flex items-center gap-1.5">
           <span>What to expect when we meet:</span>
         </p>
-        <ul className="mt-2 space-y-2 text-xs">
+        <ul className="mt-1 space-y-1 text-[11px]">
           {door.expectations.map((item, idx) => (
-            <li key={idx} className="flex items-start gap-2 text-charcoal leading-relaxed">
-              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sage" />
+            <li key={idx} className="flex items-start gap-1.5 text-charcoal leading-snug">
+              <Check className="mt-0.5 h-3 w-3 shrink-0 text-sage" />
               <span>{item}</span>
             </li>
           ))}
@@ -1112,14 +1133,14 @@ function ServiceExpectationsTooltip({
       </div>
 
       {door.takeaway && (
-        <div className="mt-3.5 rounded-xl border border-beige bg-cream/70 p-2.5 text-[11px] text-warm-gray leading-relaxed">
+        <div className="mt-2 rounded-xl border border-beige bg-cream/70 p-2 text-[10px] text-warm-gray leading-snug">
           <strong className="text-charcoal font-semibold">What you take away: </strong>
           {door.takeaway}
         </div>
       )}
 
       {door.guarantee && (
-        <p className="mt-2 text-[10px] text-soft-gray italic">
+        <p className="mt-1.5 text-[9px] text-soft-gray italic">
           🌿 {door.guarantee}
         </p>
       )}
