@@ -123,7 +123,13 @@ export const AdminCRM = (): JSX.Element => {
       if (fetchErr) throw fetchErr;
 
       const items = (data || []) as CustomerJourneyState[];
-      setClients(items);
+      // Rule: No user is to be added/displayed without both valid phone number and country of residence
+      const validItems = items.filter((c) => {
+        if (c.role === 'admin') return true;
+        const clean = (c.phone || '').replace(/\D/g, '');
+        return Boolean(c.phone && clean.length >= 7 && c.country && c.country.trim().length > 0);
+      });
+      setClients(validItems);
       const hSet = new Set((households || []).map((h) => h.primary_contact_profile_id).filter(Boolean) as string[]);
       setHouseholdClientIds(hSet);
 

@@ -6,21 +6,18 @@ import {
   Calendar,
   Check,
   Clock,
-  CreditCard,
   ArrowRight,
   User,
   Mail,
   MessageSquare,
   Sparkles,
   Heart,
-  Brain,
   Users,
-  Star,
-  MessageCircle,
   Loader2,
   CalendarCheck,
   Video,
   Globe,
+  Info,
 } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type { UserProfile, Booking as BookingType } from '../types';
@@ -34,72 +31,25 @@ import { BookingStepper } from '../components/booking/BookingStepper';
 import { getClientAvailableSlots } from '../lib/bookingAvailability';
 import { BookableMonthCalendar } from '../components/booking/BookableMonthCalendar';
 import { DiscoveryIntakeModal, ConfettiBurst } from '../components/booking/DiscoveryIntakeModal';
+import { CoachingPackagesView } from '../components/booking/CoachingPackagesView';
+import { GroupCoachingView } from '../components/booking/GroupCoachingView';
 import type { DiscoveryIntake } from '../types';
 
+type BookingDoorId = 'discovery' | 'coaching' | 'groups';
 
-const SESSION_ICONS: Record<string, { icon: React.ReactNode; bg: string; text: string }> = {
-  initial: { icon: <Sparkles className="h-3.5 w-3.5" />, bg: 'bg-sage/15', text: 'text-sage-dark' },
-  'coaching-60': { icon: <Heart className="h-3.5 w-3.5" />, bg: 'bg-terracotta/10', text: 'text-terracotta-dark' },
-  'intensive-90': { icon: <Brain className="h-3.5 w-3.5" />, bg: 'bg-dusty-blue/15', text: 'text-dusty-blue-dark' },
-  family: { icon: <Users className="h-3.5 w-3.5" />, bg: 'bg-olive/10', text: 'text-olive' },
-  'follow-up': { icon: <Star className="h-3.5 w-3.5" />, bg: 'bg-gold/15', text: 'text-[rgb(var(--color-terracotta-dark))]' },
-};
-
-const SESSION_META: Record<
-  string,
-  { icon: typeof Heart; accent: string; expectations: string[] }
-> = {
-  initial: {
-    icon: Sparkles,
-    accent: 'bg-dusty-blue/15 text-dusty-blue-dark',
-    expectations: [
-      'Warm welcome and overview of how coaching works together.',
-      'Space to share your story, current challenges, and family context.',
-      'Clarifying your goals and what success would look like for you.',
-      'Honest guidance on the best next steps — no pressure to commit.',
-    ],
-  },
-  'coaching-60': {
-    icon: Heart,
-    accent: 'bg-sage/15 text-sage-dark',
-    expectations: [
-      'Check-in on what has shifted since your last session.',
-      'Practical strategies tailored to your child and your nervous system.',
-      'Role-play or scripts for difficult moments when helpful.',
-      'Clear action steps you can try before the next meeting.',
-    ],
-  },
-  'intensive-90': {
-    icon: Brain,
-    accent: 'bg-terracotta/15 text-terracotta-dark',
-    expectations: [
-      'Extended time for complex patterns, burnout, or layered family stress.',
-      'Deeper exploration of triggers, cycles, and unmet needs.',
-      'Integrated plan across parenting, self-regulation, and boundaries.',
-      'Follow-up resources or homework to anchor the work.',
-    ],
-  },
-  family: {
-    icon: Users,
-    accent: 'bg-olive/15 text-olive',
-    expectations: [
-      'Focus on household dynamics, sibling friction, and co-parent alignment.',
-      'Tools for shared language and consistent responses across caregivers.',
-      'Age-appropriate ways to involve children when appropriate.',
-      'Systems and routines that reduce daily conflict.',
-    ],
-  },
-  'follow-up': {
-    icon: MessageCircle,
-    accent: 'bg-gold/15 text-charcoal',
-    expectations: [
-      'Quick review of what is working and what still feels stuck.',
-      'Adjustments to strategies based on real-life feedback.',
-      'Celebration of progress — even small wins matter.',
-      'Light touch maintenance for ongoing clients.',
-    ],
-  },
-};
+interface BookingDoorItem {
+  id: BookingDoorId;
+  eyebrow: string;
+  title: string;
+  description: string;
+  meta: string;
+  badge?: string;
+  icon: React.ReactNode;
+  highlights: string[];
+  expectations: string[];
+  takeaway: string;
+  guarantee: string;
+}
 
 
 function resolveBookingName(profile: UserProfile | null, user: SupabaseUser | null): string {
@@ -116,6 +66,7 @@ function resolveBookingEmail(profile: UserProfile | null, user: SupabaseUser | n
 
 export default function Booking() {
   const { user, profile, loading: authLoading } = useAuth();
+  const [selectedDoor, setSelectedDoor] = useState<BookingDoorId>('discovery');
   const [selectedType, setSelectedType] = useState<string | null>('initial');
   const [selectedDate, setSelectedDate] = useState<string | null>(() => {
     const d = new Date();
@@ -131,7 +82,91 @@ export default function Booking() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [intakeOpen, setIntakeOpen] = useState(false);
-  const [hoveredSession, setHoveredSession] = useState<{ id: string; rect: DOMRect } | null>(null);
+
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  const [slotsError, setSlotsError] = useState<string | null>(null);
+  const [userPreviousBookings, setUserPreviousBookings] = useState<BookingType[]>([]);
+  const [loadingUserBookings, setLoadingUserBookings] = useState(false);
+
+  // CRITICAL RULE: 1:1 Coaching packages open strictly AFTER ATTENDING the Discovery Call
+  // (status === 'completed') OR if the admin explicitly opens it for them.
+  // Merely booking a Discovery Call (status === 'confirmed') does NOT open it!
+  const hasAttendedDiscovery = Boolean(
+    user && userPreviousBookings.some((b) => b.appointment_type_id === 'initial' && b.status === 'completed')
+  );
+  const isAdminOpened = Boolean(
+    profile?.role === 'admin' || (profile as any)?.coaching_unlocked
+  );
+  const isCoachingUnlocked = hasAttendedDiscovery || isAdminOpened;
+  const isReturningClient = isCoachingUnlocked;
+
+  const [returningCoachingTab, setReturningCoachingTab] = useState<'single' | 'packages'>('single');
+  const [hoveredDoor, setHoveredDoor] = useState<BookingDoorItem | null>(null);
+  const [hoverRect, setHoverRect] = useState<DOMRect | null>(null);
+
+  const doors = useMemo<BookingDoorItem[]>(() => [
+    {
+      id: 'discovery',
+      eyebrow: 'Recommended First Step',
+      title: 'Discovery Call',
+      description:
+        'A calm, 30-minute private call with me. We’ll talk about what feels exhausting or confusing at home, and find a gentle, clear way forward together.',
+      meta: '30 min · EGP 500 · Tuesdays',
+      badge: 'Start Here',
+      icon: <Sparkles className="h-4 w-4" />,
+      highlights: ['Private Google Meet', 'Zero judgment', 'Clear next steps'],
+      expectations: [
+        'A safe, gentle space where you can share what feels overwhelming right now.',
+        'Understanding the root causes behind your child’s big emotions and meltdowns.',
+        'My honest advice on whether 1:1 coaching or a small group circle fits your family best.',
+        'Purely supportive guidance — zero high-pressure sales pitches ever.',
+        'A quick check-in right after booking so I can prepare specifically for our conversation.',
+      ],
+      takeaway: 'A deep breath of relief, clarity on your child’s needs, and peace of mind on what to do next.',
+      guarantee: 'Private Google Meet · Calendar invite and gentle WhatsApp reminder sent right away.',
+    },
+    {
+      id: 'coaching',
+      eyebrow: 'Dedicated 1-on-1 Support',
+      title: '1:1 Parent Coaching',
+      description:
+        'Focused time together to understand your child’s world, soothe meltdowns with connection, and help you feel calm and grounded as a parent.',
+      meta: isReturningClient ? 'Single slot (EGP 3,500) & Packages' : 'Personal Roadmap · 60 min',
+      badge: isReturningClient ? 'Unlocked' : undefined,
+      icon: <Heart className="h-4 w-4" />,
+      highlights: ['Weekly 60-min deep dives', 'Gentle, practical scripts', 'WhatsApp voice support'],
+      expectations: [
+        'Dedicated 60-minute sessions focused entirely on you, your child, and your home life.',
+        'Step-by-step methods to calm big feelings without yelling, threats, or burnout.',
+        'Nervous system care to help you parent from patience rather than exhaustion.',
+        'Loving, clear boundary scripts you can use with your child right away.',
+        'WhatsApp voice check-ins between sessions so you never feel alone with a tough moment.',
+        'Opens after our Discovery Call so I know your family’s unique story personally.',
+      ],
+      takeaway: 'A more peaceful home where you and your child feel deeply understood and connected.',
+      guarantee: 'Private session recording provided if you wish · Reschedule anytime with 24h notice.',
+    },
+    {
+      id: 'groups',
+      eyebrow: 'Small Parent Circles',
+      title: 'Small Parent Circles',
+      description:
+        'A caring circle of 4 to 8 parents walking through the same parenting moments. Guided by me, you’ll learn together and feel truly supported.',
+      meta: '4–8 Parents · Coming Soon',
+      badge: 'Coming Soon',
+      icon: <Users className="h-4 w-4" />,
+      highlights: ['Small group (4–8 parents)', 'Real parent companionship', 'Practical tools for home'],
+      expectations: [
+        'Small, safe circles kept to just 4 to 8 parents so everyone feels heard, supported, and unhurried.',
+        'Weekly 60-minute conversations with gentle practice and practical tools for home.',
+        'Exploring one shared topic together (such as big feelings, bedtime struggles, or parental fatigue).',
+        'The comforting relief of realizing you are not alone or failing in your parenting.',
+        'Independent from 1:1 coaching — circles open warmly once 4 parents are ready to begin.',
+      ],
+      takeaway: 'Practical parenting tools and a warm community of parents who truly understand.',
+      guarantee: 'Group schedule arranged warmly together once 4 parents join.',
+    },
+  ], [isReturningClient]);
 
   const selectedAppointment = appointmentTypes.find((a) => a.id === selectedType);
 
@@ -149,12 +184,30 @@ export default function Booking() {
     setSelectedTime(null);
   };
 
-  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
-  const [slotsError, setSlotsError] = useState<string | null>(null);
-  const [userPreviousBookings, setUserPreviousBookings] = useState<BookingType[]>([]);
-  const [loadingUserBookings, setLoadingUserBookings] = useState(false);
+  const handleSelectDoor = (doorId: BookingDoorId) => {
+    setSelectedDoor(doorId);
+    if (doorId === 'discovery') {
+      setSelectedType('initial');
+    } else if (doorId === 'coaching') {
+      setSelectedType(isReturningClient ? 'coaching-60' : null);
+    } else {
+      setSelectedType(null);
+    }
+    setSelectedTime(null);
+  };
 
   useEffect(() => {
+    if (selectedDoor === 'coaching') {
+      setSelectedType(isReturningClient ? 'coaching-60' : null);
+    }
+  }, [selectedDoor, isReturningClient]);
+
+  useEffect(() => {
+    if (!selectedType || !selectedDate) {
+      setAvailableTimes([]);
+      return;
+    }
+
     let isMounted = true;
     async function loadLiveAvailability() {
       setLoadingSlots(true);
@@ -303,11 +356,6 @@ export default function Booking() {
     selectedType && selectedDate && selectedTime && formData.name && formData.email && !submitting,
   );
 
-  const hoveredType = hoveredSession
-    ? appointmentTypes.find((type) => type.id === hoveredSession.id)
-    : null;
-  const hoveredMeta = hoveredSession ? SESSION_META[hoveredSession.id] : null;
-
   if (submitted) {
     return (
       <div className="flex h-screen items-center justify-center bg-ivory px-4">
@@ -316,10 +364,11 @@ export default function Booking() {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-sage/15 ring-4 ring-sage/20">
             <Check className="h-6 w-6 text-sage-dark" />
           </div>
-          <h1 className="mb-2 font-serif text-2xl text-charcoal">Booking Request Received!</h1>
+          <h1 className="mb-2 font-serif text-2xl text-charcoal">Your Session is Reserved!</h1>
           <div className="mb-5 space-y-2 text-sm leading-relaxed text-warm-gray">
             <p>
-              Your time slot for <span className="font-medium text-charcoal">{selectedAppointment?.title}</span> on{' '}
+              I’m so looking forward to connecting for your{' '}
+              <span className="font-medium text-charcoal">{selectedAppointment?.title}</span> on{' '}
               <span className="font-medium text-charcoal">
                 {selectedDate &&
                   new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', {
@@ -328,19 +377,29 @@ export default function Booking() {
                     day: 'numeric',
                   })}
               </span>{' '}
-              at <span className="font-medium text-charcoal">{selectedTime}</span> is{' '}
-              <span className="font-semibold text-sage-dark">temporarily reserved</span>.
+              at <span className="font-medium text-charcoal">{selectedTime}</span>.
             </p>
             <p className="text-xs text-soft-gray">
-              Mai will review and confirm your session shortly. Once approved, you will receive an email confirmation with your session details and Google Meet link at{' '}
+              I’ve sent your calendar invitation and Google Meet link directly to{' '}
               <span className="font-medium text-charcoal">{formData.email}</span>.
             </p>
+            {selectedType === 'initial' && (
+              <div className="rounded-xl border border-sage/30 bg-sage/10 p-3.5 text-left text-xs text-charcoal mt-3">
+                <p className="font-serif font-semibold text-sage-dark mb-1 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>A note from Mai:</span>
+                </p>
+                <p className="text-[11.5px] leading-relaxed text-ink-2">
+                  Take a gentle breath — you’ve taken a wonderful first step for your family today. In our 30 minutes together, we’ll talk through what feels exhausting or heavy in a safe, judgment-free space. You don't need to prepare anything; just come as you are.
+                </p>
+              </div>
+            )}
           </div>
           <Link
             to="/"
             className="inline-flex items-center gap-2 rounded-full bg-sage px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-sage-dark"
           >
-            Back to Home <ArrowRight className="h-3.5 w-3.5" />
+            Return to Home <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       </div>
@@ -355,8 +414,8 @@ export default function Booking() {
       >
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-2">
           <div className="shrink-0">
-            <h1 className="font-serif text-sm sm:text-base md:text-lg leading-none text-charcoal">Book a Session</h1>
-            <p className="mt-0.5 hidden text-xs text-soft-gray sm:block">Fill in your preferences below</p>
+            <h1 className="font-serif text-sm sm:text-base md:text-lg leading-none text-charcoal">Reserve Your Time with Mai</h1>
+            <p className="mt-0.5 hidden text-xs text-soft-gray sm:block">Choose what feels right for your family today</p>
           </div>
           <BookingStepper
             hasSelectedType={!!selectedType}
@@ -375,39 +434,32 @@ export default function Booking() {
           className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-4 py-4 sm:px-6
           lg:grid lg:grid-cols-12 lg:items-start lg:gap-4 xl:gap-5"
         >
-          {/* Column 1: Session Types */}
+          {/* Column 1: Three Doors */}
           <div className="flex flex-col gap-3 lg:col-span-4 xl:col-span-3">
-            <SectionHeader icon={<Heart className="h-3 w-3 text-sage-dark" />} label="Session Type" />
+            <div className="flex items-center justify-between">
+              <SectionHeader
+                icon={<Heart className="h-3 w-3 text-sage-dark" />}
+                label="How can I support you?"
+              />
+              <span className="text-[10px] font-semibold text-sage-dark bg-sage/10 px-2 py-0.5 rounded-full hidden sm:inline-block">
+                Hover or tap (i) for details
+              </span>
+            </div>
             <div className="flex flex-col gap-2.5">
-              {appointmentTypes.filter((type) => !type.hidden).map((type) => {
-                const sel = selectedType === type.id;
-                const meta =
-                  SESSION_ICONS[type.id] ?? {
-                    icon: <Sparkles className="h-3.5 w-3.5" />,
-                    bg: 'bg-sage/15',
-                    text: 'text-sage-dark',
-                  };
+              {doors.map((door) => {
+                const sel = selectedDoor === door.id;
                 return (
                   <button
-                    key={type.id}
+                    key={door.id}
                     type="button"
-                    onClick={() => {
-                      setSelectedType(type.id);
-                      setSelectedTime(null);
+                    onClick={() => handleSelectDoor(door.id)}
+                    onMouseEnter={(e) => {
+                      setHoverRect(e.currentTarget.getBoundingClientRect());
+                      setHoveredDoor(door);
                     }}
-                    onMouseEnter={(event) =>
-                      setHoveredSession({ id: type.id, rect: event.currentTarget.getBoundingClientRect() })
-                    }
-                    onMouseLeave={() =>
-                      setHoveredSession((current) => (current?.id === type.id ? null : current))
-                    }
-                    onFocus={(event) =>
-                      setHoveredSession({ id: type.id, rect: event.currentTarget.getBoundingClientRect() })
-                    }
-                    onBlur={() => setHoveredSession((current) => (current?.id === type.id ? null : current))}
-                    aria-describedby={hoveredSession?.id === type.id ? `session-tip-${type.id}` : undefined}
+                    onMouseLeave={() => setHoveredDoor(null)}
                     className={cn(
-                      'group rounded-xl border px-3.5 py-2.5 text-left transition-all duration-200',
+                      'group relative rounded-xl border p-3.5 text-left transition-all duration-200',
                       sel
                         ? 'border-sage bg-sage/8 shadow-sm ring-1 ring-sage/20'
                         : 'border-beige bg-cream hover:border-sage/40 hover:bg-cream/80',
@@ -417,36 +469,63 @@ export default function Booking() {
                       <div
                         className={cn(
                           'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl transition-all',
-                          sel ? `${meta.bg} ${meta.text}` : 'bg-beige/60 text-soft-gray group-hover:bg-beige',
+                          sel ? 'bg-sage/15 text-sage-dark' : 'bg-beige/60 text-soft-gray group-hover:bg-beige',
                         )}
                       >
-                        {meta.icon}
+                        {door.icon}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
-                          <span
-                            className={cn(
-                              'font-serif text-[13px] leading-snug',
-                              sel ? 'text-sage-dark' : 'text-charcoal',
+                        <div className="mb-0.5 flex items-center justify-between gap-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-sage-dark">
+                            {door.eyebrow}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {door.badge && (
+                              <span className="rounded-full bg-gold/30 px-1.5 py-0.2 text-[9px] font-bold text-charcoal border border-gold/40">
+                                {door.badge}
+                              </span>
                             )}
-                          >
-                            {type.title}
-                          </span>
-                        </div>
-                        <p className="line-clamp-2 text-[11px] leading-relaxed text-warm-gray">
-                          {type.description}
-                        </p>
-                        <div className="mt-1 flex gap-3 text-[10px] text-soft-gray">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-2.5 w-2.5" />
-                            {type.duration}
-                          </span>
-                          {typeof type.price === 'number' && type.price > 0 && (
-                            <span className="flex items-center gap-1">
-                              <CreditCard className="h-2.5 w-2.5" />EGP {type.price.toLocaleString('en-US')}
+                            <span
+                              title="Hover or tap to view full service expectations"
+                              className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-beige/80 text-warm-gray group-hover:bg-sage group-hover:text-white transition"
+                            >
+                              <Info className="h-2.5 w-2.5" />
                             </span>
-                          )}
+                          </div>
                         </div>
+                        <p className="font-serif text-sm font-semibold text-charcoal leading-snug">
+                          {door.title}
+                        </p>
+                        <p className="line-clamp-3 text-[11px] leading-relaxed text-warm-gray mt-1">
+                          {door.description}
+                        </p>
+
+                        {/* Highlight pills */}
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {door.highlights.map((h, i) => (
+                            <span
+                              key={i}
+                              className="rounded-md border border-beige/80 bg-white/80 px-1.5 py-0.5 text-[9.5px] font-medium text-warm-gray"
+                            >
+                              ✓ {h}
+                            </span>
+                          ))}
+                        </div>
+
+                        <p className="mt-2 text-[10px] text-soft-gray font-medium">
+                          {door.meta}
+                        </p>
+
+                        {door.id === 'coaching' && !isReturningClient && (
+                          <div className="mt-2 flex items-center gap-1 rounded-md bg-sage/10 px-2 py-1 text-[10px] font-semibold text-sage-dark border border-sage/20">
+                            🌿 We'll shape your personalized coaching plan together during your Discovery Call
+                          </div>
+                        )}
+                        {door.id === 'groups' && !isReturningClient && (
+                          <div className="mt-2 flex items-center gap-1 rounded-md bg-dusty-blue/15 px-2 py-1 text-[10px] font-semibold text-dusty-blue-dark border border-dusty-blue/30">
+                            🌱 I'll help you find the right topic circle during our Discovery Call
+                          </div>
+                        )}
                       </div>
                       <div
                         className={cn(
@@ -463,175 +542,229 @@ export default function Booking() {
             </div>
           </div>
 
-          {/* Column 2: Date & Available Times */}
-          <div className="flex flex-col gap-3.5 lg:col-span-4 xl:col-span-3">
-            <div>
-              <SectionHeader icon={<Calendar className="h-3 w-3 text-sage-dark" />} label="Date" />
-              <div className="mt-2">
-                <BookableMonthCalendar
-                  appointmentTypeId={selectedType ?? 'initial'}
-                  timeZone={userTimeZone}
-                  selectedDate={selectedDate}
-                  onSelectDate={handleSelectDate}
-                />
-              </div>
+          {/* Conditional Center/Right Area */}
+          {selectedDoor === 'groups' ? (
+            <div className="flex flex-col gap-4 lg:col-span-8 xl:col-span-6">
+              <GroupCoachingView
+                isReturningClient={isReturningClient}
+                onSelectDiscovery={() => handleSelectDoor('discovery')}
+              />
             </div>
-
-            <div className="shrink-0">
-              <div className="flex items-center justify-between gap-2">
-                <SectionHeader icon={<Clock className="h-3 w-3 text-terracotta" />} label="Available Times" />
-                <span
-                  className="inline-flex items-center gap-1 rounded-full border border-sage/20 bg-sage/10 px-2 py-0.5 text-[10px] font-medium text-sage-dark shadow-xs"
-                  title={`Times are automatically converted to your local timezone (${userTimeZone})`}
+          ) : selectedDoor === 'coaching' && !isReturningClient ? (
+            <div className="flex flex-col gap-4 lg:col-span-8 xl:col-span-6">
+              <CoachingPackagesView
+                isReturningClient={false}
+                onSelectDiscovery={() => handleSelectDoor('discovery')}
+              />
+            </div>
+          ) : selectedDoor === 'coaching' && isReturningClient && returningCoachingTab === 'packages' ? (
+            <div className="flex flex-col gap-4 lg:col-span-8 xl:col-span-6">
+              <div className="flex items-center justify-between rounded-xl border border-sage/30 bg-sage/10 p-2.5">
+                <span className="text-xs font-semibold text-charcoal">Your Unlocked 1:1 Packages</span>
+                <button
+                  type="button"
+                  onClick={() => setReturningCoachingTab('single')}
+                  className="rounded-full bg-sage px-3 py-1 text-xs font-semibold text-white hover:bg-sage-dark transition"
                 >
-                  <Globe className="h-2.5 w-2.5 shrink-0" />
-                  <span className="truncate max-w-[130px] sm:max-w-[160px]">{userTimeZone.replace(/_/g, ' ')}</span>
-                </span>
+                  Book Single 60-min Session
+                </button>
               </div>
-              <div className="mt-2 rounded-xl border border-beige bg-cream p-3">
-                {!selectedDate ? (
-                  <p className="py-2.5 text-center text-xs text-soft-gray">
-                    Select a date above to view available open times.
-                  </p>
-                ) : loadingSlots ? (
-                  <div className="flex items-center justify-center gap-2 py-4 text-xs font-medium text-sage-dark">
-                    <Loader2 className="h-4 w-4 animate-spin text-sage" />
-                    <span>Loading open times...</span>
-                  </div>
-                ) : slotsError ? (
-                  <p role="alert" className="py-2.5 text-center text-xs text-terracotta-dark">
-                    {slotsError}
-                  </p>
-                ) : availableTimes.length === 0 ? (
-                  <p className="py-2.5 text-center text-xs text-warm-gray">
-                    No open times on this date. Please try another date.
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
-                    {availableTimes.map((time) => {
-                      const sel = selectedTime === time;
-                      return (
-                        <button
-                          key={time}
-                          type="button"
-                          onClick={() => setSelectedTime(time)}
-                          className={cn(
-                            'flex items-center justify-center rounded-lg border py-1.5 text-xs font-semibold transition-all duration-150',
-                            sel
-                              ? 'border-sage bg-sage text-white shadow-sm ring-1 ring-sage/30'
-                              : 'border-beige/80 bg-white text-charcoal hover:border-sage/40 hover:bg-sage/5',
-                          )}
-                        >
-                          {time}
-                        </button>
-                      );
-                    })}
+              <CoachingPackagesView
+                isReturningClient={true}
+                onSelectDiscovery={() => handleSelectDoor('discovery')}
+              />
+            </div>
+          ) : (
+            <>
+              {/* Column 2: Date & Available Times */}
+              <div className="flex flex-col gap-3.5 lg:col-span-4 xl:col-span-3">
+                {selectedDoor === 'coaching' && isReturningClient && (
+                  <div className="rounded-xl border border-sage/30 bg-sage/10 p-2.5 text-xs text-charcoal mb-1 flex items-center justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-sage-dark text-[11px]">Single 60-Minute Session</p>
+                      <p className="text-[10px] text-warm-gray mt-0.5">
+                        Book a single session slot anytime on Mondays or Wednesdays.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReturningCoachingTab('packages')}
+                      className="shrink-0 rounded-full border border-sage/40 bg-white px-2.5 py-1 text-[11px] font-semibold text-sage-dark hover:bg-sage/10 transition"
+                    >
+                      View Packages
+                    </button>
                   </div>
                 )}
-              </div>
-            </div>
-          </div>
-
-          {/* Column 3: Your Details Form */}
-          <div className="flex flex-col gap-3 lg:col-span-4 xl:col-span-3">
-            <SectionHeader icon={<User className="h-3 w-3 text-dusty-blue-dark" />} label="Your Details" />
-            <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-2.5">
-              {!authLoading && !user && (
-                <p className="text-[11px] leading-relaxed text-warm-gray">
-                  Sign in to save your booking, course progress, and resources in one place.{' '}
-                  <Link
-                    to="/auth/login"
-                    state={{ from: '/booking' }}
-                    className="font-medium text-sage-dark hover:underline"
-                  >
-                    Sign in
-                  </Link>
-                </p>
-              )}
-              <div className="shrink-0 flex flex-col gap-2.5">
-                <Field label="Full Name" icon={<User className="h-3 w-3" />}>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
-                    placeholder="Your name"
-                  />
-                </Field>
-                <Field label="Email" icon={<Mail className="h-3 w-3" />}>
-                  <input
-                    type="email"
-                    required
-                    readOnly={Boolean(user)}
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className={cn(
-                      'w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30',
-                      user && 'cursor-default bg-beige/40 text-warm-gray',
-                    )}
-                    placeholder="your@email.com"
-                  />
-                </Field>
-                <Field label="Notes (optional)" icon={<MessageSquare className="h-3 w-3" />}>
-                  <textarea
-                    rows={2}
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full resize-none rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
-                    placeholder="Anything to share before our session..."
-                  />
-                </Field>
-              </div>
-
-              <div className="shrink-0 flex flex-col gap-2.5">
-                <div
-                  className={cn(
-                    'rounded-xl border p-3 transition-all duration-300',
-                    selectedAppointment ? 'border-sage/20 bg-sage/5' : 'border-beige bg-cream/50',
-                  )}
-                >
-                  <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-warm-gray">Summary</p>
-                  <div className="space-y-1.5 text-[11px]">
-                    <SummaryRow label="Session" value={selectedAppointment?.title ?? '—'} />
-                    <SummaryRow
-                      label="Date"
-                      value={
-                        selectedDate
-                          ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                            })
-                          : '—'
-                      }
+                <div>
+                  <SectionHeader icon={<Calendar className="h-3 w-3 text-sage-dark" />} label="Choose a date" />
+                  <div className="mt-2">
+                    <BookableMonthCalendar
+                      appointmentTypeId={selectedType ?? 'initial'}
+                      timeZone={userTimeZone}
+                      selectedDate={selectedDate}
+                      onSelectDate={handleSelectDate}
                     />
-                    <SummaryRow label="Time" value={selectedTime ?? '—'} />
-                    <SummaryRow label="Timezone" value={userTimeZone.replace(/_/g, ' ')} />
-                    {selectedAppointment && selectedAppointment.price !== undefined && (
-                      <div className="flex justify-between gap-2 border-t border-beige/80 pt-1.5">
-                        <span className="text-soft-gray">Total</span>
-                        <span className="font-semibold text-charcoal">
-                          EGP {selectedAppointment.price.toLocaleString('en-US')}
-                        </span>
+                  </div>
+                </div>
+
+                <div className="shrink-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <SectionHeader icon={<Clock className="h-3 w-3 text-terracotta" />} label="Select a time" />
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full border border-sage/20 bg-sage/10 px-2 py-0.5 text-[10px] font-medium text-sage-dark shadow-xs"
+                      title={`Times are automatically converted to your local timezone (${userTimeZone})`}
+                    >
+                      <Globe className="h-2.5 w-2.5 shrink-0" />
+                      <span className="truncate max-w-[130px] sm:max-w-[160px]">{userTimeZone.replace(/_/g, ' ')}</span>
+                    </span>
+                  </div>
+                  <div className="mt-2 rounded-xl border border-beige bg-cream p-3">
+                    {!selectedDate ? (
+                      <p className="py-2.5 text-center text-xs text-soft-gray">
+                        Please choose a date above to see available times.
+                      </p>
+                    ) : loadingSlots ? (
+                      <div className="flex items-center justify-center gap-2 py-4 text-xs font-medium text-sage-dark">
+                        <Loader2 className="h-4 w-4 animate-spin text-sage" />
+                        <span>Looking up open times for you...</span>
+                      </div>
+                    ) : slotsError ? (
+                      <p role="alert" className="py-2.5 text-center text-xs text-terracotta-dark">
+                        {slotsError}
+                      </p>
+                    ) : availableTimes.length === 0 ? (
+                      <p className="py-2.5 text-center text-xs text-warm-gray">
+                        No open times on this date. Please pick another day that suits you.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+                        {availableTimes.map((time) => {
+                          const sel = selectedTime === time;
+                          return (
+                            <button
+                              key={time}
+                              type="button"
+                              onClick={() => setSelectedTime(time)}
+                              className={cn(
+                                'flex items-center justify-center rounded-lg border py-1.5 text-xs font-semibold transition-all duration-150',
+                                sel
+                                  ? 'border-sage bg-sage text-white shadow-sm ring-1 ring-sage/30'
+                                  : 'border-beige/80 bg-white text-charcoal hover:border-sage/40 hover:bg-sage/5',
+                              )}
+                            >
+                              {time}
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
                 </div>
-
-                {submitError && (
-                  <p className="text-center text-xs text-terracotta-dark">{submitError}</p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={!canSubmit || submitting}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sage py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-sage-dark disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {submitting ? 'Confirming...' : 'Confirm Booking'} <Check className="h-3.5 w-3.5" />
-                </button>
               </div>
-            </form>
-          </div>
+
+              {/* Column 3: Your Details Form */}
+              <div className="flex flex-col gap-3 lg:col-span-4 xl:col-span-3">
+                <SectionHeader icon={<User className="h-3 w-3 text-dusty-blue-dark" />} label="Your details" />
+                <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-2.5">
+                  {!authLoading && !user && (
+                    <p className="text-[11px] leading-relaxed text-warm-gray">
+                      Have an account?{' '}
+                      <Link
+                        to="/auth/login"
+                        state={{ from: '/booking' }}
+                        className="font-medium text-sage-dark hover:underline"
+                      >
+                        Sign in
+                      </Link>{' '}
+                      to view your sessions and notes in one place.
+                    </p>
+                  )}
+                  <div className="shrink-0 flex flex-col gap-2.5">
+                    <Field label="Your Name" icon={<User className="h-3 w-3" />}>
+                      <input
+                        type="text"
+                        required
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                        placeholder="Your full name"
+                      />
+                    </Field>
+                    <Field label="Email Address" icon={<Mail className="h-3 w-3" />}>
+                      <input
+                        type="email"
+                        required
+                        readOnly={Boolean(user)}
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className={cn(
+                          'w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30',
+                          user && 'cursor-default bg-beige/40 text-warm-gray',
+                        )}
+                        placeholder="Where I can send your invite & link"
+                      />
+                    </Field>
+                    <Field label="Notes for Mai (optional)" icon={<MessageSquare className="h-3 w-3" />}>
+                      <textarea
+                        rows={2}
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        className="w-full resize-none rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                        placeholder="Anything you'd like me to know before we talk..."
+                      />
+                    </Field>
+                  </div>
+
+                  <div className="shrink-0 flex flex-col gap-2.5">
+                    <div
+                      className={cn(
+                        'rounded-xl border p-3 transition-all duration-300',
+                        selectedAppointment ? 'border-sage/20 bg-sage/5' : 'border-beige bg-cream/50',
+                      )}
+                    >
+                      <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-warm-gray">Session Summary</p>
+                      <div className="space-y-1.5 text-[11px]">
+                        <SummaryRow label="Session" value={selectedAppointment?.title ?? '—'} />
+                        <SummaryRow
+                          label="Date"
+                          value={
+                            selectedDate
+                              ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                })
+                              : '—'
+                          }
+                        />
+                        <SummaryRow label="Time" value={selectedTime ?? '—'} />
+                        <SummaryRow label="Timezone" value={userTimeZone.replace(/_/g, ' ')} />
+                        {selectedAppointment && selectedAppointment.price !== undefined && (
+                          <div className="flex justify-between gap-2 border-t border-beige/80 pt-1.5">
+                            <span className="text-soft-gray">Investment</span>
+                            <span className="font-semibold text-charcoal">
+                              EGP {selectedAppointment.price.toLocaleString('en-US')}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {submitError && (
+                      <p className="text-center text-xs text-terracotta-dark">{submitError}</p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={!canSubmit || submitting}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sage py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-sage-dark disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {submitting ? 'Holding your time...' : 'Confirm My Session with Mai'} <Check className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </>
+          )}
 
           {/* Column 4: Right Column Container with Quote and Previous Sessions */}
           <div className="flex flex-col gap-3.5 lg:col-span-12 xl:col-span-3">
@@ -664,16 +797,11 @@ export default function Booking() {
         onSubmit={(intake) => void submitBooking(intake)}
       />
 
-      {hoveredType && hoveredMeta && hoveredSession &&
+      {hoveredDoor && hoverRect &&
         createPortal(
-          <SessionTooltip
-            id={`session-tip-${hoveredType.id}`}
-            title={hoveredType.title}
-            description={hoveredType.description}
-            expectations={hoveredMeta.expectations}
-            rect={hoveredSession.rect}
-            accent={hoveredMeta.accent}
-            icon={hoveredMeta.icon}
+          <ServiceExpectationsTooltip
+            door={hoveredDoor}
+            rect={hoverRect}
           />,
           document.body,
         )}
@@ -722,13 +850,13 @@ function UserPreviousBookings({
       <div className="rounded-xl border border-beige/80 bg-cream/90 p-3.5 shadow-sm">
         <div className="flex items-center gap-2 mb-1.5">
           <CalendarCheck className="h-3.5 w-3.5 text-sage-dark" />
-          <span className="text-xs font-semibold text-charcoal">Returning Client?</span>
+          <span className="text-xs font-semibold text-charcoal">Already Working Together?</span>
         </div>
         <p className="text-[11px] leading-relaxed text-warm-gray">
           <Link to="/auth/login" state={{ from: '/booking' }} className="font-medium text-sage-dark hover:underline">
             Sign in
           </Link>{' '}
-          to view your session history, reschedule sessions, access Google Meet links, and coaching notes in one place.
+          to view your upcoming sessions, reschedule if needed, and access your meeting links.
         </p>
       </div>
     );
@@ -742,7 +870,7 @@ function UserPreviousBookings({
           <span className="text-xs font-semibold text-charcoal">Your Sessions</span>
         </div>
         <p className="text-[11px] leading-relaxed text-soft-gray">
-          No previous sessions yet. Once booked and confirmed, your upcoming meetings, rescheduling options, and video links will appear here.
+          No upcoming sessions yet. Once reserved, your meeting times and video links will be safely stored here for you.
         </p>
       </div>
     );
@@ -894,7 +1022,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 }
 
 const QUOTE_TEXT =
-  "You don't have to hold it all alone. This session is your space to breathe, be heard, and leave with one clear next step.";
+  "You don't have to carry this alone. Our session is your space to breathe, be heard, and leave with gentle, clear steps forward.";
 
 function BookingQuoteFooter() {
   const [displayed, setDisplayed] = useState('');
@@ -921,62 +1049,81 @@ function BookingQuoteFooter() {
         {done ? '\u201d' : null}
       </p>
       <p className="mt-2 text-[11px] text-soft-gray">
-        Need help?{' '}
+        Have a question before booking?{' '}
         <Link to="/contact" className="font-medium text-sage-dark hover:underline">
-          Contact me
+          Send me a message
         </Link>
       </p>
     </div>
   );
 }
 
-function SessionTooltip({
-  id,
-  title,
-  description,
-  expectations,
+function ServiceExpectationsTooltip({
+  door,
   rect,
-  accent,
-  icon: Icon,
 }: {
-  id: string;
-  title: string;
-  description: string;
-  expectations: string[];
+  door: BookingDoorItem;
   rect: DOMRect;
-  accent: string;
-  icon: typeof Heart;
 }) {
-  const width = 288;
-  const margin = 12;
-  const left = Math.min(Math.max(margin, rect.right + margin), window.innerWidth - width - margin);
-  const top = Math.min(Math.max(margin, rect.top), window.innerHeight - 280);
+  const width = Math.min(380, window.innerWidth - 32);
+  const margin = 16;
+  let left = rect.right + margin;
+  if (left + width > window.innerWidth - margin) {
+    left = Math.max(margin, rect.left - width - margin);
+    if (left < margin) {
+      left = Math.max(margin, (window.innerWidth - width) / 2);
+    }
+  }
+  const top = Math.min(Math.max(margin, rect.top), window.innerHeight - 440);
 
   return (
     <div
-      id={id}
       role="tooltip"
-      className="pointer-events-none fixed z-[200] w-72 rounded-2xl border border-beige bg-white p-4 shadow-xl ring-1 ring-sage/10"
+      className="pointer-events-none fixed z-[300] w-[340px] sm:w-[380px] rounded-2xl border border-sage/40 bg-white p-4 sm:p-5 shadow-2xl ring-1 ring-sage/20 animate-in fade-in duration-150"
       style={{ left, top }}
     >
-      <div className="flex items-start gap-3">
-        <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', accent)}>
-          <Icon className="h-4 w-4" />
+      <div className="flex items-start justify-between gap-2 border-b border-beige/80 pb-3">
+        <div>
+          <span className="inline-block rounded-full bg-sage/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-sage-dark">
+            {door.eyebrow}
+          </span>
+          <h4 className="mt-1 font-serif text-base sm:text-lg font-bold text-charcoal leading-snug">
+            {door.title}
+          </h4>
+          <p className="text-[11px] text-warm-gray mt-0.5">{door.meta}</p>
         </div>
-        <div className="min-w-0">
-          <p className="font-serif text-sm font-semibold text-charcoal">{title}</p>
-          <p className="mt-1 text-xs leading-relaxed text-warm-gray">{description}</p>
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sage/15 text-sage-dark">
+          {door.icon}
         </div>
       </div>
-      <p className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-sage-dark">What to expect</p>
-      <ul className="mt-2 space-y-1.5">
-        {expectations.map((item) => (
-          <li key={item} className="flex gap-2 text-xs leading-relaxed text-charcoal">
-            <Check className="mt-0.5 h-3 w-3 shrink-0 text-sage" />
-            {item}
-          </li>
-        ))}
-      </ul>
+
+      <div className="mt-3">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-sage-dark flex items-center gap-1.5">
+          <span>What to expect when we meet:</span>
+        </p>
+        <ul className="mt-2 space-y-2 text-xs">
+          {door.expectations.map((item, idx) => (
+            <li key={idx} className="flex items-start gap-2 text-charcoal leading-relaxed">
+              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sage" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {door.takeaway && (
+        <div className="mt-3.5 rounded-xl border border-beige bg-cream/70 p-2.5 text-[11px] text-warm-gray leading-relaxed">
+          <strong className="text-charcoal font-semibold">What you take away: </strong>
+          {door.takeaway}
+        </div>
+      )}
+
+      {door.guarantee && (
+        <p className="mt-2 text-[10px] text-soft-gray italic">
+          🌿 {door.guarantee}
+        </p>
+      )}
     </div>
   );
 }
+

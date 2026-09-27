@@ -1,0 +1,1788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mai Website — Offer & Booking Journey Interactive Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap">
+  <style>
+    :root {
+      --bg: #FAF8F5;
+      --card: #FFFFFF;
+      --surface: #F5F2EC;
+      --line: #E8E4DC;
+      --sage: #6B8E7B;
+      --sage-dark: #4D6B5A;
+      --sage-wash: #EDF3EF;
+      --terracotta: #C97258;
+      --terracotta-dark: #A8563E;
+      --terracotta-wash: #FDF1ED;
+      --gold: #D4A853;
+      --gold-wash: #FAF4E8;
+      --blue: #6A8CA3;
+      --blue-wash: #EDF3F7;
+      --charcoal: #2D2A28;
+      --ink-2: #65605B;
+      --ink-3: #99938C;
+      --font-serif: 'Playfair Display', Georgia, serif;
+      --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 8px;
+      --shadow-sm: 0 1px 3px rgba(45, 42, 40, 0.05);
+      --shadow-md: 0 4px 16px rgba(45, 42, 40, 0.08);
+      --shadow-lg: 0 14px 36px rgba(45, 42, 40, 0.14);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--charcoal);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      padding: 20px;
+      position: relative;
+    }
+
+    /* Top interactive control banner */
+    .controls-banner {
+      max-width: 1320px;
+      margin: 0 auto 24px;
+      background: #2D2A28;
+      color: #fff;
+      padding: 16px 20px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: var(--shadow-lg);
+    }
+    .controls-title h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .controls-title p {
+      font-size: 12px;
+      color: #B5AFA8;
+      margin-top: 2px;
+    }
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .control-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #A39D97;
+      font-weight: 700;
+    }
+    .pill-tabs {
+      display: inline-flex;
+      background: #3E3A37;
+      padding: 3px;
+      border-radius: 99px;
+      gap: 2px;
+    }
+    .pill-tab {
+      background: transparent;
+      border: none;
+      color: #C5BFB8;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 99px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .pill-tab:hover {
+      color: #fff;
+    }
+    .pill-tab.active {
+      background: var(--sage);
+      color: #fff;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Mockup Container */
+    .mockup-wrapper {
+      max-width: 1320px;
+      margin: 0 auto;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow-md);
+      overflow: visible;
+      position: relative;
+    }
+
+    /* Mockup Browser Header */
+    .mockup-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+    }
+    .browser-dots {
+      display: flex;
+      gap: 6px;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #D9D5CC;
+    }
+    .dot.r { background: #FF5F56; }
+    .dot.y { background: #FFBD2E; }
+    .dot.g { background: #27C93F; }
+    .browser-url {
+      font-size: 12px;
+      color: var(--ink-2);
+      background: #fff;
+      padding: 4px 16px;
+      border-radius: 99px;
+      border: 1px solid var(--line);
+    }
+    .client-status-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 99px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge-locked {
+      background: var(--gold-wash);
+      color: #8C6819;
+      border: 1px solid rgba(212, 168, 83, 0.4);
+    }
+    .badge-unlocked {
+      background: var(--sage-wash);
+      color: var(--sage-dark);
+      border: 1px solid rgba(107, 142, 123, 0.4);
+    }
+
+    /* Booking App Body */
+    .booking-canvas {
+      padding: 24px 28px 40px;
+      background: var(--bg);
+      position: relative;
+    }
+
+    .page-title-row {
+      margin-bottom: 22px;
+    }
+    .page-title {
+      font-family: var(--font-serif);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--charcoal);
+    }
+    .page-subtitle {
+      font-size: 13px;
+      color: var(--ink-2);
+      margin-top: 2px;
+    }
+
+    /* 4-Column Layout Grid */
+    .booking-grid {
+      display: grid;
+      grid-template-columns: 320px 320px 340px minmax(260px, 1fr);
+      gap: 20px;
+      align-items: start;
+      position: relative;
+    }
+    @media (max-width: 1240px) {
+      .booking-grid {
+        grid-template-columns: 300px 1fr 1fr;
+      }
+      .col-quote { display: none; }
+    }
+    @media (max-width: 890px) {
+      .booking-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Shared Column Cards */
+    .col-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+    .col-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--charcoal);
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+    .col-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .col-header-icon {
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 6px;
+    }
+    .hover-hint {
+      font-size: 10px;
+      color: var(--sage-dark);
+      text-transform: none;
+      font-weight: 600;
+      background: var(--sage-wash);
+      padding: 2px 7px;
+      border-radius: 99px;
+    }
+
+    /* Door Cards (Column 1) */
+    .doors-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .door-item {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+      position: relative;
+      text-align: left;
+    }
+    .door-item:hover {
+      border-color: var(--sage);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+    .door-item.active {
+      border-color: var(--sage);
+      background: var(--sage-wash);
+      box-shadow: 0 0 0 1.5px var(--sage);
+    }
+    .door-top-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .door-tag {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 8px;
+      border-radius: 99px;
+      display: inline-block;
+    }
+    .info-bubble-trigger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--surface);
+      color: var(--ink-2);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .info-bubble-trigger:hover {
+      background: var(--sage);
+      color: #fff;
+    }
+    .door-title {
+      font-family: var(--font-serif);
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--charcoal);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .door-price-line {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--sage-dark);
+      margin-top: 2px;
+    }
+    .door-sub {
+      font-size: 11.5px;
+      color: var(--ink-2);
+      margin-top: 5px;
+      line-height: 1.45;
+    }
+    .door-highlights-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 8px;
+    }
+    .highlight-pill {
+      font-size: 10px;
+      font-weight: 600;
+      background: #fff;
+      color: var(--ink-2);
+      border: 1px solid var(--line);
+      padding: 1px 6px;
+      border-radius: 6px;
+    }
+    .door-item.active .highlight-pill {
+      background: rgba(255, 255, 255, 0.85);
+      border-color: rgba(107, 142, 123, 0.3);
+      color: var(--sage-dark);
+    }
+    .door-lock-notice {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      color: var(--terracotta-dark);
+      background: var(--terracotta-wash);
+      padding: 4px 8px;
+      border-radius: 6px;
+      margin-top: 8px;
+      font-weight: 600;
+    }
+
+    /* THE HOVER POPUP (WHAT TO EXPECT FROM THIS SERVICE) */
+    .service-hover-tooltip {
+      position: absolute;
+      top: 60px;
+      left: 360px;
+      width: 380px;
+      background: #FFFFFF;
+      border: 1.5px solid var(--sage);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: 0 16px 40px rgba(45, 42, 40, 0.16);
+      z-index: 500;
+      pointer-events: auto;
+      display: none;
+      animation: fadeInTooltip 0.15s ease-out;
+    }
+    @keyframes fadeInTooltip {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 890px) {
+      .service-hover-tooltip {
+        left: 20px;
+        right: 20px;
+        width: auto;
+        top: 220px;
+      }
+    }
+    .tip-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    .tip-badge {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 99px;
+      display: inline-block;
+      margin-bottom: 3px;
+    }
+    .tip-title {
+      font-family: var(--font-serif);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--charcoal);
+      line-height: 1.2;
+    }
+    .tip-sub {
+      font-size: 11.5px;
+      color: var(--ink-2);
+      margin-top: 2px;
+    }
+    .tip-sec-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--sage-dark);
+      margin: 10px 0 6px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .tip-points-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .tip-point-item {
+      display: grid;
+      grid-template-columns: 16px 1fr;
+      gap: 8px;
+      font-size: 11.5px;
+      color: var(--charcoal);
+      line-height: 1.4;
+    }
+    .tip-check {
+      color: var(--sage);
+      font-weight: 800;
+      font-size: 13px;
+    }
+    .tip-point-item strong {
+      color: var(--charcoal);
+      font-weight: 700;
+    }
+    .tip-takeaway {
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px;
+      margin-top: 12px;
+      font-size: 11px;
+      color: var(--ink-2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Column 2: Date & Available Times */
+    .mini-calendar {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      background: #fff;
+      margin-bottom: 14px;
+    }
+    .cal-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      text-align: center;
+    }
+    .cal-th {
+      font-size: 10px;
+      color: var(--ink-3);
+      font-weight: 700;
+      padding-bottom: 4px;
+    }
+    .cal-day {
+      font-size: 11px;
+      padding: 6px 0;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      color: #999;
+      cursor: not-allowed;
+    }
+    .cal-day.open {
+      color: var(--charcoal);
+      font-weight: 600;
+      background: var(--surface);
+      cursor: pointer;
+    }
+    .cal-day.open:hover {
+      background: var(--sage-wash);
+      border-color: var(--sage);
+    }
+    .cal-day.selected {
+      background: var(--sage);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .time-slots-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .time-slot {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 7px 0;
+      text-align: center;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .time-slot:hover {
+      border-color: var(--sage);
+      background: var(--sage-wash);
+    }
+    .time-slot.selected {
+      background: var(--sage);
+      color: #fff;
+      border-color: var(--sage);
+    }
+
+    /* Column 3: Form & Summary */
+    .form-group {
+      margin-bottom: 10px;
+    }
+    .form-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--charcoal);
+      margin-bottom: 4px;
+      display: block;
+    }
+    .form-input {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--charcoal);
+    }
+    .summary-box {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      margin: 12px 0;
+      font-size: 11.5px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      color: var(--ink-2);
+    }
+    .summary-row.total {
+      border-top: 1px solid var(--line);
+      padding-top: 6px;
+      margin-top: 6px;
+      font-weight: 700;
+      color: var(--charcoal);
+      font-size: 13px;
+    }
+    .btn-confirm {
+      width: 100%;
+      background: var(--sage);
+      color: #fff;
+      border: none;
+      border-radius: 99px;
+      padding: 11px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+    .btn-confirm:hover {
+      background: var(--sage-dark);
+    }
+
+    /* Options Panel */
+    .options-view-container {
+      grid-column: 2 / span 2;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .reveal-card {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .reveal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .reveal-title {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--charcoal);
+    }
+    .reveal-sub {
+      font-size: 12.5px;
+      color: var(--ink-2);
+      margin-top: 4px;
+      line-height: 1.45;
+    }
+
+    /* Gateway Callout (Full width, no squeezed button, beautiful typography) */
+    .gate-callout {
+      background: var(--gold-wash);
+      border: 1.5px solid rgba(212, 168, 83, 0.4);
+      border-radius: var(--radius-md);
+      padding: 18px 22px;
+      display: block;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    .gate-callout h4 {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.4;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .gate-callout p {
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .gate-note {
+      font-size: 11px;
+      line-height: 1.5;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed rgba(0, 0, 0, 0.12);
+    }
+
+    /* Under The Tab CTA Section */
+    .under-tab-cta {
+      margin-top: 20px;
+      border-radius: var(--radius-md);
+      border: 1.5px solid;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    @media (max-width: 700px) {
+      .under-tab-cta {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+      }
+    }
+    .under-tab-cta-text h4 {
+      font-size: 13.5px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .under-tab-cta-text p {
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+    .under-tab-cta .btn-confirm {
+      flex-shrink: 0;
+      width: auto;
+      padding: 10px 22px;
+      font-size: 12px;
+    }
+
+    /* 1:1 Coaching Pathways (No prices) */
+    .pathways-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .pathway-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .pathway-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--sage-dark);
+    }
+    .pathway-name {
+      font-family: var(--font-serif);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--charcoal);
+      margin: 3px 0;
+    }
+    .pathway-desc {
+      font-size: 11px;
+      color: var(--ink-2);
+      line-height: 1.35;
+    }
+    .pathway-footer {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--line);
+      font-size: 10.5px;
+      color: var(--ink-3);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Group Topics Grid (No prices) */
+    .topics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .topic-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 12px;
+    }
+    .topic-tag {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--blue);
+      text-transform: uppercase;
+    }
+    .topic-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--charcoal);
+      margin: 4px 0 2px;
+    }
+    .topic-desc {
+      font-size: 10.5px;
+      color: var(--ink-2);
+      line-height: 1.35;
+    }
+
+    /* Unlocked View (After Attending Discovery or Admin Open) */
+    .unlocked-packages-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .package-unlocked-card {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .package-unlocked-card.popular {
+      border-color: var(--sage);
+      background: var(--sage-wash);
+    }
+    .pkg-title {
+      font-family: var(--font-serif);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--charcoal);
+    }
+    .pkg-price {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--charcoal);
+      margin: 6px 0 2px;
+    }
+    .pkg-per-session {
+      font-size: 10.5px;
+      color: var(--ink-2);
+    }
+
+    /* Post-Booking Modal Preview */
+    .post-booking-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(45, 42, 40, 0.6);
+      backdrop-filter: blur(4px);
+      display: none;
+      place-items: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+    .post-booking-modal {
+      background: #fff;
+      width: 100%;
+      max-width: 580px;
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Section Notes / Explanations for User */
+    .annotation-strip {
+      max-width: 1320px;
+      margin: 20px auto 0;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 1100px) {
+      .annotation-strip { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .annotation-strip { grid-template-columns: 1fr; }
+    }
+    .annot-col h5 {
+      font-size: 11.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--sage-dark);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 4px;
+    }
+    .annot-col p {
+      font-size: 11.5px;
+      color: var(--ink-2);
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Controller to Switch Between Views and States -->
+  <div class="controls-banner">
+    <div class="controls-title">
+      <h1>
+        <span>🌿 Mai Parent Coaching — Interactive Offer Flow Mockup</span>
+      </h1>
+      <p>A warm, thoughtful booking journey designed around parents' real needs and peace of mind.</p>
+    </div>
+
+    <div class="controls-group">
+      <div>
+        <span class="control-label">Client Access State:</span>
+        <div class="pill-tabs" id="clientStatusTabs">
+          <button type="button" class="pill-tab active" onclick="setAccessState('not_attended')">1. New Family (Discovery Call First)</button>
+          <button type="button" class="pill-tab" onclick="setAccessState('attended')">2. Returning Family (Coaching Plans Open)</button>
+          <button type="button" class="pill-tab" onclick="setAccessState('admin_unlocked')">3. Access Granted by Mai</button>
+        </div>
+      </div>
+
+      <div>
+        <span class="control-label">Service Selected:</span>
+        <div class="pill-tabs" id="doorTabs">
+          <button type="button" class="pill-tab active" onclick="selectDoor('discovery')">🌿 Discovery Call</button>
+          <button type="button" class="pill-tab" onclick="selectDoor('coaching')">👤 1:1 Coaching</button>
+          <button type="button" class="pill-tab" onclick="selectDoor('groups')">👥 Small Circles</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mockup Frame -->
+  <div class="mockup-wrapper">
+    <div class="mockup-header">
+      <div class="browser-dots">
+        <div class="dot r"></div>
+        <div class="dot y"></div>
+        <div class="dot g"></div>
+      </div>
+      <div class="browser-url">
+        https://mai-parentcoaching.com/booking
+      </div>
+      <div>
+        <span id="headerStatusBadge" class="client-status-badge badge-locked">
+          🌿 Welcome! Let’s begin with a gentle Discovery Call to understand your family’s needs
+        </span>
+      </div>
+    </div>
+
+    <div class="booking-canvas">
+      <div class="page-title-row">
+        <h2 class="page-title" id="canvasTitle">Reserve Your Time with Mai</h2>
+        <p class="page-subtitle" id="canvasSub">
+          Choose what feels right for your family today.
+        </p>
+      </div>
+
+      <!-- 4-Column Layout Grid -->
+      <div class="booking-grid">
+
+        <!-- Column 1: The Three Doors with Richer Explanations & Hover Trigger -->
+        <div class="col-card">
+          <div class="col-header">
+            <div class="col-header-left">
+              <span class="col-header-icon" style="background: var(--sage-wash); color: var(--sage-dark);">1</span>
+              <span>Choose a Service</span>
+            </div>
+            <span class="hover-hint">Hover for what to expect 💡</span>
+          </div>
+
+          <div class="doors-list">
+            <!-- Door 1: Discovery Call -->
+            <div
+              id="doorCard-discovery"
+              class="door-item active"
+              onclick="selectDoor('discovery')"
+              onmouseenter="showServiceTooltip('discovery', event)"
+              onmouseleave="hideServiceTooltip()"
+            >
+              <div class="door-top-meta">
+                <span class="door-tag" style="background: var(--gold-wash); color: #8C6819;">Recommended First Step · Start Here</span>
+                <span class="info-bubble-trigger" title="Click or hover for expectations" onclick="toggleServiceTooltip('discovery', event)">i</span>
+              </div>
+              <div class="door-title">
+                <span>Discovery Call</span>
+                <span style="font-size: 12px; color: var(--sage-dark); font-weight: 700;">30 min · EGP 500</span>
+              </div>
+              <p class="door-sub">
+                A calm, 30-minute private call with me. We’ll talk about what feels exhausting or confusing at home, and find a gentle, clear way forward together.
+              </p>
+              <div class="door-highlights-row">
+                <span class="highlight-pill">✓ Private Google Meet</span>
+                <span class="highlight-pill">✓ No pressure, just listening</span>
+                <span class="highlight-pill">✓ Clear next steps for home</span>
+              </div>
+            </div>
+
+            <!-- Door 2: 1:1 Coaching -->
+            <div
+              id="doorCard-coaching"
+              class="door-item"
+              onclick="selectDoor('coaching')"
+              onmouseenter="showServiceTooltip('coaching', event)"
+              onmouseleave="hideServiceTooltip()"
+            >
+              <div class="door-top-meta">
+                <span class="door-tag" style="background: var(--sage-wash); color: var(--sage-dark);">Dedicated 1-on-1 Support</span>
+                <span class="info-bubble-trigger" title="Click or hover for expectations" onclick="toggleServiceTooltip('coaching', event)">i</span>
+              </div>
+              <div class="door-title">
+                <span>1:1 Parent Coaching</span>
+                <span style="font-size: 12px; color: var(--ink-2); font-weight: 700;">60-min Sessions</span>
+              </div>
+              <div class="door-price-line" id="doorCoachingPrice">
+                Tailored Family Plan
+              </div>
+              <p class="door-sub">
+                Focused time together to understand your child’s world, soothe meltdowns with connection, and help you feel calm and grounded as a parent.
+              </p>
+              <div class="door-highlights-row">
+                <span class="highlight-pill">✓ Weekly deep dives</span>
+                <span class="highlight-pill">✓ Gentle boundary scripts</span>
+                <span class="highlight-pill">✓ WhatsApp voice check-ins</span>
+              </div>
+              <div id="doorLockNoticeCoaching" class="door-lock-notice" style="background: var(--sage-wash); color: var(--sage-dark);">
+                🌿 We shape your personalized coaching plan together during your Discovery Call
+              </div>
+            </div>
+
+            <!-- Door 3: Group Cohorts -->
+            <div
+              id="doorCard-groups"
+              class="door-item"
+              onclick="selectDoor('groups')"
+              onmouseenter="showServiceTooltip('groups', event)"
+              onmouseleave="hideServiceTooltip()"
+            >
+              <div class="door-top-meta">
+                <span class="door-tag" style="background: var(--blue-wash); color: var(--blue);">Small Parent Circles</span>
+                <span class="info-bubble-trigger" title="Click or hover for expectations" onclick="toggleServiceTooltip('groups', event)">i</span>
+              </div>
+              <div class="door-title">
+                <span>Group Parent Cohorts</span>
+                <span style="font-size: 11px; color: #8C6819; background: var(--gold-wash); padding: 1px 6px; border-radius: 99px;">Coming Soon</span>
+              </div>
+              <div class="door-price-line" id="doorGroupPrice">
+                Intimate Circles (4–8 Parents) · Coming Soon
+              </div>
+              <p class="door-sub">
+                A caring circle of 4 to 8 parents walking through the same parenting moments. Guided by me, you’ll learn together and feel truly supported.
+              </p>
+              <div class="door-highlights-row">
+                <span class="highlight-pill">✓ Small group (4–8 parents)</span>
+                <span class="highlight-pill">✓ Real parent companionship</span>
+                <span class="highlight-pill">✓ Practical tools for home</span>
+              </div>
+              <div id="doorLockNoticeGroup" class="door-lock-notice" style="background: var(--blue-wash); color: var(--blue);">
+                🌱 I'll help you find the right topic circle during our Discovery Call
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- THE HOVER POPOVER DETAILING ALL WHAT IS EXPECTED FROM THE SERVICE -->
+        <div id="serviceHoverTooltip" class="service-hover-tooltip" onmouseenter="keepTooltipOpen()" onmouseleave="hideServiceTooltip()">
+          <div class="tip-header">
+            <div style="flex: 1;">
+              <span class="tip-badge" id="tipBadge">Step 1</span>
+              <h4 class="tip-title" id="tipTitle">Discovery Call</h4>
+              <p class="tip-sub" id="tipSub">30 min · EGP 500 · Private Google Meet</p>
+            </div>
+            <button type="button" onclick="hideServiceTooltip()" style="border:none;background:none;font-size:16px;color:var(--ink-3);cursor:pointer;padding:2px 6px;">✕</button>
+          </div>
+
+          <div class="tip-sec-title">
+            <span>📋 What to expect from this service:</span>
+          </div>
+          <ul class="tip-points-list" id="tipPointsList">
+            <!-- Injected via JS -->
+          </ul>
+
+          <div class="tip-sec-title" style="margin-top: 12px;">
+            <span>✨ What you walk away with:</span>
+          </div>
+          <p id="tipTakeaway" style="font-size: 11.5px; color: var(--ink-2); line-height: 1.4;">
+            <!-- Injected via JS -->
+          </p>
+
+          <div class="tip-takeaway">
+            <span style="font-size: 14px;">🛡️</span>
+            <span id="tipGuarantee" style="font-size: 11px;">100% private Google Meet · Free reschedule up to 24 hrs prior.</span>
+          </div>
+        </div>
+
+        <!-- Dynamic Middle Area: Either Normal Booking Cols 2 & 3 OR The Selected Options View -->
+
+        <!-- CASE A: Standard Booking Cols 2 & 3 (Discovery Call, or Direct 60-min slot for Unlocked Clients) -->
+        <div id="standardBookingColumns" style="display: contents;">
+          <!-- Column 2: Date & Available Times -->
+          <div class="col-card">
+            <div class="col-header">
+              <div class="col-header-left">
+                <span class="col-header-icon" style="background: var(--terracotta-wash); color: var(--terracotta);">2</span>
+                <span>Choose a Date & Time</span>
+              </div>
+            </div>
+
+            <div class="mini-calendar">
+              <div class="cal-nav">
+                <button type="button" style="border:none;background:none;cursor:pointer;">‹</button>
+                <span>October 2026</span>
+                <button type="button" style="border:none;background:none;cursor:pointer;">›</button>
+              </div>
+              <div class="cal-grid">
+                <div class="cal-th">M</div>
+                <div class="cal-th">T</div>
+                <div class="cal-th">W</div>
+                <div class="cal-th">T</div>
+                <div class="cal-th">F</div>
+                <div class="cal-th">S</div>
+                <div class="cal-th">S</div>
+
+                <!-- Sample month days -->
+                <div class="cal-day">28</div>
+                <div class="cal-day">29</div>
+                <div class="cal-day">30</div>
+                <div class="cal-day open">1</div>
+                <div class="cal-day">2</div>
+                <div class="cal-day">3</div>
+                <div class="cal-day">4</div>
+                <div class="cal-day open selected">5</div>
+                <div class="cal-day">6</div>
+                <div class="cal-day open">7</div>
+                <div class="cal-day">8</div>
+                <div class="cal-day">9</div>
+                <div class="cal-day">10</div>
+                <div class="cal-day">11</div>
+                <div class="cal-day open">12</div>
+                <div class="cal-day">13</div>
+                <div class="cal-day open">14</div>
+                <div class="cal-day">15</div>
+                <div class="cal-day">16</div>
+                <div class="cal-day">17</div>
+                <div class="cal-day">18</div>
+              </div>
+            </div>
+
+            <div style="font-size: 11px; font-weight: 700; color: var(--ink-2); margin-bottom: 6px;">
+              Available Times (Cairo Time)
+            </div>
+            <div class="time-slots-grid">
+              <div class="time-slot selected">12:00 PM</div>
+              <div class="time-slot">12:45 PM</div>
+              <div class="time-slot">01:30 PM</div>
+              <div class="time-slot">02:15 PM</div>
+              <div class="time-slot">03:00 PM</div>
+            </div>
+          </div>
+
+          <!-- Column 3: Your Details & Summary Form -->
+          <div class="col-card">
+            <div class="col-header">
+              <div class="col-header-left">
+                <span class="col-header-icon" style="background: var(--blue-wash); color: var(--blue);">3</span>
+                <span>Your Details</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Your Name</label>
+              <input type="text" class="form-input" value="Lina Mansour" readonly>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Your Email Address</label>
+              <input type="email" class="form-input" value="lina@example.com" readonly>
+            </div>
+            <div class="form-group">
+              <label class="form-label">A note for Mai (optional)</label>
+              <input type="text" class="form-input" placeholder="What would you like to share before we meet?">
+            </div>
+
+            <div class="summary-box">
+              <div class="summary-row">
+                <span>Session Type</span>
+                <b id="summarySessionTitle">Discovery Call (30 min)</b>
+              </div>
+              <div class="summary-row">
+                <span>Date & Time</span>
+                <span>Mon, Oct 5 · 12:00 PM</span>
+              </div>
+              <div class="summary-row total">
+                <span>Session Fee</span>
+                <span id="summaryTotalText">EGP 500</span>
+              </div>
+            </div>
+
+            <button type="button" class="btn-confirm" onclick="triggerBookingDemo()">
+              <span>Confirm My Session with Mai</span>
+              <span>→</span>
+            </button>
+            <p style="font-size: 10.5px; color: var(--ink-3); text-align: center; margin-top: 8px;">
+              Reserves your 30-minute private call. You'll receive a Google Meet link and calendar invitation right away.
+            </p>
+          </div>
+        </div>
+
+        <!-- CASE B: 1:1 Coaching Options (Gentle Explanation: Starting with Discovery Call First) -->
+        <div id="coachingOptionsView" class="options-view-container" style="display: none;">
+          <div class="reveal-card">
+            <div class="reveal-header">
+              <div>
+                <span class="door-tag" style="background: var(--sage-wash); color: var(--sage-dark);">Personalized 1-on-1 Guidance</span>
+                <h3 class="reveal-title">1:1 Parent Coaching Pathways</h3>
+                <p class="reveal-sub">
+                  Deep, continuous guidance with Mai to restore calm, rebuild connection, and heal burnout.
+                </p>
+              </div>
+            </div>
+
+            <!-- WARM INTRODUCTORY REASSURANCE (FULL WIDTH, NO SQUEEZING) -->
+            <div class="gate-callout" style="background: var(--sage-wash); border-color: rgba(107, 142, 123, 0.4);">
+              <h4 style="color: var(--sage-dark);">🌿 Every Family is Different — Why We Begin with a Discovery Call</h4>
+              <p style="color: var(--charcoal); margin-top: 6px;">
+                Rather than offering a <em>generic, off-the-shelf package</em>, I listen to your family’s unique story first during an <strong>introductory Discovery Call</strong>. Every child’s nervous system is unique, and <u>no two parenting challenges are identical</u>.
+              </p>
+              <p style="color: var(--charcoal); margin-top: 6px;">
+                Together on our call, we will explore what feels heaviest at home and shape a <strong>truly personalized coaching roadmap</strong> — matching the exact pace, topics, and level of support that honors your child's emotional needs and <em>restores your own inner calm</em>.
+              </p>
+              <div class="gate-note" style="color: var(--sage-dark);">
+                <em>* Note: 1:1 coaching packages and single sessions are unlocked on your account right after we meet on your Discovery Call.</em>
+              </div>
+            </div>
+
+            <!-- What 1:1 Involves (Structure & Topics - NO PRICES) -->
+            <div style="font-size: 12px; font-weight: 700; color: var(--charcoal); margin-bottom: 8px;">
+              Areas We Often Explore Together:
+            </div>
+            <div class="pathways-grid">
+              <div class="pathway-card">
+                <div>
+                  <span class="pathway-badge">Pathway 01</span>
+                  <div class="pathway-name">Big Feelings & Regulation</div>
+                  <p class="pathway-desc">
+                    Step-by-step guidance to <strong>de-escalate meltdowns</strong> and soothe emotional overwhelm <em>without yelling, threats, or isolation</em>.
+                  </p>
+                </div>
+                <div class="pathway-footer">
+                  <span>60-min Deep Dives</span>
+                  <span>Personalized Tools</span>
+                </div>
+              </div>
+
+              <div class="pathway-card">
+                <div>
+                  <span class="pathway-badge">Pathway 02</span>
+                  <div class="pathway-name">Parental Exhaustion & Inner Calm</div>
+                  <p class="pathway-desc">
+                    Replenish depleted emotional reserves, break the reactive cycle, and <strong>parent from grounded patience</strong> rather than <u>chronic stress and guilt</u>.
+                  </p>
+                </div>
+                <div class="pathway-footer">
+                  <span>60-min Deep Dives</span>
+                  <span>Nervous System Care</span>
+                </div>
+              </div>
+
+              <div class="pathway-card">
+                <div>
+                  <span class="pathway-badge">Pathway 03</span>
+                  <div class="pathway-name">Sibling Warmth & Connection</div>
+                  <p class="pathway-desc">
+                    Resolve persistent daily conflict and jealousy, helping your children build <em>genuine, lifelong companionship</em> while meeting <u>each child’s individual needs</u>.
+                  </p>
+                </div>
+                <div class="pathway-footer">
+                  <span>60-min Deep Dives</span>
+                  <span>Family Harmony</span>
+                </div>
+              </div>
+
+              <div class="pathway-card">
+                <div>
+                  <span class="pathway-badge">Pathway 04</span>
+                  <div class="pathway-name">Peaceful Bedtime & Loving Boundaries</div>
+                  <p class="pathway-desc">
+                    Hold <strong>clear, firm, and loving boundaries</strong> that your child respects, ending evening power struggles and bedtime negotiations <em>peacefully</em>.
+                  </p>
+                </div>
+                <div class="pathway-footer">
+                  <span>60-min Deep Dives</span>
+                  <span>Gentle Scripts</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- UNDER THE TAB: CLEAR, PROMINENT NEXT STEP -->
+            <div class="under-tab-cta" style="background: var(--sage-wash); border-color: rgba(107, 142, 123, 0.4);">
+              <div class="under-tab-cta-text">
+                <h4 style="color: var(--sage-dark);">Ready to take the first gentle step together?</h4>
+                <p style="color: var(--charcoal);">
+                  Schedule your <strong>introductory Discovery Call</strong> with Mai so we can talk through what you're navigating and shape a gentle roadmap for home.
+                </p>
+              </div>
+              <button type="button" class="btn-confirm" onclick="selectDoor('discovery')">
+                <span>Schedule a Discovery Call with Mai</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CASE C: Group Coaching Options (Warm & Kind Invitation) -->
+        <div id="groupOptionsView" class="options-view-container" style="display: none;">
+          <div class="reveal-card">
+            <div class="reveal-header">
+              <div>
+                <span class="door-tag" style="background: var(--blue-wash); color: var(--blue);">Small Circles · 4–8 Parents</span>
+                <h3 class="reveal-title">Small Parent Circles</h3>
+                <p class="reveal-sub">
+                  Sharing the journey alongside parents facing the exact same daily moments.
+                </p>
+              </div>
+            </div>
+
+            <!-- WARM INTRODUCTORY REASSURANCE (FULL WIDTH, NO SQUEEZING) -->
+            <div class="gate-callout" style="background: var(--blue-wash); border-color: rgba(106, 140, 163, 0.4);">
+              <h4 style="color: #2D4C63;">🌱 A Circle of Parents Who Understand — Shared Support Guided by Mai</h4>
+              <p style="color: #3D607B; margin-top: 6px;">
+                Parenting can feel <em>deeply lonely</em> when you're in the thick of it. In these <strong>small, intimate circles (just 4 to 8 parents)</strong>, we meet weekly to share openly, learn practical tools, and experience the comforting reassurance that <u>you are not alone or failing</u>.
+              </p>
+              <p style="color: #3D607B; margin-top: 6px;">
+                <strong>Small parent circles operate completely separately from 1:1 coaching.</strong> They do not open automatically with packages. Instead, we begin with a <strong>Discovery Call</strong> to get to know your family and connect you with parents facing the <em>very same everyday moments</em>.
+              </p>
+              <div class="gate-note" style="color: #2D4C63;">
+                <em>* Circles launch collaboratively once 4 parents enroll in a shared topic, choosing meeting dates that fit everyone's family routine.</em>
+              </div>
+            </div>
+
+            <div style="font-size: 12px; font-weight: 700; color: var(--charcoal); margin-bottom: 8px;">
+              Group Topics: What We Explore Together
+            </div>
+            <div class="topics-grid">
+              <div class="topic-card">
+                <span class="topic-tag">Topic 01</span>
+                <div class="topic-title">Tantrums & Big Feelings</div>
+                <p class="topic-desc">Helping your child calm high emotions through <strong>co-regulation and connection</strong>, <em>never fear or punishment</em>.</p>
+              </div>
+              <div class="topic-card">
+                <span class="topic-tag">Topic 02</span>
+                <div class="topic-title">Parental Exhaustion</div>
+                <p class="topic-desc">Restoring your <em>nervous system calm</em> when you feel <u>touched out, overwhelmed, and reactive</u>.</p>
+              </div>
+              <div class="topic-card">
+                <span class="topic-tag">Topic 03</span>
+                <div class="topic-title">Screen Time & Tech Habits</div>
+                <p class="topic-desc">Ending daily device battles peacefully with <strong>clear, loving, and consistent boundaries</strong>.</p>
+              </div>
+              <div class="topic-card">
+                <span class="topic-tag">Topic 04</span>
+                <div class="topic-title">Bedtime & Sleep Struggles</div>
+                <p class="topic-desc">Creating comforting evening rituals that ease separation anxiety and lead to <em>peaceful, independent sleep</em>.</p>
+              </div>
+              <div class="topic-card">
+                <span class="topic-tag">Topic 05</span>
+                <div class="topic-title">Sibling Clashes & Jealousy</div>
+                <p class="topic-desc">Transforming chronic rivalry into <u>lifelong warmth, fairness, and mutual companionship</u>.</p>
+              </div>
+              <div class="topic-card">
+                <span class="topic-tag">Topic 06</span>
+                <div class="topic-title">Parenting as a United Team</div>
+                <p class="topic-desc">Getting on the <strong>exact same page with your partner</strong> so neither of you feels <em>divided or unsupported</em>.</p>
+              </div>
+            </div>
+
+            <!-- UNDER THE TAB: CLEAR, PROMINENT NEXT STEP -->
+            <div class="under-tab-cta" style="background: var(--blue-wash); border-color: rgba(106, 140, 163, 0.4);">
+              <div class="under-tab-cta-text">
+                <h4 style="color: #2D4C63;">Interested in joining or exploring a parent circle?</h4>
+                <p style="color: #3D607B;">
+                  Connect with Mai on a <strong>Discovery Call</strong> to discuss your family's needs and explore joining an upcoming circle.
+                </p>
+              </div>
+              <button type="button" class="btn-confirm" style="background: var(--blue);" onclick="selectDoor('discovery')">
+                <span>Explore Group Circles with Mai</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CASE D: Unlocked View (Client Has Met with Mai OR Granted Access) -->
+        <div id="unlockedClientView" class="options-view-container" style="display: none;">
+          <div class="reveal-card" style="border-color: var(--sage); background: #FAFDFB;">
+            <div class="reveal-header">
+              <div>
+                <span class="door-tag" style="background: var(--sage-wash); color: var(--sage-dark);" id="unlockedBannerTag">
+                  ✨ Welcome Back! Your 1:1 Packages & Sessions
+                </span>
+                <h3 class="reveal-title">Your 1:1 Coaching Packages & Sessions</h3>
+                <p class="reveal-sub" id="unlockedBannerSub">
+                  It was wonderful meeting you! Here are your tailored 1:1 coaching packages and session bookings, ready whenever you'd like to begin.
+                </p>
+              </div>
+            </div>
+
+            <div class="unlocked-packages-grid">
+              <div class="package-unlocked-card">
+                <div>
+                  <span class="door-tag" style="background: var(--surface); color: var(--ink-2);">Single</span>
+                  <div class="pkg-title">Single Session</div>
+                  <div class="pkg-price">EGP 3,500</div>
+                  <div class="pkg-per-session">1 × 60 min session with Mai</div>
+                </div>
+                <button type="button" class="btn-confirm" style="margin-top: 12px; padding: 7px 10px; font-size: 11px;" onclick="selectDoor('discovery')">
+                  Book Single Session
+                </button>
+              </div>
+
+              <div class="package-unlocked-card popular">
+                <div>
+                  <span class="door-tag" style="background: var(--sage); color: #fff;">Popular · 4 Sessions</span>
+                  <div class="pkg-title">Growth Package</div>
+                  <div class="pkg-price">EGP 11,200</div>
+                  <div class="pkg-per-session">EGP 2,800 per session</div>
+                </div>
+                <div style="font-size: 11px; color: var(--sage-dark); font-weight: 700; margin-top: 12px;">
+                  ✓ Ready for your family
+                </div>
+              </div>
+
+              <div class="package-unlocked-card">
+                <div>
+                  <span class="door-tag" style="background: var(--surface); color: var(--ink-2);">8 Sessions</span>
+                  <div class="pkg-title">Deep Transformation</div>
+                  <div class="pkg-price">EGP 21,000</div>
+                  <div class="pkg-per-session">EGP 2,625 per session</div>
+                </div>
+                <div style="font-size: 11px; color: var(--ink-2); font-weight: 600; margin-top: 12px;">
+                  ✓ Ready for your family
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 4: Context & Reassurance (Visible on large screens) -->
+        <div class="col-card col-quote" style="background: var(--surface);">
+          <div class="col-header" style="border-bottom: none; margin-bottom: 8px;">
+            <span>A Gentle Promise</span>
+          </div>
+          <p style="font-family: var(--font-serif); font-size: 14px; font-style: italic; color: var(--charcoal); line-height: 1.5;">
+            &ldquo;There is no judgment here. We look together at what your nervous system and your child’s emotions are trying to tell us.&rdquo;
+          </p>
+          <div style="margin-top: 12px; font-size: 11px; font-weight: 700; color: var(--sage-dark);">
+            — Mai Ezz El Din
+          </div>
+          <div style="font-size: 10.5px; color: var(--ink-2);">
+            Child Psychologist & Parent Coach
+          </div>
+
+          <div style="margin-top: 20px; border-top: 1px solid var(--line); padding-top: 14px;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--charcoal); margin-bottom: 6px;">
+              Session Care:
+            </div>
+            <ul style="font-size: 11px; color: var(--ink-2); list-style: none; display: flex; flex-direction: column; gap: 6px;">
+              <li>✓ Private, confidential 1-on-1 Google Meet</li>
+              <li>✓ Calendar invitation sent straight to your email</li>
+              <li>✓ Reschedule anytime with 24 hours notice</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Annotations Bar Explaining the Core Experience -->
+  <div class="annotation-strip">
+    <div class="annot-col">
+      <h5>1. Gentle, Clear Service Tabs</h5>
+      <p>
+        Each card warmly describes who the service is for and what to expect, speaking directly to parents in an understanding, comforting tone.
+      </p>
+    </div>
+    <div class="annot-col">
+      <h5>2. Thoughtful Hover Details</h5>
+      <p>
+        Hovering or tapping <strong>(i)</strong> gives a quiet breakdown of what to expect and what you walk away with, free from overwhelming jargon.
+      </p>
+    </div>
+    <div class="annot-col">
+      <h5>3. Personal Discovery First</h5>
+      <p>
+        Packages open after meeting with Mai so that every coaching roadmap is shaped around the child and family’s true needs.
+      </p>
+    </div>
+    <div class="annot-col">
+      <h5>4. Private & Transparent</h5>
+      <p>
+        Packages are kept private until Mai understands your family’s needs; only the introductory EGP 500 Discovery Call is shown upfront.
+      </p>
+    </div>
+    <div class="annot-col">
+      <h5>5. Small Circles Are Independent</h5>
+      <p>
+        Small parent circles are organized separately from 1:1 packages, keeping groups intimate (4 to 8 parents) around shared topics.
+      </p>
+    </div>
+  </div>
+
+  <!-- Post-Booking Modal Preview (Clarifying that booking alone DOES NOT open coaching) -->
+  <div id="postBookingModalOverlay" class="post-booking-modal-overlay" onclick="closeBookingDemo(event)">
+    <div class="post-booking-modal" onclick="event.stopPropagation()">
+      <div style="text-align: center; margin-bottom: 18px;">
+        <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--sage-wash); color: var(--sage-dark); font-size: 24px; display: inline-grid; place-items: center; margin-bottom: 8px;">
+          ✓
+        </div>
+        <h3 style="font-family: var(--font-serif); font-size: 22px; font-weight: 700; color: var(--charcoal);">
+          Discovery Call Reserved!
+        </h3>
+        <p style="font-size: 12.5px; color: var(--ink-2); margin-top: 4px;">
+          Your 30-min call is scheduled for <strong>Mon, Oct 5 at 12:00 PM</strong>.
+        </p>
+      </div>
+
+      <!-- Warm Personal Note from Mai -->
+      <div style="background: var(--sage-wash); border: 1.5px solid rgba(107, 142, 123, 0.35); border-radius: var(--radius-md); padding: 16px; margin-bottom: 18px; text-align: left;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+          <span style="font-size: 16px;">🌿</span>
+          <span style="font-size: 12px; font-weight: 800; color: var(--sage-dark); letter-spacing: 0.02em;">
+            A Note from Mai: I'm so glad you're here
+          </span>
+        </div>
+        <p style="font-size: 12px; color: var(--charcoal); line-height: 1.55;">
+          Parenting can feel heavy and lonely when you're in the thick of it. In our 30 minutes together, I’ll listen deeply to what you and your child are going through, with zero judgment.
+        </p>
+        <p style="font-size: 12px; color: var(--ink-2); line-height: 1.55; margin-top: 8px;">
+          Together on our call, we’ll figure out the gentlest next steps for your family. Afterward, your custom coaching options and calendar will be ready right here whenever you need.
+        </p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button type="button" class="btn-confirm" onclick="simulateAttended()">
+          Preview What You See After Our Call →
+        </button>
+        <button type="button" style="border: 1px solid var(--line); background: #fff; padding: 10px 16px; border-radius: 99px; font-weight: 600; cursor: pointer;" onclick="closeBookingDemo()">
+          Close Window
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Detailed Service Expectations Data for the Hover Popover
+    const SERVICE_EXPECTATIONS = {
+      discovery: {
+        badge: 'Recommended First Step · Start Here',
+        badgeBg: 'var(--gold-wash)',
+        badgeColor: '#8C6819',
+        title: 'Discovery Call',
+        sub: '30 min · EGP 500 · Private Google Meet with Mai',
+        points: [
+          '<strong>A Safe, Gentle Space:</strong> A confidential conversation where you can unpack what feels heavy or exhausting at home without judgment.',
+          '<strong>Understanding What’s Happening:</strong> Looking together at what your child’s emotions or meltdowns might be trying to tell us.',
+          '<strong>Honest, Personal Guidance:</strong> Clear advice on whether 1:1 coaching or a small group circle would feel best for you.',
+          '<strong>Zero Pressure:</strong> Purely supportive — no sales pitch, just listening and genuine help.',
+          '<strong>A Quick 1-Minute Note:</strong> A brief check-in right after booking so I can read about your situation before we meet.'
+        ],
+        takeaway: 'A deep breath of relief, clarity on your child’s emotional needs, and peace of mind on what to do next.',
+        guarantee: 'Private Google Meet · Calendar invite and gentle reminder sent right away.'
+      },
+      coaching: {
+        badge: 'Dedicated 1-on-1 Support',
+        badgeBg: 'var(--sage-wash)',
+        badgeColor: 'var(--sage-dark)',
+        title: '1:1 Parent Coaching',
+        sub: '60 min per session · Mondays & Wednesdays · Google Meet with Mai',
+        points: [
+          '<strong>Dedicated 60-Minute Sessions:</strong> Deep, unhurried time together focused entirely on you, your child, and your home life.',
+          '<strong>Soothing Big Emotions:</strong> Practical ways to calm meltdowns and big feelings with connection, without yelling or threats.',
+          '<strong>Restoring Your Calm:</strong> Compassionate guidance to help you recover from parental exhaustion and parent with patience.',
+          '<strong>Gentle Boundary Scripts:</strong> Everyday phrases you can use right away during bedtime, screen time, or transitions.',
+          '<strong>Ongoing Voice Support:</strong> Gentle WhatsApp voice check-ins between sessions so you always have support when things get tough.',
+          '<strong>How We Begin:</strong> Opens after our Discovery Call so that your plan is custom-tailored to your family’s unique world.'
+        ],
+        takeaway: 'A calmer, more connected home where both you and your child feel deeply understood.',
+        guarantee: 'Session recording provided if you wish · Reschedule anytime with 24 hours notice.'
+      },
+      groups: {
+        badge: 'Small Parent Circles',
+        badgeBg: 'var(--blue-wash)',
+        badgeColor: 'var(--blue)',
+        title: 'Small Parent Circles',
+        sub: '60 min weekly sessions · 4–8 Parents · Guided by Mai',
+        points: [
+          '<strong>A Small, Safe Circle:</strong> Kept to just 4 to 8 parents so everyone feels heard, supported, and unhurried.',
+          '<strong>Focused Topics:</strong> Exploring one shared moment together (such as big feelings, bedtime struggles, or parental fatigue).',
+          '<strong>Comforting Relief:</strong> Experience the profound reassurance that you are not alone or failing in your parenting.',
+          '<strong>Gentle Practice:</strong> Warm, supportive role-playing guided by me to try out new peaceful phrases before using them at home.',
+          '<strong>Flexible Group Timing:</strong> Meeting times are arranged warmly together once 4 parents join a shared topic.'
+        ],
+        takeaway: 'Practical parenting tools and a warm community of parents who truly understand.',
+        guarantee: 'Independent from 1:1 coaching · Circles open when 4 parents are ready to begin.'
+      }
+    };
+
+    let tooltipTimeout = null;
+
+    function showServiceTooltip(serviceKey, event) {
+      clearTimeout(tooltipTimeout);
+      const data = SERVICE_EXPECTATIONS[serviceKey];
+      if (!data) return;
+
+      const tip = document.getElementById('serviceHoverTooltip');
+      const badge = document.getElementById('tipBadge');
+      const title = document.getElementById('tipTitle');
+      const sub = document.getElementById('tipSub');
+      const list = document.getElementById('tipPointsList');
+      const takeaway = document.getElementById('tipTakeaway');
+      const guarantee = document.getElementById('tipGuarantee');
+
+      badge.textContent = data.badge;
+      badge.style.background = data.badgeBg;
+      badge.style.color = data.badgeColor;
+      title.textContent = data.title;
+      sub.textContent = data.sub;
+      takeaway.innerHTML = data.takeaway;
+      guarantee.textContent = data.guarantee;
+
+      list.innerHTML = data.points.map(p => `
+        <li class="tip-point-item">
+          <span class="tip-check">✓</span>
+          <div>${p}</div>
+        </li>
+      `).join('');
+
+      // Dynamically position next to the hovered door card
+      const targetCard = document.getElementById(`doorCard-${serviceKey}`);
+      if (targetCard && window.innerWidth > 890) {
+        const rect = targetCard.getBoundingClientRect();
+        const canvasRect = document.querySelector('.booking-canvas').getBoundingClientRect();
+        const topOffset = Math.max(10, rect.top - canvasRect.top - 20);
+        tip.style.top = `${topOffset}px`;
+      }
+
+      tip.style.display = 'block';
+    }
+
+    function hideServiceTooltip() {
+      tooltipTimeout = setTimeout(() => {
+        const tip = document.getElementById('serviceHoverTooltip');
+        if (tip) tip.style.display = 'none';
+      }, 150);
+    }
+
+    function keepTooltipOpen() {
+      clearTimeout(tooltipTimeout);
+    }
+
+    function toggleServiceTooltip(serviceKey, event) {
+      event.stopPropagation();
+      const tip = document.getElementById('serviceHoverTooltip');
+      if (tip.style.display === 'block') {
+        tip.style.display = 'none';
+      } else {
+        showServiceTooltip(serviceKey, event);
+      }
+    }
+
+    // Access states: 'not_attended' | 'attended' | 'admin_unlocked'
+    let currentAccessState = 'not_attended';
+    let currentDoor = 'discovery';
+
+    function setAccessState(state) {
+      currentAccessState = state;
+      const tabs = document.querySelectorAll('#clientStatusTabs .pill-tab');
+      tabs.forEach((tab, index) => {
+        if ((state === 'not_attended' && index === 0) ||
+            (state === 'attended' && index === 1) ||
+            (state === 'admin_unlocked' && index === 2)) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      });
+
+      const badge = document.getElementById('headerStatusBadge');
+      const doorLockCoaching = document.getElementById('doorLockNoticeCoaching');
+      const doorLockGroup = document.getElementById('doorLockNoticeGroup');
+      const bannerTag = document.getElementById('unlockedBannerTag');
+      const bannerSub = document.getElementById('unlockedBannerSub');
+
+      const isUnlocked = state === 'attended' || state === 'admin_unlocked';
+
+      if (!isUnlocked) {
+        badge.className = 'client-status-badge badge-locked';
+        badge.textContent = '🌿 Welcome! Let’s begin with a gentle Discovery Call to understand your family’s needs';
+        doorLockCoaching.style.display = 'flex';
+        document.getElementById('doorCoachingPrice').textContent = 'Tailored Family Plan';
+      } else {
+        badge.className = 'client-status-badge badge-unlocked';
+        doorLockCoaching.style.display = 'none';
+        document.getElementById('doorCoachingPrice').textContent = 'Single Slot (EGP 3,500) & Packages';
+
+        if (state === 'attended') {
+          badge.textContent = '✨ Welcome Back! Your 1:1 Coaching Packages Are Ready';
+          bannerTag.textContent = '✨ Discovery Call Completed — Your Coaching Options';
+          bannerSub.textContent = 'It was wonderful meeting you! Here are your tailored 1:1 coaching packages and single session bookings, ready whenever you are.';
+        } else {
+          badge.textContent = '✨ Welcome! Your 1:1 Coaching Packages Are Ready';
+          bannerTag.textContent = '✨ 1:1 Coaching Access Open';
+          bannerSub.textContent = 'Mai has opened access to 1:1 coaching packages and single session bookings for your family.';
+        }
+      }
+
+      // Group Parent Cohorts is separate — it stays Coming Soon and does NOT open with packages!
+      document.getElementById('doorGroupPrice').textContent = '4–8 Parents · Coming Soon';
+      doorLockGroup.style.display = 'flex';
+      doorLockGroup.textContent = '🌱 I’ll help you find the right topic circle during our Discovery Call';
+
+      renderDoorContent();
+    }
+
+    function selectDoor(doorId) {
+      currentDoor = doorId;
+      const doorItems = document.querySelectorAll('.door-item');
+      doorItems.forEach(d => d.classList.remove('active'));
+      document.getElementById(`doorCard-${doorId}`).classList.add('active');
+
+      const tabs = document.querySelectorAll('#doorTabs .pill-tab');
+      tabs.forEach((t, i) => {
+        const ids = ['discovery', 'coaching', 'groups'];
+        if (ids[i] === doorId) {
+          t.classList.add('active');
+        } else {
+          t.classList.remove('active');
+        }
+      });
+
+      renderDoorContent();
+    }
+
+    function renderDoorContent() {
+      const standardCols = document.getElementById('standardBookingColumns');
+      const coachingOpts = document.getElementById('coachingOptionsView');
+      const groupOpts = document.getElementById('groupOptionsView');
+      const unlockedOpts = document.getElementById('unlockedClientView');
+
+      const title = document.getElementById('canvasTitle');
+      const sub = document.getElementById('canvasSub');
+
+      standardCols.style.display = 'none';
+      coachingOpts.style.display = 'none';
+      groupOpts.style.display = 'none';
+      unlockedOpts.style.display = 'none';
+
+      const isUnlocked = currentAccessState === 'attended' || currentAccessState === 'admin_unlocked';
+
+      if (currentDoor === 'discovery') {
+        standardCols.style.display = 'contents';
+        title.textContent = 'Reserve Your Time with Mai';
+        sub.textContent = 'Every family begins with a gentle 30-minute Discovery Call so I can listen to your story and understand your child.';
+        document.getElementById('summarySessionTitle').textContent = 'Discovery Call (30 min)';
+        document.getElementById('summaryTotalText').textContent = 'EGP 500';
+      } else if (currentDoor === 'coaching') {
+        if (!isUnlocked) {
+          coachingOpts.style.display = 'flex';
+          title.textContent = '1:1 Parent Coaching Pathways';
+          sub.textContent = 'Explore our dedicated 1:1 coaching pathways. Specific package options and personalized plans open after our Discovery Call.';
+        } else {
+          unlockedOpts.style.display = 'flex';
+          title.textContent = '1:1 Coaching Packages & Sessions';
+          sub.textContent = 'Welcome back! Choose a multi-session package or book your next 60-minute session slot below.';
+        }
+      } else if (currentDoor === 'groups') {
+        groupOpts.style.display = 'flex';
+        title.textContent = 'Small Parent Circles';
+        sub.textContent = 'Intimate circles of 4 to 8 parents exploring a shared parenting topic together. We’ll discuss if a group circle is a good fit during your Discovery Call.';
+      }
+    }
+
+    function triggerBookingDemo() {
+      document.getElementById('postBookingModalOverlay').style.display = 'grid';
+    }
+
+    function closeBookingDemo(e) {
+      document.getElementById('postBookingModalOverlay').style.display = 'none';
+    }
+
+    function simulateAttended() {
+      closeBookingDemo();
+      setAccessState('attended');
+      selectDoor('coaching');
+    }
+  </script>
+</body>
+</html>

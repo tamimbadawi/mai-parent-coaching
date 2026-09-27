@@ -25,6 +25,12 @@ export default function Navbar() {
   const navRef = useRef<HTMLElement | null>(null);
   const { user, profile, loading, signOut } = useAuth();
 
+  const isAdmin =
+    profile?.role === 'admin' ||
+    user?.user_metadata?.role === 'admin' ||
+    user?.app_metadata?.role === 'admin' ||
+    user?.email?.toLowerCase() === 'tamimbadawi@gmail.com';
+
   const handleSignOut = async (): Promise<void> => {
     setIsProfileMenuOpen(false);
     setIsMobileMenuOpen(false);
@@ -141,7 +147,7 @@ export default function Navbar() {
                       <p className="text-xs text-warm-gray truncate">{user.email}</p>
                     </div>
                     <div className="my-2 h-px bg-beige" />
-                    {profile?.role === 'admin' ? (
+                    {isAdmin ? (
                       <>
                         <Link to="/admin" onClick={() => setIsProfileMenuOpen(false)} className="block rounded-xl px-2 py-2 text-sm text-sage-dark hover:bg-cream">Admin Dashboard</Link>
                         <Link to="/admin/crm" onClick={() => setIsProfileMenuOpen(false)} className="block rounded-xl px-2 py-2 text-sm text-warm-gray hover:bg-cream">Users CRM</Link>
@@ -241,7 +247,7 @@ export default function Navbar() {
               </button>
             ) : (
               <>
-                {profile?.role === 'admin' ? (
+                {isAdmin ? (
                   <>
                     <Link to="/admin" className="mt-4 block rounded-full bg-sage/10 px-5 py-3 text-sm font-medium text-sage-dark">Admin Dashboard</Link>
                     <Link to="/admin/crm" className="block rounded-full bg-cream px-5 py-3 text-sm font-medium text-charcoal">Users CRM</Link>

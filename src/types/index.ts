@@ -165,6 +165,7 @@ export interface Booking {
 export interface DiscoveryTopic { id: string; title: string; sub: string; note: string; }
 export interface IntakeOption { id: string; label: string; }
 export interface CoachingPackage { id: string; title: string; sessions: number; price: number; useWithinWeeks: number; }
+export interface GroupPackage { id: string; title: string; sessions: number; pricePerPerson: number; }
 export interface DiscoveryIntake { topics: string[]; need: string; duration: string; suggestedPackage: string; }
 
 export interface CoachAvailabilityRule {

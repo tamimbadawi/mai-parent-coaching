@@ -30,6 +30,7 @@ dist-ssr
 
 # Supabase
 .supabase
+supabase/.temp/
 
 # Test files
 test-supabase-connection.js

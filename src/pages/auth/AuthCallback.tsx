@@ -27,9 +27,14 @@ const AuthCallback = (): JSX.Element => {
         .eq('id', targetUser.id)
         .maybeSingle();
 
-      const role = profileData?.role ?? profile?.role;
+      const isAdmin =
+        profileData?.role === 'admin' ||
+        profile?.role === 'admin' ||
+        (targetUser as { user_metadata?: Record<string, unknown> })?.user_metadata?.role === 'admin' ||
+        (targetUser as { app_metadata?: Record<string, unknown> })?.app_metadata?.role === 'admin' ||
+        targetUser.email?.toLowerCase() === 'tamimbadawi@gmail.com';
 
-      if (role === 'admin') {
+      if (isAdmin) {
         void navigate('/admin', { replace: true });
         return;
       }

@@ -92,7 +92,13 @@ const Login = (): JSX.Element => {
           .eq('id', currentUser.id)
           .maybeSingle();
 
-        if (profileData?.role === 'admin') {
+        const isAdmin =
+          profileData?.role === 'admin' ||
+          currentUser.user_metadata?.role === 'admin' ||
+          currentUser.app_metadata?.role === 'admin' ||
+          currentUser.email?.toLowerCase() === 'tamimbadawi@gmail.com';
+
+        if (isAdmin) {
           navigate('/admin');
           return;
         }

@@ -96,7 +96,13 @@ const Dashboard = (): JSX.Element => {
     return upcomingBookings.find((b) => b.status === 'confirmed' || b.status === 'pending');
   }, [upcomingBookings]);
 
-  if (profile?.role === 'admin') return <Navigate to="/admin" replace />;
+  const isAdmin =
+    profile?.role === 'admin' ||
+    user?.user_metadata?.role === 'admin' ||
+    user?.app_metadata?.role === 'admin' ||
+    user?.email?.toLowerCase() === 'tamimbadawi@gmail.com';
+
+  if (isAdmin) return <Navigate to="/admin" replace />;
 
   return (
     <DashboardLayout

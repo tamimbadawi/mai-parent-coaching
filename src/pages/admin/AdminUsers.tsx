@@ -93,7 +93,13 @@ const AdminUsers = (): JSX.Element => {
         setError(`Failed to load users: ${data?.message ?? response.status}`);
         setUsers([]);
       } else {
-        setUsers(data ?? []);
+        // Rule: No user is to be added/displayed without both valid phone number and country of residence
+        const validUsers = ((data ?? []) as UserProfile[]).filter((u) => {
+          if (u.role === 'admin') return true;
+          const clean = (u.phone || '').replace(/\D/g, '');
+          return Boolean(u.phone && clean.length >= 7 && u.country && u.country.trim().length > 0);
+        });
+        setUsers(validUsers);
       }
     } catch (err) {
       setError(`Failed to load users: ${err instanceof Error ? err.message : String(err)}`);

@@ -277,10 +277,10 @@ export function DiscoveryIntakeModal({
               id="intake-modal-title"
               className="font-serif text-xl font-bold leading-tight text-charcoal sm:text-2xl"
             >
-              Tell Mai a little about your family
+              A quick note for Mai
             </h2>
             <p className="mt-0.5 text-xs text-warm-gray">
-              {dateLabel} · {timeLabel} · about one minute
+              {dateLabel} · {timeLabel} · Takes 1 minute
             </p>
           </div>
 
@@ -325,10 +325,10 @@ export function DiscoveryIntakeModal({
               >
                 <div>
                   <h3 className="font-serif text-base font-semibold text-charcoal sm:text-lg">
-                    What's bringing you here?
+                    What feels heaviest at home right now?
                   </h3>
                   <p className="text-xs text-warm-gray">
-                    Tap everything that fits. Most families pick two or three.
+                    Tap whatever fits your family. Most parents pick two or three.
                   </p>
                 </div>
 
@@ -394,17 +394,17 @@ export function DiscoveryIntakeModal({
               >
                 <div>
                   <h3 className="font-serif text-base font-semibold text-charcoal sm:text-lg">
-                    Two quick taps
+                    Just two quick questions
                   </h3>
                   <p className="text-xs text-warm-gray">
-                    This helps Mai understand your situation before the call.
+                    This helps me understand what you're navigating so I can prepare specifically for you.
                   </p>
                 </div>
 
                 {/* Question 1 */}
                 <div className="space-y-2">
                   <label className="block text-sm font-bold text-charcoal">
-                    What would help most right now?
+                    What would bring you the most relief right now?
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {intakeNeeds.map((need) => {
@@ -431,7 +431,7 @@ export function DiscoveryIntakeModal({
                 {/* Question 2 */}
                 <div className="space-y-2">
                   <label className="block text-sm font-bold text-charcoal">
-                    How long has it felt hard?
+                    How long has this felt difficult?
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {intakeDurations.map((duration) => {
@@ -468,10 +468,10 @@ export function DiscoveryIntakeModal({
               >
                 <div>
                   <h3 className="font-serif text-base font-semibold text-charcoal sm:text-lg">
-                    Looks good?
+                    Ready for our conversation?
                   </h3>
                   <p className="text-xs text-warm-gray">
-                    This is what Mai will read before your call.
+                    Here is what I'll review before we speak together.
                   </p>
                 </div>
 
@@ -483,7 +483,7 @@ export function DiscoveryIntakeModal({
                   <div className="py-2.5 flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <span className="font-semibold text-warm-gray block text-xs">
-                        Bringing you here
+                        What you're navigating
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {selectedTopics.map((topicId) => {
@@ -511,7 +511,7 @@ export function DiscoveryIntakeModal({
                   {/* Wants */}
                   <div className="py-2.5 flex items-center justify-between gap-3">
                     <div>
-                      <span className="font-semibold text-warm-gray text-xs mr-2">Wants:</span>
+                      <span className="font-semibold text-warm-gray text-xs mr-2">What you need most:</span>
                       <span className="font-medium text-charcoal">
                         {intakeNeeds.find((n) => n.id === selectedNeed)?.label || selectedNeed}
                       </span>
@@ -529,7 +529,7 @@ export function DiscoveryIntakeModal({
                   <div className="py-2.5 flex items-center justify-between gap-3">
                     <div>
                       <span className="font-semibold text-warm-gray text-xs mr-2">
-                        Felt hard for:
+                        How long it's felt hard:
                       </span>
                       <span className="font-medium text-charcoal">
                         {intakeDurations.find((d) => d.id === selectedDuration)?.label ||
@@ -551,7 +551,7 @@ export function DiscoveryIntakeModal({
                 {suggestedPkg && (
                   <div className="space-y-0.5 rounded-2xl border border-terracotta/25 bg-terracotta/10 p-3">
                     <div className="text-[10px] font-bold uppercase tracking-wider text-terracotta-dark">
-                      Families like yours usually start with
+                      Families in similar situations often find this pathway most helpful:
                     </div>
                     <div className="font-serif text-lg font-bold leading-tight text-charcoal">
                       {suggestedPkg.title}
@@ -562,21 +562,21 @@ export function DiscoveryIntakeModal({
                       {suggestedPkg.sessions > 1 && ` over about ${suggestedPkg.useWithinWeeks} weeks`}
                     </div>
                     <div className="pt-0.5 text-xs font-medium text-charcoal">
-                      Mai will confirm the right fit and walk you through the options on your call.
+                      We'll confirm the best fit together on our call — zero pressure.
                     </div>
                   </div>
                 )}
 
                 {/* Today's booking price line */}
                 <div className="text-xs font-semibold text-charcoal">
-                  Today you're booking: <span className="text-sage-dark">Discovery Call · 30 min · EGP 500</span>
+                  Today you're reserving: <span className="text-sage-dark">Discovery Call · 30 min · EGP 500</span>
                 </div>
 
                 {/* Privacy Line */}
                 <div className="flex items-start gap-2 text-[11px] leading-snug text-warm-gray">
                   <Lock className="mt-0.5 h-3 w-3 shrink-0 text-sage-dark" />
                   <span>
-                    Only Mai sees your answers. They're stored with your booking and never shared.
+                    Only I see your answers. They are kept completely private and confidential.
                   </span>
                 </div>
                 </div>
@@ -634,7 +634,7 @@ export function DiscoveryIntakeModal({
                 className="inline-flex items-center gap-2 rounded-full bg-terracotta px-6 py-2 text-xs sm:text-sm font-bold text-white transition hover:bg-terracotta-dark disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
               >
                 {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                <span>{submitting ? 'Booking...' : 'Book my Discovery Call'}</span>
+                <span>{submitting ? 'Reserving your time...' : 'Confirm My Discovery Call'}</span>
               </button>
             )}
           </div>

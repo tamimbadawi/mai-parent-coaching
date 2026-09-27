@@ -199,6 +199,17 @@ Deno.serve(async (request) => {
     }
 
     if (payload.action === 'updateUser') {
+      const targetRole = payload.role ?? 'student';
+      if (targetRole !== 'admin') {
+        const cleanPhone = (payload.phone ?? '').replace(/\D/g, '');
+        if (!payload.phone || cleanPhone.length < 7) {
+          return json({ step: 'validate_phone', error: 'A valid working phone number is required (minimum 7 digits).' }, 400);
+        }
+        if (!payload.country?.trim()) {
+          return json({ step: 'validate_country', error: 'Country of residence is required.' }, 400);
+        }
+      }
+
       const metadataUpdates: Record<string, unknown> = {
         full_name: payload.fullName,
       };

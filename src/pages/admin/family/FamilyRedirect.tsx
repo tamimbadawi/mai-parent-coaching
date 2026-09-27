@@ -5,7 +5,7 @@ import { supabase } from '../../../lib/supabase';
 import AdminLayout from '../AdminLayout';
 
 /**
- * Redirects retired Family Case routes to Client Workspace.
+ * Redirects retired Family Case routes to Session Notes.
  * /admin/families -> /admin/sessions?client=<primary_contact_profile_id> (or /admin/sessions)
  * /admin/families/:householdId -> /admin/sessions?client=<primary_contact_profile_id> (or /admin/sessions)
  */
@@ -46,10 +46,10 @@ export const FamilyRedirect: React.FC = () => {
   }, [householdId, searchParams, navigate]);
 
   return (
-    <AdminLayout title="Family Case" subtitle="Redirecting to Client Workspace...">
+    <AdminLayout title="Family Case" subtitle="Redirecting to Session Notes...">
       <div className="flex flex-col items-center justify-center py-20 text-warm-gray">
         <Loader2 className="h-8 w-8 animate-spin text-sage-dark mb-3" />
-        <p className="text-sm font-medium">Opening unified Client Workspace...</p>
+        <p className="text-sm font-medium">Opening unified Session Notes workspace...</p>
       </div>
     </AdminLayout>
   );

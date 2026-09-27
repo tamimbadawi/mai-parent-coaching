@@ -1,4 +1,4 @@
-import type { Service, Course, BlogPost, Testimonial, FAQ, FreeResource, AppointmentType, ShopProduct, CommunityPost, DiscoveryTopic, IntakeOption, CoachingPackage } from '../types';
+import type { Service, Course, BlogPost, Testimonial, FAQ, FreeResource, AppointmentType, ShopProduct, CommunityPost, DiscoveryTopic, IntakeOption, CoachingPackage, GroupPackage } from '../types';
 import { courseVideoIds } from './courseVideoIds';
 
 export const services: Service[] = [
@@ -490,6 +490,12 @@ export const coachingPackages: CoachingPackage[] = [
   { id: 'growth', title: 'Growth Package', sessions: 4, price: 11200, useWithinWeeks: 8 },
   { id: 'deep-work', title: 'Deep Work Package', sessions: 8, price: 21000, useWithinWeeks: 16 },
   { id: 'full', title: 'Full Transformation', sessions: 12, price: 29400, useWithinWeeks: 24 },
+];
+
+export const groupPackages: GroupPackage[] = [
+  { id: 'group-growth', title: 'Group Growth', sessions: 4, pricePerPerson: 7200 },
+  { id: 'group-deep-work', title: 'Group Deep Work', sessions: 8, pricePerPerson: 12960 },
+  { id: 'group-full', title: 'Group Full Transformation', sessions: 12, pricePerPerson: 17496 },
 ];
 
 // Mai can move any cell. Keep in sync with PACKAGE_SUGGESTION_MATRIX in supabase/functions/_shared/booking-scheduling.ts.

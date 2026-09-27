@@ -38,6 +38,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       return;
     }
 
+    const inferredRole: 'student' | 'admin' =
+      currentUser.user_metadata?.role === 'admin' ||
+      currentUser.app_metadata?.role === 'admin' ||
+      currentUser.email?.toLowerCase() === 'tamimbadawi@gmail.com'
+        ? 'admin'
+        : 'student';
+
     const fallbackProfile: UserProfile = {
       id: currentUser.id,
       email: currentUser.email ?? '',
@@ -47,7 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       country: currentUser.user_metadata?.country ?? null,
       city: currentUser.user_metadata?.city ?? null,
       address: currentUser.user_metadata?.address ?? null,
-      role: 'student',
+      role: inferredRole,
       approval_status: currentUser.user_metadata?.approval_status ?? 'approved',
       approved_at: null,
       created_at: new Date().toISOString(),
@@ -59,11 +66,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     }
 
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
         .maybeSingle<UserProfile>();
+
+      // If no data returned and no explicit error, wait 200ms and retry once (session token propagation)
+      if (!error && !data) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        if (epoch === authEpochRef.current) {
+          const retryRes = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .maybeSingle<UserProfile>();
+          if (retryRes.data) {
+            data = retryRes.data;
+          }
+          if (retryRes.error) {
+            error = retryRes.error;
+          }
+        }
+      }
 
       if (epoch !== authEpochRef.current) {
         return;
@@ -87,10 +112,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
             .from('profiles')
             .update({ ...profileSelfHeal, updated_at: new Date().toISOString() })
             .eq('id', currentUser.id)
-            .then(() => {
-              setProfile((prev) => (prev ? { ...prev, ...profileSelfHeal } : prev));
-            })
-            .catch(() => {});
+            .then(
+              () => {
+                setProfile((prev) => (prev ? { ...prev, ...profileSelfHeal } : prev));
+              },
+              () => {}
+            );
         }
 
         if (
@@ -195,6 +222,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
         setUser(nextUser);
         // Only keep previous profile if it belongs to the same user
         setProfile((prev) => (prev?.id === nextUser.id ? prev : null));
+        setLoading(true);
 
         // Supabase warns against awaiting client calls inside onAuthStateChange:
         // the auth callback holds an internal lock that those calls may also need.
@@ -267,11 +295,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
         updated_at: new Date().toISOString(),
       };
 
-      await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', data.user.id)
-        .catch(() => {});
+      try {
+        await supabase
+          .from('profiles')
+          .update(updates)
+          .eq('id', data.user.id);
+      } catch {
+        // ignore
+      }
     }
 
     return { error: null };
@@ -382,13 +413,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       return { error: new Error('You need to be signed in to update your profile.') };
     }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', user.id);
+    const cleanDigits = (updates.phone || '').replace(/\D/g, '');
+    const hasPhoneAndCountry = Boolean(updates.phone && cleanDigits.length >= 7 && updates.country);
 
-    if (error) {
-      return { error: error as Error };
+    if (hasPhoneAndCountry) {
+      // Use the security-definer complete_user_profile RPC to ensure profile creation and admin notification
+      const { error: rpcError } = await supabase.rpc('complete_user_profile', {
+        p_phone: updates.phone!.trim(),
+        p_country: updates.country!.trim(),
+        p_full_name: updates.full_name || user.user_metadata?.full_name || profile?.full_name || user.email || '',
+      });
+
+      if (rpcError) {
+        console.warn('AuthContext - complete_user_profile RPC notice, falling back to direct upsert:', rpcError.message);
+        const { error: upsertError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            email: user.email ?? '',
+            full_name: updates.full_name || user.user_metadata?.full_name || profile?.full_name || user.email || '',
+            ...updates,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (upsertError) {
+          return { error: upsertError as Error };
+        }
+      }
+    } else {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+
+      if (error) {
+        return { error: error as Error };
+      }
     }
 
     // Also sync user_metadata in Supabase Auth

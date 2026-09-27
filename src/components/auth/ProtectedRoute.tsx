@@ -22,22 +22,28 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps): JSX.El
     return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
   }
 
-  if (profile && profile.role !== 'admin') {
-    const rawPhone = profile.phone || user.user_metadata?.phone || '';
+  const isAdmin =
+    profile?.role === 'admin' ||
+    user.user_metadata?.role === 'admin' ||
+    user.app_metadata?.role === 'admin' ||
+    user.email?.toLowerCase() === 'tamimbadawi@gmail.com';
+
+  if (!isAdmin) {
+    const rawPhone = profile?.phone || user.user_metadata?.phone || '';
     const cleanDigits = rawPhone.replace(/\D/g, '');
     const hasPhone = Boolean(rawPhone && cleanDigits.length >= 7);
-    const hasCountry = Boolean(profile.country || user.user_metadata?.country);
+    const hasCountry = Boolean(profile?.country || user.user_metadata?.country);
 
     if (!hasPhone || !hasCountry) {
       return <Navigate to="/auth/complete-profile" replace state={{ from: location.pathname }} />;
     }
   }
 
-  if (requiredRole === 'admin' && profile?.role !== 'admin') {
+  if (requiredRole === 'admin' && !isAdmin) {
     return <Navigate to="/dashboard" replace state={{ from: location.pathname }} />;
   }
 
-  if (!requiredRole && profile?.role === 'admin' && location.pathname.startsWith('/dashboard')) {
+  if (!requiredRole && isAdmin && location.pathname.startsWith('/dashboard')) {
     return <Navigate to="/admin" replace state={{ from: location.pathname }} />;
   }
 
