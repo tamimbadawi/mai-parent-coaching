@@ -29,9 +29,13 @@ const AuthCallback = (): JSX.Element => {
 
       const isAdmin =
         profileData?.role === 'admin' ||
+        profileData?.role === 'assistant' ||
         profile?.role === 'admin' ||
+        profile?.role === 'assistant' ||
         (targetUser as { user_metadata?: Record<string, unknown> })?.user_metadata?.role === 'admin' ||
+        (targetUser as { user_metadata?: Record<string, unknown> })?.user_metadata?.role === 'assistant' ||
         (targetUser as { app_metadata?: Record<string, unknown> })?.app_metadata?.role === 'admin' ||
+        (targetUser as { app_metadata?: Record<string, unknown> })?.app_metadata?.role === 'assistant' ||
         targetUser.email?.toLowerCase() === 'tamimbadawi@gmail.com';
 
       if (isAdmin) {

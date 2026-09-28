@@ -22,7 +22,7 @@ export interface UserComposerData {
   city: string;
   address: string;
   password: string;
-  role: 'student' | 'admin';
+  role: 'student' | 'admin' | 'assistant';
 }
 
 const emptyDraft: UserComposerData = {
@@ -47,7 +47,7 @@ interface UserComposerModalProps {
     country?: string | null;
     city?: string | null;
     address?: string | null;
-    role?: 'student' | 'admin' | string;
+    role?: 'student' | 'admin' | 'assistant' | string;
   } | null;
   onClose: () => void;
   onSaved: (message: string) => void;
@@ -89,7 +89,12 @@ export const UserComposerModal = ({
         city: editingUser.city ?? '',
         address: editingUser.address ?? '',
         password: '',
-        role: editingUser.role === 'admin' ? 'admin' : 'student',
+        role:
+          editingUser.role === 'admin'
+            ? 'admin'
+            : editingUser.role === 'assistant'
+            ? 'assistant'
+            : 'student',
       });
     } else {
       setDraft(emptyDraft);
@@ -470,11 +475,12 @@ export const UserComposerModal = ({
               <select
                 value={draft.role}
                 onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, role: event.target.value as 'student' | 'admin' }))
+                  setDraft((prev) => ({ ...prev, role: event.target.value as 'student' | 'admin' | 'assistant' }))
                 }
                 className="w-full rounded-2xl border border-beige bg-[#faf8f4] px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white cursor-pointer"
               >
                 <option value="student">Student / Client (Default)</option>
+                <option value="assistant">Assistant (Practice & Scheduling Assistant)</option>
                 <option value="admin">Administrator (Full Access)</option>
               </select>
             </div>

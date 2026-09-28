@@ -20,6 +20,7 @@ import {
   Crown,
   Eye,
   EyeOff,
+  UserCheck,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
@@ -28,6 +29,7 @@ import { ClientDossierModal } from './components/ClientDossierModal';
 import ContentLibraryStudio from './components/ContentLibraryStudio';
 import { UserComposerModal } from './components/UserComposerModal';
 import { DeleteUserModal } from './components/DeleteUserModal';
+import { AssistantFollowUpModal } from './components/AssistantFollowUpModal';
 import type { CustomerJourneyState } from '../../types';
 import { COUNTRIES } from '../../data/countries';
 
@@ -47,6 +49,9 @@ export const AdminCRM = (): JSX.Element => {
 
   // Selected client for dossier modal
   const [selectedClient, setSelectedClient] = useState<CustomerJourneyState | null>(null);
+
+  // Selected client for assistant follow-up hub modal
+  const [assistantFollowUpClient, setAssistantFollowUpClient] = useState<CustomerJourneyState | null>(null);
 
   // Set of admin client IDs whose journey details are expanded (per-admin toggle)
   const [expandedAdmins, setExpandedAdmins] = useState<Set<string>>(new Set());
@@ -125,7 +130,7 @@ export const AdminCRM = (): JSX.Element => {
       const items = (data || []) as CustomerJourneyState[];
       // Rule: No user is to be added/displayed without both valid phone number and country of residence
       const validItems = items.filter((c) => {
-        if (c.role === 'admin') return true;
+        if (c.role === 'admin' || c.role === 'assistant') return true;
         const clean = (c.phone || '').replace(/\D/g, '');
         return Boolean(c.phone && clean.length >= 7 && c.country && c.country.trim().length > 0);
       });
@@ -153,9 +158,9 @@ export const AdminCRM = (): JSX.Element => {
 
   // Summary Metrics
   const stats = useMemo(() => {
-    const total = clients.length; // Everyone (clients + admins)
+    const total = clients.length; // Everyone (clients + admins + assistants)
     const clientUsers = clients.filter((c) => c.role === 'student');
-    const adminUsers = clients.filter((c) => c.role === 'admin');
+    const adminUsers = clients.filter((c) => c.role === 'admin' || c.role === 'assistant');
 
     const totalClients = clientUsers.length;
     const totalAdmins = adminUsers.length;
@@ -200,7 +205,7 @@ export const AdminCRM = (): JSX.Element => {
         return client.role === 'student';
       }
       if (activeTab === 'admins') {
-        return client.role === 'admin';
+        return client.role === 'admin' || client.role === 'assistant';
       }
       // Track and lifecycle tabs count and show CLIENTS ONLY (admins excluded from nurture tracks)
       if (activeTab === 'track_a') {
@@ -335,13 +340,17 @@ export const AdminCRM = (): JSX.Element => {
     }
   };
 
-  const handleToggleRole = async (client: CustomerJourneyState): Promise<void> => {
+  const handleSetRole = async (
+    client: CustomerJourneyState,
+    targetRole: 'student' | 'admin' | 'assistant'
+  ): Promise<void> => {
     setActiveDropdownId(null);
-    const newRole = client.role === 'admin' ? 'student' : 'admin';
     const confirmMsg =
-      newRole === 'admin'
+      targetRole === 'admin'
         ? `Grant administrator privileges to ${client.email}? They will have full access to admin panels.`
-        : `Remove administrator privileges for ${client.email}? They will become a standard student/client.`;
+        : targetRole === 'assistant'
+        ? `Assign Assistant role (Client Follow-up Lead) to ${client.email}? They will have administrative access and lead client follow-up.`
+        : `Demote ${client.email} to standard student/client?`;
 
     if (!window.confirm(confirmMsg)) return;
 
@@ -357,14 +366,14 @@ export const AdminCRM = (): JSX.Element => {
         fullName: client.parent_name,
         phone: client.phone,
         country: client.country,
-        role: newRole,
+        role: targetRole,
         approvalStatus: 'approved',
       });
 
       if (result.error) {
         setError(result.error);
       } else {
-        setSuccess(`User role updated to ${newRole}.`);
+        setSuccess(`User role updated to ${targetRole}.`);
         await fetchJourneyStates();
       }
     } catch (err) {
@@ -622,7 +631,7 @@ export const AdminCRM = (): JSX.Element => {
                         : 'text-warm-gray hover:text-charcoal'
                     }`}
                   >
-                    Admins ({stats.totalAdmins})
+                    Admins & Team ({stats.totalAdmins})
                   </button>
                   <button
                     type="button"
@@ -693,8 +702,8 @@ export const AdminCRM = (): JSX.Element => {
                   const country = COUNTRIES.find(
                     (c) => c.iso === client.country || c.name.toLowerCase() === client.country?.toLowerCase()
                   );
-                  const isAdmin = client.role === 'admin';
-                  const showJourney = !isAdmin || expandedAdmins.has(client.client_id);
+                  const isStaff = client.role === 'admin' || client.role === 'assistant';
+                  const showJourney = !isStaff || expandedAdmins.has(client.client_id);
 
                   return (
                     <div
@@ -713,7 +722,7 @@ export const AdminCRM = (): JSX.Element => {
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="text-base font-semibold text-charcoal">{client.parent_name}</p>
 
-                              {/* Track Badge (Hidden for admins unless journey is expanded) */}
+                              {/* Track Badge (Hidden for admins/assistants unless journey is expanded) */}
                               {showJourney && (
                                 <span
                                   className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
@@ -726,7 +735,7 @@ export const AdminCRM = (): JSX.Element => {
                                 </span>
                               )}
 
-                              {/* Lifecycle Stage Badge (Hidden for admins unless journey is expanded) */}
+                              {/* Lifecycle Stage Badge (Hidden for admins/assistants unless journey is expanded) */}
                               {showJourney && (
                                 <span
                                   className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
@@ -755,17 +764,44 @@ export const AdminCRM = (): JSX.Element => {
                                     type="button"
                                     onClick={() => toggleAdminJourney(client.client_id)}
                                     className="inline-flex items-center gap-1 rounded-full bg-[#faf8f4] hover:bg-beige/40 px-2.5 py-0.5 text-[10px] font-medium text-charcoal border border-beige/80 transition cursor-pointer"
-                                    title={expandedAdmins.has(client.client_id) ? 'Hide client journey details' : 'Show client journey details'}
+                                    title={expandedAdmins.has(client.client_id) ? 'Hide details' : 'Show details'}
                                   >
                                     {expandedAdmins.has(client.client_id) ? (
                                       <>
                                         <EyeOff className="h-3 w-3 text-warm-gray" />
-                                        <span>Hide journey</span>
+                                        <span>Hide details</span>
                                       </>
                                     ) : (
                                       <>
                                         <Eye className="h-3 w-3 text-sage-dark" />
-                                        <span>Show journey</span>
+                                        <span>Show details</span>
+                                      </>
+                                    )}
+                                  </button>
+                                </>
+                              )}
+
+                              {/* Role Badge and Journey Toggle if Assistant */}
+                              {client.role === 'assistant' && (
+                                <>
+                                  <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900 border border-amber-300">
+                                    Assistant · Client Follow-up Lead
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleAdminJourney(client.client_id)}
+                                    className="inline-flex items-center gap-1 rounded-full bg-[#faf8f4] hover:bg-beige/40 px-2.5 py-0.5 text-[10px] font-medium text-charcoal border border-beige/80 transition cursor-pointer"
+                                    title={expandedAdmins.has(client.client_id) ? 'Hide details' : 'Show details'}
+                                  >
+                                    {expandedAdmins.has(client.client_id) ? (
+                                      <>
+                                        <EyeOff className="h-3 w-3 text-warm-gray" />
+                                        <span>Hide details</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Eye className="h-3 w-3 text-sage-dark" />
+                                        <span>Show details</span>
                                       </>
                                     )}
                                   </button>
@@ -800,6 +836,15 @@ export const AdminCRM = (): JSX.Element => {
                                 <span className="leading-relaxed">
                                   <strong className="text-charcoal font-semibold">Next Step: </strong>
                                   {client.next_step_recommendation}
+                                </span>
+                              </div>
+                            )}
+
+                            {!showJourney && client.role === 'assistant' && (
+                              <div className="mt-2.5 flex items-center gap-2 text-xs text-amber-900 bg-amber-50/80 p-2.5 rounded-xl border border-amber-200">
+                                <UserCheck className="h-4 w-4 shrink-0 text-amber-700" />
+                                <span>
+                                  <strong>Practice Follow-up Lead:</strong> Responsible for all client follow-ups across session bookings, intake questionnaires, continuity check-ins, and direct outreach.
                                 </span>
                               </div>
                             )}
@@ -852,6 +897,19 @@ export const AdminCRM = (): JSX.Element => {
                             </button>
                           )}
 
+                          {/* Action: Assistant Follow-up (Direct outreach and scheduling coordinator) */}
+                          {showJourney && (
+                            <button
+                              type="button"
+                              onClick={() => setAssistantFollowUpClient(client)}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 text-amber-900 px-3 py-2 text-xs font-medium hover:bg-amber-100 transition shadow-2xs cursor-pointer"
+                              title="Open Assistant Follow-up Hub"
+                            >
+                              <UserCheck className="h-3.5 w-3.5 text-amber-700" />
+                              <span>Follow-up</span>
+                            </button>
+                          )}
+
                           {/* Client Workspace Action (Hidden for admins unless journey is expanded) */}
                           {showJourney && (
                             <Link
@@ -881,7 +939,7 @@ export const AdminCRM = (): JSX.Element => {
                             </button>
 
                             {activeDropdownId === client.client_id && (
-                              <div className="absolute right-0 z-30 mt-1 w-48 rounded-2xl border border-beige bg-white p-1.5 shadow-xl animate-in fade-in">
+                              <div className="absolute right-0 z-30 mt-1 w-52 rounded-2xl border border-beige bg-white p-1.5 shadow-xl animate-in fade-in">
                                 <button
                                   type="button"
                                   onClick={() => void handleOpenEditUser(client)}
@@ -891,24 +949,74 @@ export const AdminCRM = (): JSX.Element => {
                                   <span>Edit user details</span>
                                 </button>
 
-                                <button
-                                  type="button"
-                                  onClick={() => void handleToggleRole(client)}
-                                  disabled={updatingUserId === client.client_id}
-                                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-charcoal hover:bg-[#faf8f4] transition text-left cursor-pointer disabled:opacity-50"
-                                >
-                                  {client.role === 'admin' ? (
-                                    <>
-                                      <ShieldCheck className="h-3.5 w-3.5 text-warm-gray" />
-                                      <span>Demote to student</span>
-                                    </>
-                                  ) : (
-                                    <>
+                                {client.role === 'student' && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleSetRole(client, 'assistant')}
+                                      disabled={updatingUserId === client.client_id}
+                                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-amber-900 hover:bg-amber-50 transition text-left cursor-pointer disabled:opacity-50"
+                                    >
+                                      <UserCheck className="h-3.5 w-3.5 text-amber-700" />
+                                      <span>Make Assistant</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleSetRole(client, 'admin')}
+                                      disabled={updatingUserId === client.client_id}
+                                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-charcoal hover:bg-[#faf8f4] transition text-left cursor-pointer disabled:opacity-50"
+                                    >
                                       <Crown className="h-3.5 w-3.5 text-amber-600" />
                                       <span>Promote to admin</span>
-                                    </>
-                                  )}
-                                </button>
+                                    </button>
+                                  </>
+                                )}
+
+                                {client.role === 'assistant' && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleSetRole(client, 'admin')}
+                                      disabled={updatingUserId === client.client_id}
+                                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-charcoal hover:bg-[#faf8f4] transition text-left cursor-pointer disabled:opacity-50"
+                                    >
+                                      <Crown className="h-3.5 w-3.5 text-amber-600" />
+                                      <span>Promote to admin</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleSetRole(client, 'student')}
+                                      disabled={updatingUserId === client.client_id}
+                                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-warm-gray hover:bg-[#faf8f4] transition text-left cursor-pointer disabled:opacity-50"
+                                    >
+                                      <ShieldCheck className="h-3.5 w-3.5 text-warm-gray" />
+                                      <span>Demote to student</span>
+                                    </button>
+                                  </>
+                                )}
+
+                                {client.role === 'admin' && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleSetRole(client, 'assistant')}
+                                      disabled={updatingUserId === client.client_id}
+                                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-amber-900 hover:bg-amber-50 transition text-left cursor-pointer disabled:opacity-50"
+                                    >
+                                      <UserCheck className="h-3.5 w-3.5 text-amber-700" />
+                                      <span>Change to Assistant</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleSetRole(client, 'student')}
+                                      disabled={updatingUserId === client.client_id}
+                                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-warm-gray hover:bg-[#faf8f4] transition text-left cursor-pointer disabled:opacity-50"
+                                    >
+                                      <ShieldCheck className="h-3.5 w-3.5 text-warm-gray" />
+                                      <span>Demote to student</span>
+                                    </button>
+                                  </>
+                                )}
 
                                 <div className="my-1 border-t border-beige/60" />
 
@@ -944,6 +1052,18 @@ export const AdminCRM = (): JSX.Element => {
           client={selectedClient}
           onClose={handleCloseDossier}
           onClientUpdated={handleClientUpdated}
+        />
+      )}
+
+      {/* Assistant Client Follow-up Hub Modal */}
+      {assistantFollowUpClient && (
+        <AssistantFollowUpModal
+          isOpen={Boolean(assistantFollowUpClient)}
+          client={assistantFollowUpClient}
+          onClose={() => setAssistantFollowUpClient(null)}
+          onFollowUpCompleted={() => {
+            void fetchJourneyStates();
+          }}
         />
       )}
 

@@ -168,6 +168,28 @@ export interface CoachingPackage { id: string; title: string; sessions: number; 
 export interface GroupPackage { id: string; title: string; sessions: number; pricePerPerson: number; }
 export interface DiscoveryIntake { topics: string[]; need: string; duration: string; suggestedPackage: string; }
 
+export interface AdvisoryFocusArea {
+  id: string;
+  title: string;
+  sub: string;
+  clinicalNote: string;
+  toneTheme: 'mint' | 'gold' | 'blue';
+}
+
+export interface AdvisoryScope {
+  id: string;
+  title: string;
+  duration: string;
+  sub: string;
+  targetPackageId: string;
+}
+
+export interface AdvisoryCadence {
+  id: string;
+  label: string;
+  sub: string;
+}
+
 export interface CoachAvailabilityRule {
   id: string;
   rule_type: 'recurring' | 'date_override' | 'date_closed';
@@ -223,6 +245,8 @@ export interface CommunityPost {
   category: string;
 }
 
+export type UserRole = 'student' | 'admin' | 'assistant';
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -232,7 +256,7 @@ export interface UserProfile {
   country: string | null;
   city: string | null;
   address: string | null;
-  role: 'student' | 'admin';
+  role: UserRole;
   approval_status: 'pending' | 'approved' | 'rejected';
   approved_at: string | null;
   engagement_status?: 'active' | 'paused' | 'opted_out';

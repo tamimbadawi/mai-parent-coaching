@@ -100,7 +100,6 @@ export default function Booking() {
   const isCoachingUnlocked = hasAttendedDiscovery || isAdminOpened;
   const isReturningClient = isCoachingUnlocked;
 
-  const [returningCoachingTab, setReturningCoachingTab] = useState<'single' | 'packages'>('single');
   const [hoveredDoor, setHoveredDoor] = useState<BookingDoorItem | null>(null);
   const [hoverRect, setHoverRect] = useState<DOMRect | null>(null);
 
@@ -278,8 +277,8 @@ export default function Booking() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    const name = resolveBookingName(profile, user);
-    const email = resolveBookingEmail(profile, user);
+    const name = resolveBookingName(profile, user) || (user.email ? user.email.split('@')[0] : '') || 'Parent';
+    const email = resolveBookingEmail(profile, user) || user.email || '';
     setFormData((prev) => ({
       ...prev,
       name: name || prev.name,
@@ -294,13 +293,15 @@ export default function Booking() {
     try {
       const userPhone = profile?.phone || (user?.user_metadata as any)?.phone || null;
       const userCountry = profile?.country || (user?.user_metadata as any)?.country || null;
+      const parentName = (formData.name || resolveBookingName(profile, user) || (user?.email ? user.email.split('@')[0] : '') || 'Parent').trim();
+      const parentEmail = (formData.email || resolveBookingEmail(profile, user) || user?.email || '').trim();
 
       const body: Record<string, any> = {
         appointment_type_id: selectedType,
         appointment_date: selectedDate,
         appointment_time: selectedTime,
-        parent_name: formData.name.trim(),
-        email: formData.email.trim(),
+        parent_name: parentName,
+        email: parentEmail,
         phone: userPhone,
         country: userCountry,
         notes: formData.notes.trim() || null,
@@ -353,8 +354,9 @@ export default function Booking() {
     }
   };
 
+  const hasContactInfo = Boolean(user || (formData.name.trim() && formData.email.trim()));
   const canSubmit = Boolean(
-    selectedType && selectedDate && selectedTime && formData.name && formData.email && !submitting,
+    selectedType && selectedDate && selectedTime && hasContactInfo && !submitting,
   );
 
   if (submitted) {
@@ -426,7 +428,7 @@ export default function Booking() {
             hasSelectedType={!!selectedType}
             hasSelectedDate={!!selectedDate}
             hasSelectedTime={!!selectedTime}
-            hasDetails={!!(formData.name.trim() && formData.email.trim())}
+            hasDetails={hasContactInfo}
             selectedType={selectedType}
             selectedDate={selectedDate}
             selectedTime={selectedTime}
@@ -434,7 +436,7 @@ export default function Booking() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto lg:overflow-visible">
         <div
           className="mx-auto flex w-full max-w-[1440px] flex-col gap-3 px-4 py-2.5 sm:py-3 sm:px-6
           lg:grid lg:grid-cols-12 lg:items-start lg:gap-4"
@@ -532,27 +534,10 @@ export default function Booking() {
                 onSelectDiscovery={() => handleSelectDoor('discovery')}
               />
             </div>
-          ) : selectedDoor === 'coaching' && !isReturningClient ? (
+          ) : selectedDoor === 'coaching' ? (
             <div className="flex flex-col gap-4 lg:col-span-8">
               <CoachingPackagesView
-                isReturningClient={false}
-                onSelectDiscovery={() => handleSelectDoor('discovery')}
-              />
-            </div>
-          ) : selectedDoor === 'coaching' && isReturningClient && returningCoachingTab === 'packages' ? (
-            <div className="flex flex-col gap-4 lg:col-span-8">
-              <div className="flex items-center justify-between rounded-xl border border-sage/30 bg-sage/10 p-2.5">
-                <span className="text-xs font-semibold text-charcoal">Your Unlocked 1:1 Packages</span>
-                <button
-                  type="button"
-                  onClick={() => setReturningCoachingTab('single')}
-                  className="rounded-full bg-sage px-3 py-1 text-xs font-semibold text-white hover:bg-sage-dark transition"
-                >
-                  Book Single 60-min Session
-                </button>
-              </div>
-              <CoachingPackagesView
-                isReturningClient={true}
+                isReturningClient={isReturningClient}
                 onSelectDiscovery={() => handleSelectDoor('discovery')}
               />
             </div>
@@ -560,23 +545,6 @@ export default function Booking() {
             <>
               {/* Column 2: Date & Available Times */}
               <div className="flex flex-col gap-2.5 lg:col-span-4">
-                {selectedDoor === 'coaching' && isReturningClient && (
-                  <div className="rounded-xl border border-sage/30 bg-sage/10 p-2 text-xs text-charcoal mb-1 flex items-center justify-between gap-2">
-                    <div>
-                      <p className="font-semibold text-sage-dark text-[11px]">Single 60-Minute Session</p>
-                      <p className="text-[10px] text-warm-gray mt-0.5">
-                        Book a single session slot anytime on Mondays or Wednesdays.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setReturningCoachingTab('packages')}
-                      className="shrink-0 rounded-full border border-sage/40 bg-white px-2.5 py-1 text-[11px] font-semibold text-sage-dark hover:bg-sage/10 transition"
-                    >
-                      View Packages
-                    </button>
-                  </div>
-                )}
                 <div>
                   <SectionHeader icon={<Calendar className="h-3 w-3 text-sage-dark" />} label="Choose a date" />
                   <div className="mt-1.5">
@@ -644,73 +612,66 @@ export default function Booking() {
                 </div>
               </div>
 
-              {/* Column 3: Your Details Form */}
+              {/* Column 3: Notes & Confirmation Form */}
               <div className="flex flex-col gap-2 lg:col-span-4">
-                <SectionHeader icon={<User className="h-3 w-3 text-dusty-blue-dark" />} label="Your details" />
-                <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-2.5">
+                <SectionHeader icon={<MessageSquare className="h-3 w-3 text-dusty-blue-dark" />} label="Notes & confirmation" />
+                <form onSubmit={handleSubmit} className="mt-1 flex flex-col gap-2">
+                  {/* Previous Sessions in place of redundant user info */}
                   {user && (
-                    <div className="flex items-center justify-between rounded-xl border border-sage/30 bg-sage/10 px-3 py-2 text-xs">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sage/20 text-sage-dark font-medium text-[11px]">
-                          {(formData.name || user.email || 'U')[0].toUpperCase()}
-                        </div>
-                        <div className="truncate">
-                          <p className="font-semibold text-charcoal text-[11px] truncate">
-                            {formData.name || 'Account'}
-                          </p>
-                          <p className="text-[10px] text-warm-gray truncate">{formData.email}</p>
-                        </div>
-                      </div>
-                      <span className="shrink-0 text-[10px] font-medium text-sage-dark bg-white/80 px-2 py-0.5 rounded-full border border-sage/20">
-                        Signed in
-                      </span>
+                    <UserPreviousBookings
+                      bookings={userPreviousBookings}
+                      loading={loadingUserBookings}
+                      user={user}
+                      onRefresh={fetchUserBookings}
+                    />
+                  )}
+
+                  {/* Fallback inputs only for unauthenticated visitors */}
+                  {!user && (
+                    <div className="shrink-0 flex flex-col gap-2">
+                      <Field label="Your Name" icon={<User className="h-3 w-3" />}>
+                        <input
+                          type="text"
+                          required
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className="w-full rounded-xl border border-beige bg-cream py-1.5 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                          placeholder="Your full name"
+                        />
+                      </Field>
+                      <Field label="Email Address" icon={<Mail className="h-3 w-3" />}>
+                        <input
+                          type="email"
+                          required
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          className="w-full rounded-xl border border-beige bg-cream py-1.5 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                          placeholder="Where I can send your invite & link"
+                        />
+                      </Field>
                     </div>
                   )}
-                  <div className="shrink-0 flex flex-col gap-2.5">
-                    <Field label="Your Name" icon={<User className="h-3 w-3" />}>
-                      <input
-                        type="text"
-                        required
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
-                        placeholder="Your full name"
-                      />
-                    </Field>
-                    <Field label="Email Address" icon={<Mail className="h-3 w-3" />}>
-                      <input
-                        type="email"
-                        required
-                        readOnly={Boolean(user)}
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className={cn(
-                          'w-full rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30',
-                          user && 'cursor-default bg-beige/40 text-warm-gray',
-                        )}
-                        placeholder="Where I can send your invite & link"
-                      />
-                    </Field>
-                    <Field label="Notes for Mai (optional)" icon={<MessageSquare className="h-3 w-3" />}>
-                      <textarea
-                        rows={2}
-                        value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        className="w-full resize-none rounded-xl border border-beige bg-cream py-2 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
-                        placeholder="Anything you'd like me to know before we talk..."
-                      />
-                    </Field>
-                  </div>
 
-                  <div className="shrink-0 flex flex-col gap-2.5">
+                  {/* Notes for Mai */}
+                  <Field label="Notes for Mai (optional)" icon={<MessageSquare className="h-3 w-3" />}>
+                    <textarea
+                      rows={2}
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      className="w-full resize-none rounded-xl border border-beige bg-cream py-1.5 pl-7 pr-3 text-xs transition-all placeholder:text-soft-gray focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      placeholder="Anything you'd like me to know before we talk..."
+                    />
+                  </Field>
+
+                  <div className="shrink-0 flex flex-col gap-2">
                     <div
                       className={cn(
-                        'rounded-xl border p-3 transition-all duration-300',
+                        'rounded-xl border p-2.5 transition-all duration-300',
                         selectedAppointment ? 'border-sage/20 bg-sage/5' : 'border-beige bg-cream/50',
                       )}
                     >
-                      <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-warm-gray">Session Summary</p>
-                      <div className="space-y-1.5 text-[11px]">
+                      <p className="mb-1.5 text-[9.5px] font-medium uppercase tracking-wider text-warm-gray">Session Summary</p>
+                      <div className="space-y-1 text-[11px]">
                         <SummaryRow label="Session" value={selectedAppointment?.title ?? '—'} />
                         <SummaryRow
                           label="Date"
@@ -726,7 +687,7 @@ export default function Booking() {
                         <SummaryRow label="Time" value={selectedTime ?? '—'} />
                         <SummaryRow label="Timezone" value={userTimeZone.replace(/_/g, ' ')} />
                         {selectedAppointment && selectedAppointment.price !== undefined && (
-                          <div className="flex justify-between gap-2 border-t border-beige/80 pt-1.5">
+                          <div className="flex justify-between gap-2 border-t border-beige/80 pt-1">
                             <span className="text-soft-gray">Investment</span>
                             <span className="font-semibold text-charcoal">
                               EGP {selectedAppointment.price.toLocaleString('en-US')}
@@ -743,7 +704,7 @@ export default function Booking() {
                     <button
                       type="submit"
                       disabled={!canSubmit || submitting}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sage py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-sage-dark disabled:cursor-not-allowed disabled:opacity-40"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sage py-2.5 text-xs font-semibold text-white shadow-xs transition-all hover:bg-sage-dark disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {submitting ? 'Holding your time...' : 'Confirm My Session with Mai'} <Check className="h-3.5 w-3.5" />
                     </button>
@@ -751,18 +712,6 @@ export default function Booking() {
                 </form>
               </div>
             </>
-          )}
-
-          {/* Previous Sessions (If any exist for logged-in user) */}
-          {user && userPreviousBookings.length > 0 && (
-            <div className="col-span-12 mt-3">
-              <UserPreviousBookings
-                bookings={userPreviousBookings}
-                loading={loadingUserBookings}
-                user={user}
-                onRefresh={fetchUserBookings}
-              />
-            </div>
           )}
         </div>
       </div>
@@ -822,60 +771,22 @@ function UserPreviousBookings({
   const [rescheduleBooking, setRescheduleBooking] = useState<BookingType | null>(null);
   const [cancelBooking, setCancelBooking] = useState<BookingType | null>(null);
 
-  if (loading) {
-    return (
-      <div className="rounded-xl border border-beige/80 bg-cream/90 p-3.5 shadow-sm">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-sage-dark" />
-          <span className="text-xs text-soft-gray">Checking your session history...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user && bookings.length === 0) {
-    return (
-      <div className="rounded-xl border border-beige/80 bg-cream/90 p-3.5 shadow-sm">
-        <div className="flex items-center gap-2 mb-1.5">
-          <CalendarCheck className="h-3.5 w-3.5 text-sage-dark" />
-          <span className="text-xs font-semibold text-charcoal">Already Working Together?</span>
-        </div>
-        <p className="text-[11px] leading-relaxed text-warm-gray">
-          <Link to="/auth/login" state={{ from: '/booking' }} className="font-medium text-sage-dark hover:underline">
-            Sign in
-          </Link>{' '}
-          to view your upcoming sessions, reschedule if needed, and access your meeting links.
-        </p>
-      </div>
-    );
-  }
-
-  if (bookings.length === 0) {
-    return (
-      <div className="rounded-xl border border-beige/80 bg-cream/90 p-3.5 shadow-sm">
-        <div className="flex items-center gap-2 mb-1.5">
-          <CalendarCheck className="h-3.5 w-3.5 text-sage-dark" />
-          <span className="text-xs font-semibold text-charcoal">Your Sessions</span>
-        </div>
-        <p className="text-[11px] leading-relaxed text-soft-gray">
-          No upcoming sessions yet. Once reserved, your meeting times and video links will be safely stored here for you.
-        </p>
-      </div>
-    );
+  if (loading || !user || bookings.length === 0) {
+    return null;
   }
 
   return (
     <>
-      <div className="rounded-xl border border-beige/80 bg-cream/90 p-3.5 shadow-sm">
-        <div className="flex items-center justify-between gap-2 mb-2.5">
-          <div className="flex items-center gap-2">
-            <CalendarCheck className="h-3.5 w-3.5 text-sage-dark" />
-            <span className="text-xs font-semibold text-charcoal">Your Sessions ({bookings.length})</span>
+      <div className="rounded-xl border border-beige/80 bg-cream/90 p-2.5 shadow-xs">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-1.5">
+            <CalendarCheck className="h-3 w-3 text-sage-dark" />
+            <span className="text-[11px] font-semibold text-charcoal">Your Sessions ({bookings.length})</span>
           </div>
-          <span className="text-[10px] text-soft-gray">History & Options</span>
+          <span className="text-[9px] text-soft-gray">Manage</span>
         </div>
 
-        <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+        <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1">
           {bookings.map((b) => {
             const badge = bookingStatusBadges[b.status] || bookingStatusBadges.pending;
             const canModify = b.status !== 'cancelled' && b.status !== 'completed';
@@ -883,17 +794,17 @@ function UserPreviousBookings({
             return (
               <div
                 key={b.id}
-                className="rounded-xl border border-beige bg-white p-2.5 transition hover:border-sage/40"
+                className="rounded-lg border border-beige bg-white p-2 transition hover:border-sage/40"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="font-serif text-xs font-semibold text-charcoal leading-snug">
+                <div className="flex items-start justify-between gap-1.5">
+                  <span className="font-serif text-[11px] font-semibold text-charcoal leading-snug line-clamp-1">
                     {b.appointment_type_title}
                   </span>
-                  <span className={cn('shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-medium', badge.className)}>
+                  <span className={cn('shrink-0 rounded-full border px-1.5 py-0.2 text-[8.5px] font-medium leading-none', badge.className)}>
                     {badge.label}
                   </span>
                 </div>
-                <div className="mt-1 flex items-center gap-2.5 text-[10px] text-warm-gray">
+                <div className="mt-1 flex items-center gap-2 text-[9.5px] text-warm-gray">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-2.5 w-2.5 text-soft-gray" />
                     {b.appointment_date}
@@ -909,26 +820,26 @@ function UserPreviousBookings({
                     href={b.google_meet_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-2 inline-flex items-center gap-1 rounded-lg bg-sage/10 px-2 py-1 text-[10px] font-medium text-sage-dark hover:bg-sage/20 transition"
+                    className="mt-1.5 inline-flex items-center gap-1 rounded bg-sage/10 px-1.5 py-0.5 text-[9px] font-medium text-sage-dark hover:bg-sage/20 transition"
                   >
                     <Video className="h-2.5 w-2.5" />
-                    Join Google Meet
+                    Join Meet
                   </a>
                 )}
 
                 {canModify && (
-                  <div className="mt-2.5 flex items-center justify-end gap-1.5 border-t border-beige/60 pt-2">
+                  <div className="mt-1.5 flex items-center justify-end gap-1.5 border-t border-beige/60 pt-1">
                     <button
                       type="button"
                       onClick={() => setRescheduleBooking(b)}
-                      className="rounded-lg bg-cream px-2 py-1 text-[10px] font-medium text-charcoal hover:bg-beige/60 hover:text-sage-dark transition"
+                      className="rounded bg-cream px-1.5 py-0.5 text-[9px] font-medium text-charcoal hover:bg-beige/60 hover:text-sage-dark transition"
                     >
                       Reschedule
                     </button>
                     <button
                       type="button"
                       onClick={() => setCancelBooking(b)}
-                      className="rounded-lg bg-cream px-2 py-1 text-[10px] font-medium text-rose-700 hover:bg-rose-50 transition"
+                      className="rounded bg-cream px-1.5 py-0.5 text-[9px] font-medium text-rose-700 hover:bg-rose-50 transition"
                     >
                       Cancel
                     </button>

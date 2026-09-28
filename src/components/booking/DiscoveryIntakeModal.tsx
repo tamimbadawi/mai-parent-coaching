@@ -7,6 +7,7 @@ import {
   intakeNeeds,
   intakeDurations,
   suggestPackage,
+  coachingPackages,
 } from '../../data/content';
 import type { DiscoveryIntake } from '../../types';
 
@@ -25,20 +26,22 @@ let preservedIntakeState: {
   need: string;
   duration: string;
   lastTopicId: string | null;
+  chosenPackageId: string | null;
 } = {
   topics: [],
   need: '',
   duration: '',
   lastTopicId: null,
+  chosenPackageId: null,
 };
 
-function renderTopicSvg(id: string, iconClass = 'h-9 w-9') {
+export function renderTopicSvg(id: string, iconClass = 'h-9 w-9') {
   switch (id) {
     case 'emotions':
       return (
         <svg viewBox="0 0 52 52" className={iconClass} aria-hidden="true">
-          <circle cx="26" cy="26" r="24" fill="rgb(var(--color-terracotta) / 0.15)" />
-          <path d="M15 30a7 7 0 0 1 2-13.7A9 9 0 0 1 34 19a6 6 0 0 1 1 11.9z" fill="rgb(var(--color-terracotta))" />
+          <circle cx="26" cy="26" r="24" fill="rgb(var(--color-sage) / 0.2)" />
+          <path d="M15 30a7 7 0 0 1 2-13.7A9 9 0 0 1 34 19a6 6 0 0 1 1 11.9z" fill="rgb(var(--color-sage))" />
           <path d="M27 31l-4 7h5l-3 7" fill="none" stroke="rgb(var(--color-gold))" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       );
@@ -48,7 +51,7 @@ function renderTopicSvg(id: string, iconClass = 'h-9 w-9') {
           <circle cx="26" cy="26" r="24" fill="rgb(var(--color-gold) / 0.2)" />
           <rect x="12" y="18" width="26" height="16" rx="4" fill="#fff" stroke="rgb(var(--color-charcoal))" strokeWidth="2" />
           <rect x="38" y="23" width="3" height="6" rx="1" fill="rgb(var(--color-charcoal))" />
-          <rect x="15" y="21" width="6" height="10" rx="2" fill="rgb(var(--color-terracotta))" />
+          <rect x="15" y="21" width="6" height="10" rx="2" fill="rgb(var(--color-sage))" />
         </svg>
       );
     case 'family':
@@ -74,8 +77,8 @@ function renderTopicSvg(id: string, iconClass = 'h-9 w-9') {
     case 'anxiety':
       return (
         <svg viewBox="0 0 52 52" className={iconClass} aria-hidden="true">
-          <circle cx="26" cy="26" r="24" fill="rgb(var(--color-terracotta) / 0.15)" />
-          <path d="M26 39c-9-6-13-11-13-16a7 7 0 0 1 13-3.5A7 7 0 0 1 39 23c0 5-4 10-13 16z" fill="rgb(var(--color-terracotta-light))" />
+          <circle cx="26" cy="26" r="24" fill="rgb(var(--color-dusty-blue) / 0.2)" />
+          <path d="M26 39c-9-6-13-11-13-16a7 7 0 0 1 13-3.5A7 7 0 0 1 39 23c0 5-4 10-13 16z" fill="rgb(var(--color-dusty-blue))" />
           <path d="M20 26q3-3 6 0t6 0" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
         </svg>
       );
@@ -91,9 +94,9 @@ function renderTopicSvg(id: string, iconClass = 'h-9 w-9') {
     case 'limits':
       return (
         <svg viewBox="0 0 52 52" className={iconClass} aria-hidden="true">
-          <circle cx="26" cy="26" r="24" fill="rgb(var(--color-terracotta) / 0.15)" />
-          <path d="M26 14c-5 2.5-9 2-9 8 0 8 5 12 9 13 4-1 9-5 9-13 0-6-4-5.5-9-8z" fill="#fff" stroke="rgb(var(--color-terracotta))" strokeWidth="2" />
-          <path d="M21 24.5h10" stroke="rgb(var(--color-terracotta))" strokeWidth="2.2" strokeLinecap="round" />
+          <circle cx="26" cy="26" r="24" fill="rgb(var(--color-sage) / 0.2)" />
+          <path d="M26 14c-5 2.5-9 2-9 8 0 8 5 12 9 13 4-1 9-5 9-13 0-6-4-5.5-9-8z" fill="#fff" stroke="rgb(var(--color-sage))" strokeWidth="2" />
+          <path d="M21 24.5h10" stroke="rgb(var(--color-sage))" strokeWidth="2.2" strokeLinecap="round" />
         </svg>
       );
     case 'confidence':
@@ -138,6 +141,7 @@ export function DiscoveryIntakeModal({
   const [selectedNeed, setSelectedNeed] = useState<string>(preservedIntakeState.need);
   const [selectedDuration, setSelectedDuration] = useState<string>(preservedIntakeState.duration);
   const [lastTopicId, setLastTopicId] = useState<string | null>(preservedIntakeState.lastTopicId);
+  const [chosenPackageId, setChosenPackageId] = useState<string | null>(preservedIntakeState.chosenPackageId);
 
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const previousActiveElementRef = useRef<HTMLElement | null>(null);
@@ -149,8 +153,9 @@ export function DiscoveryIntakeModal({
       need: selectedNeed,
       duration: selectedDuration,
       lastTopicId,
+      chosenPackageId,
     };
-  }, [selectedTopics, selectedNeed, selectedDuration, lastTopicId]);
+  }, [selectedTopics, selectedNeed, selectedDuration, lastTopicId, chosenPackageId]);
 
   // Trap focus and body scroll lock
   useEffect(() => {
@@ -233,13 +238,17 @@ export function DiscoveryIntakeModal({
     }
   };
 
+  const suggestedPkg = suggestPackage(selectedNeed, selectedDuration);
+  const effectivePackageId = chosenPackageId || suggestedPkg?.id || 'growth';
+  const effectivePkg = coachingPackages.find((p) => p.id === effectivePackageId) || suggestedPkg;
+
   const handleFinalSubmit = () => {
     if (submitting) return;
     onSubmit({
       topics: selectedTopics,
       need: selectedNeed,
       duration: selectedDuration,
-      suggestedPackage: suggestedPkg?.id || '',
+      suggestedPackage: effectivePackageId,
     });
   };
 
@@ -247,8 +256,6 @@ export function DiscoveryIntakeModal({
   const currentNote = lastTopicObj
     ? lastTopicObj.note
     : 'Whatever you pick, there are no wrong answers. Mai will take it from here.';
-
-  const suggestedPkg = suggestPackage(selectedNeed, selectedDuration);
 
   const modalContent = (
     <div
@@ -290,7 +297,7 @@ export function DiscoveryIntakeModal({
                 <span
                   key={n}
                   className={`h-1.5 rounded-full transition-all duration-300 ${
-                    step === n ? 'w-8 bg-terracotta' : step > n ? 'w-5 bg-sage' : 'w-5 bg-beige'
+                    step === n ? 'w-8 bg-sage' : step > n ? 'w-5 bg-sage/60' : 'w-5 bg-beige'
                   }`}
                 />
               ))}
@@ -547,21 +554,59 @@ export function DiscoveryIntakeModal({
                 </div>
 
                 <div className="space-y-2.5">
-                {/* Highlighted suggestion card */}
-                {suggestedPkg && (
-                  <div className="space-y-0.5 rounded-2xl border border-terracotta/25 bg-terracotta/10 p-3">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-terracotta-dark">
-                      Families in similar situations often find this pathway most helpful:
+                {/* Highlighted suggestion card with interactive adjustment */}
+                {effectivePkg && (
+                  <div className="space-y-1.5 rounded-2xl border border-sage/30 bg-sage/10 p-3">
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-sage-dark">
+                        {chosenPackageId ? 'Your Selected Pathway:' : 'Suggested Pathway For Your Family:'}
+                      </div>
+                      <span className="rounded-full bg-sage/20 px-2 py-0.5 text-[9px] font-semibold text-sage-dark">
+                        {chosenPackageId ? 'Adjusted' : 'Recommended'}
+                      </span>
                     </div>
-                    <div className="font-serif text-lg font-bold leading-tight text-charcoal">
-                      {suggestedPkg.title}
+                    <div className="flex items-baseline justify-between gap-2">
+                      <div className="font-serif text-base sm:text-lg font-bold leading-tight text-charcoal">
+                        {effectivePkg.title}
+                      </div>
+                      <div className="text-xs text-warm-gray">
+                        {effectivePkg.sessions} {effectivePkg.sessions === 1 ? 'session' : 'sessions'}
+                        {effectivePkg.sessions > 1 && ` over ~${effectivePkg.useWithinWeeks} weeks`}
+                      </div>
                     </div>
-                    {/* No package prices before the Discovery Call (offer-journey decision, 2026-09-26) */}
-                    <div className="text-xs text-warm-gray">
-                      {suggestedPkg.sessions} {suggestedPkg.sessions === 1 ? 'session' : 'sessions'}
-                      {suggestedPkg.sessions > 1 && ` over about ${suggestedPkg.useWithinWeeks} weeks`}
+
+                    {/* Quick package switcher so the client can change the suggestion */}
+                    <div className="pt-0.5">
+                      <p className="text-[10px] text-warm-gray mb-1">
+                        Prefer another pace? Tap to change:
+                      </p>
+                      <div className="grid grid-cols-5 gap-1">
+                        {coachingPackages.map((pkg) => {
+                          const isCurrent = pkg.id === effectivePackageId;
+                          return (
+                            <button
+                              key={pkg.id}
+                              type="button"
+                              onClick={() => setChosenPackageId(pkg.id)}
+                              className={`rounded-lg border px-1 py-1 text-center transition-all ${
+                                isCurrent
+                                  ? 'border-sage-dark bg-white font-bold text-sage-dark shadow-2xs ring-1 ring-sage/30'
+                                  : 'border-beige bg-white/70 text-charcoal hover:bg-white text-[10px]'
+                              }`}
+                            >
+                              <span className="block text-[10px] leading-tight truncate font-semibold">
+                                {pkg.title.replace(' Package', '').replace(' Transformation', '')}
+                              </span>
+                              <span className="block text-[8.5px] text-warm-gray">
+                                {pkg.sessions} {pkg.sessions === 1 ? 'sess' : 'sess'}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="pt-0.5 text-xs font-medium text-charcoal">
+
+                    <div className="pt-0.5 text-[11px] font-medium text-charcoal">
                       We'll confirm the best fit together on our call — zero pressure.
                     </div>
                   </div>
@@ -609,7 +654,7 @@ export function DiscoveryIntakeModal({
 
           <div className="flex items-center gap-3">
             {step === 1 && selectedTopics.length === 0 && (
-              <span className="text-xs text-terracotta font-medium">
+              <span className="text-xs text-warm-gray font-medium">
                 Pick at least one to continue
               </span>
             )}
@@ -622,7 +667,7 @@ export function DiscoveryIntakeModal({
                   (step === 2 && (!selectedNeed || !selectedDuration))
                 }
                 onClick={handleNext}
-                className="rounded-full bg-terracotta px-6 py-2 text-xs sm:text-sm font-bold text-white transition hover:bg-terracotta-dark disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
+                className="rounded-full bg-sage px-6 py-2 text-xs sm:text-sm font-bold text-white transition hover:bg-sage-dark disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
               >
                 Continue
               </button>
@@ -631,7 +676,7 @@ export function DiscoveryIntakeModal({
                 type="button"
                 disabled={submitting}
                 onClick={handleFinalSubmit}
-                className="inline-flex items-center gap-2 rounded-full bg-terracotta px-6 py-2 text-xs sm:text-sm font-bold text-white transition hover:bg-terracotta-dark disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+                className="inline-flex items-center gap-2 rounded-full bg-sage px-6 py-2 text-xs sm:text-sm font-bold text-white transition hover:bg-sage-dark disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
               >
                 {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 <span>{submitting ? 'Reserving your time...' : 'Confirm My Discovery Call'}</span>
@@ -668,7 +713,7 @@ export function ConfettiBurst() {
 
     const colors = [
       parseVar('--color-sage', '#92CFCA'),
-      parseVar('--color-terracotta', '#F1873B'),
+      parseVar('--color-sage-dark', '#4A6B5D'),
       parseVar('--color-gold', '#F4D721'),
       parseVar('--color-dusty-blue', '#8FA3B8'),
     ];

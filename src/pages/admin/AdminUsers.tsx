@@ -54,12 +54,23 @@ const AdminUsers = (): JSX.Element => {
     return COUNTRIES.filter((c) => c.name.toLowerCase().includes(q) || c.iso.toLowerCase().includes(q));
   }, [countrySearch]);
 
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admins' | 'clients'>('all');
+
   const adminCount = users.filter((user) => user.role === 'admin').length;
-  const memberCount = users.length - adminCount;
+  const assistantCount = users.filter((user) => user.role === 'assistant').length;
+  const memberCount = users.length - adminCount - assistantCount;
   const sortedUsers = useMemo(
     () => [...users].sort((left, right) => right.created_at.localeCompare(left.created_at)),
     [users]
   );
+
+  const displayedUsers = useMemo(() => {
+    return sortedUsers.filter((user) => {
+      if (roleFilter === 'admins') return user.role === 'admin' || user.role === 'assistant';
+      if (roleFilter === 'clients') return user.role === 'student';
+      return true;
+    });
+  }, [sortedUsers, roleFilter]);
 
   const fetchUsers = async (): Promise<void> => {
 
@@ -95,7 +106,7 @@ const AdminUsers = (): JSX.Element => {
       } else {
         // Rule: No user is to be added/displayed without both valid phone number and country of residence
         const validUsers = ((data ?? []) as UserProfile[]).filter((u) => {
-          if (u.role === 'admin') return true;
+          if (u.role === 'admin' || u.role === 'assistant') return true;
           const clean = (u.phone || '').replace(/\D/g, '');
           return Boolean(u.phone && clean.length >= 7 && u.country && u.country.trim().length > 0);
         });
@@ -304,8 +315,8 @@ const AdminUsers = (): JSX.Element => {
     }
   };
 
-  const toggleRole = async (user: UserProfile): Promise<void> => {
-    const newRole = user.role === 'admin' ? 'student' : 'admin';
+  const toggleRole = async (user: UserProfile, targetRole?: 'student' | 'admin' | 'assistant'): Promise<void> => {
+    const newRole = targetRole || (user.role === 'admin' ? 'student' : user.role === 'assistant' ? 'admin' : 'assistant');
     setUpdatingId(user.id);
     const result = await invokeUserManager({
       action: 'updateUser',
@@ -320,6 +331,9 @@ const AdminUsers = (): JSX.Element => {
 
     if (!result.error) {
       await fetchUsers();
+      setSuccess(`User role updated to ${newRole}.`);
+    } else {
+      setError(result.error);
     }
     setUpdatingId(null);
   };
@@ -350,12 +364,12 @@ const AdminUsers = (): JSX.Element => {
       <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-3">
             <StatCard icon={UserRound} label="People in system" value={users.length} detail="Every profile currently accessible inside the admin workspace." tone="sage" />
-            <StatCard icon={Crown} label="Administrators" value={adminCount} detail="Accounts able to access this control center and manage data." tone="amber" />
+            <StatCard icon={Crown} label="Admins & Team" value={adminCount + assistantCount} detail={`${adminCount} admin(s), ${assistantCount} assistant(s) with control center access.`} tone="amber" />
             <StatCard icon={ShieldCheck} label="Members" value={memberCount} detail="Standard customers learning, booking, and receiving resources." tone="sky" />
           </div>
 
           <Panel title="User control center" eyebrow="Roles and access">
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm leading-6 text-warm-gray">
                 Create accounts manually, adjust access, assign roles, and manage users without leaving the admin workspace.
               </p>
@@ -368,21 +382,75 @@ const AdminUsers = (): JSX.Element => {
               </button>
             </div>
 
+            {/* Role Filter Tabs */}
+            <div className="mb-5 flex flex-wrap items-center gap-1.5 p-1 bg-[#faf8f4] rounded-xl border border-beige/70 w-fit">
+              <button
+                type="button"
+                onClick={() => setRoleFilter('all')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
+                  roleFilter === 'all'
+                    ? 'bg-white text-charcoal shadow-2xs font-semibold'
+                    : 'text-warm-gray hover:text-charcoal'
+                }`}
+              >
+                All ({users.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setRoleFilter('admins')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
+                  roleFilter === 'admins'
+                    ? 'bg-white text-amber-900 shadow-2xs font-semibold'
+                    : 'text-warm-gray hover:text-charcoal'
+                }`}
+              >
+                Admins & Team ({adminCount + assistantCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setRoleFilter('clients')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
+                  roleFilter === 'clients'
+                    ? 'bg-white text-charcoal shadow-2xs font-semibold'
+                    : 'text-warm-gray hover:text-charcoal'
+                }`}
+              >
+                Clients ({memberCount})
+              </button>
+            </div>
+
             {error && !composerOpen ? <p className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
             {success ? <p className="mb-4 rounded-2xl border border-sage/20 bg-sage/10 px-4 py-3 text-sm text-sage-dark">{success}</p> : null}
 
-            {users.length === 0 ? (
-              <EmptyPanel title="No users found" description="When new members sign up, they will appear here with role, join date, and access controls." />
+            {displayedUsers.length === 0 ? (
+              <EmptyPanel
+                title="No users found"
+                description={
+                  roleFilter === 'admins'
+                    ? 'No administrators or assistants found matching this filter.'
+                    : roleFilter === 'clients'
+                    ? 'No client profiles found matching this filter.'
+                    : 'When new members sign up, they will appear here with role, join date, and access controls.'
+                }
+              />
             ) : (
               <div className="space-y-3">
-                {sortedUsers.map((user) => (
+                {displayedUsers.map((user) => (
                   <div key={user.id} className="rounded-[24px] border border-beige bg-cream p-5">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-lg font-medium text-charcoal">{user.full_name ?? 'Unnamed member'}</p>
-                          <span className={`rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] ${user.role === 'admin' ? 'bg-sage text-white' : 'bg-white text-warm-gray'}`}>
-                            {user.role}
+                          <span
+                            className={`rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] ${
+                              user.role === 'admin'
+                                ? 'bg-sage text-white'
+                                : user.role === 'assistant'
+                                ? 'bg-amber-100 text-amber-900 border border-amber-300 font-bold'
+                                : 'bg-white text-warm-gray border border-beige'
+                            }`}
+                          >
+                            {user.role === 'assistant' ? 'Assistant · Follow-up Lead' : user.role}
                           </span>
                         </div>
                         <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-warm-gray">
@@ -439,13 +507,59 @@ const AdminUsers = (): JSX.Element => {
                         >
                           <span className="inline-flex items-center gap-2"><Edit3 className="h-4 w-4" /> Edit</span>
                         </button>
-                        <button
-                          onClick={() => toggleRole(user)}
-                          disabled={updatingId === user.id}
-                          className="rounded-2xl border border-beige bg-white px-4 py-3 text-sm font-medium text-charcoal transition hover:border-sage hover:text-sage-dark disabled:opacity-50"
-                        >
-                          {updatingId === user.id ? 'Saving…' : user.role === 'admin' ? 'Remove admin access' : 'Promote to admin'}
-                        </button>
+                        {user.role === 'student' ? (
+                          <>
+                            <button
+                              onClick={() => toggleRole(user, 'assistant')}
+                              disabled={updatingId === user.id}
+                              className="rounded-2xl border border-amber-300 bg-amber-50 px-3.5 py-3 text-sm font-medium text-amber-900 transition hover:bg-amber-100 disabled:opacity-50"
+                              title="Assign Assistant role (Client Follow-up Lead)"
+                            >
+                              {updatingId === user.id ? 'Saving…' : 'Make Assistant'}
+                            </button>
+                            <button
+                              onClick={() => toggleRole(user, 'admin')}
+                              disabled={updatingId === user.id}
+                              className="rounded-2xl border border-beige bg-white px-3.5 py-3 text-sm font-medium text-charcoal transition hover:border-sage hover:text-sage-dark disabled:opacity-50"
+                            >
+                              {updatingId === user.id ? 'Saving…' : 'Make Admin'}
+                            </button>
+                          </>
+                        ) : user.role === 'assistant' ? (
+                          <>
+                            <button
+                              onClick={() => toggleRole(user, 'admin')}
+                              disabled={updatingId === user.id}
+                              className="rounded-2xl border border-beige bg-white px-3.5 py-3 text-sm font-medium text-charcoal transition hover:border-sage hover:text-sage-dark disabled:opacity-50"
+                            >
+                              {updatingId === user.id ? 'Saving…' : 'Promote to Admin'}
+                            </button>
+                            <button
+                              onClick={() => toggleRole(user, 'student')}
+                              disabled={updatingId === user.id}
+                              className="rounded-2xl border border-beige bg-white px-3.5 py-3 text-sm font-medium text-warm-gray transition hover:border-beige hover:text-charcoal disabled:opacity-50"
+                            >
+                              {updatingId === user.id ? 'Saving…' : 'Demote to Student'}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => toggleRole(user, 'assistant')}
+                              disabled={updatingId === user.id}
+                              className="rounded-2xl border border-amber-300 bg-amber-50 px-3.5 py-3 text-sm font-medium text-amber-900 transition hover:bg-amber-100 disabled:opacity-50"
+                            >
+                              {updatingId === user.id ? 'Saving…' : 'Set as Assistant'}
+                            </button>
+                            <button
+                              onClick={() => toggleRole(user, 'student')}
+                              disabled={updatingId === user.id}
+                              className="rounded-2xl border border-beige bg-white px-3.5 py-3 text-sm font-medium text-warm-gray transition hover:border-beige hover:text-charcoal disabled:opacity-50"
+                            >
+                              {updatingId === user.id ? 'Saving…' : 'Remove Admin'}
+                            </button>
+                          </>
+                        )}
                         {user.email !== 'admin@admin.com' ? (
                           <button
                             onClick={() => void deleteUser(user)}
@@ -676,6 +790,7 @@ const AdminUsers = (): JSX.Element => {
                     className="w-full rounded-2xl border border-beige bg-cream px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
                   >
                     <option value="student">Student (Member)</option>
+                    <option value="assistant">Assistant (Practice & Scheduling Assistant)</option>
                     <option value="admin">Administrator</option>
                   </select>
                 </div>

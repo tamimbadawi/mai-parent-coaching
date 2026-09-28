@@ -98,8 +98,11 @@ const Dashboard = (): JSX.Element => {
 
   const isAdmin =
     profile?.role === 'admin' ||
+    profile?.role === 'assistant' ||
     user?.user_metadata?.role === 'admin' ||
+    user?.user_metadata?.role === 'assistant' ||
     user?.app_metadata?.role === 'admin' ||
+    user?.app_metadata?.role === 'assistant' ||
     user?.email?.toLowerCase() === 'tamimbadawi@gmail.com';
 
   if (isAdmin) return <Navigate to="/admin" replace />;

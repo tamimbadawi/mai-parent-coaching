@@ -103,7 +103,7 @@ const AdminLayout = ({ children, title, subtitle, action, headerContent, fillHei
             Mai <span className="text-sage font-normal">Elbadawy</span>
           </span>
           <span className="rounded-md bg-white/10 px-2 py-0.5 text-xs uppercase tracking-wider text-stone-300">
-            Admin
+            {profile?.role === 'assistant' ? 'Assistant' : 'Admin'}
           </span>
         </Link>
         <button
@@ -140,7 +140,7 @@ const AdminLayout = ({ children, title, subtitle, action, headerContent, fillHei
               </div>
               <div className="mt-0.5 flex items-center">
                 <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-stone-400 group-hover:bg-sage/20 group-hover:text-sage transition-colors">
-                  Admin Dashboard
+                  {profile?.role === 'assistant' ? 'Practice Workspace' : 'Admin Dashboard'}
                 </span>
               </div>
             </Link>
@@ -210,7 +210,9 @@ const AdminLayout = ({ children, title, subtitle, action, headerContent, fillHei
               <p className="truncate text-xs font-medium text-stone-100">
                 {profile?.full_name?.split(' ')[0] ?? 'Mai'}
               </p>
-              <p className="text-[11px] text-stone-400 capitalize">{profile?.role ?? 'Admin'}</p>
+              <p className="text-[11px] text-stone-400 capitalize">
+                {profile?.role === 'assistant' ? 'Assistant · Follow-up Lead' : profile?.role ?? 'Admin'}
+              </p>
             </div>
             <button
               type="button"

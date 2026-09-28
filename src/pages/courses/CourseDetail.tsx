@@ -41,7 +41,7 @@ export default function CourseDetail() {
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
   const [downloadingMatId, setDownloadingMatId] = useState<string | null>(null);
 
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'assistant';
 
   useEffect(() => {
     let mounted = true;

@@ -26,12 +26,14 @@ import {
   Users,
   ListTodo,
   Tag,
+  UserCheck,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import type { CustomerJourneyState, CRMContentItem, CRMLifecycleStage } from '../../../types';
 import { roleLabel, currentAge, type Household, type HouseholdMember } from '../../../types/family';
 import { COUNTRIES } from '../../../data/countries';
 import InternalWhatsAppMessengerModal from './InternalWhatsAppMessengerModal';
+import AssistantFollowUpModal from './AssistantFollowUpModal';
 import { ensureHousehold } from '../family/ensureHousehold';
 
 export interface TimelineEvent {
@@ -144,6 +146,7 @@ export const ClientDossierModal = ({
   const [updatingCadence, setUpdatingCadence] = useState(false);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [isMessengerOpen, setIsMessengerOpen] = useState(false);
+  const [isAssistantFollowUpOpen, setIsAssistantFollowUpOpen] = useState(false);
   const [isEnsuringHousehold, setIsEnsuringHousehold] = useState(false);
 
   // Country details
@@ -663,6 +666,14 @@ export const ClientDossierModal = ({
                     <span>Send WhatsApp Message</span>
                   </button>
                 ) : null}
+                <button
+                  type="button"
+                  onClick={() => setIsAssistantFollowUpOpen(true)}
+                  className="inline-flex items-center gap-1.5 font-medium text-amber-800 hover:text-amber-900 hover:underline cursor-pointer"
+                >
+                  <UserCheck className="h-3.5 w-3.5 text-amber-700" />
+                  <span>Assistant Follow-up</span>
+                </button>
                 <Link
                   to={`/admin/sessions?client=${client.client_id}`}
                   className="inline-flex items-center gap-1.5 font-medium text-sage-dark hover:text-charcoal hover:underline cursor-pointer"
@@ -1358,6 +1369,14 @@ export const ClientDossierModal = ({
         onClose={() => setIsMessengerOpen(false)}
         client={client}
         onMessageSent={() => void loadTimeline()}
+      />
+
+      {/* Assistant Client Follow-up Hub Modal */}
+      <AssistantFollowUpModal
+        isOpen={isAssistantFollowUpOpen}
+        onClose={() => setIsAssistantFollowUpOpen(false)}
+        client={client}
+        onFollowUpCompleted={() => void loadTimeline()}
       />
 
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   CalendarCheck,
   CalendarClock,
@@ -9,6 +10,7 @@ import {
   Baby,
   FileText,
   AlertCircle,
+  AlertTriangle,
   Loader2,
   CalendarDays,
   Sparkles,
@@ -22,6 +24,8 @@ import {
   Calendar,
   XCircle,
   RotateCw,
+  CalendarPlus,
+  MessageSquare,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
@@ -29,7 +33,10 @@ import type { Booking } from '../../types';
 import { EmptyPanel, Panel, StatCard } from './components/AdminUI';
 import { BookingRescheduleModal } from './components/BookingRescheduleModal';
 import { BookingEditModal } from './components/BookingEditModal';
-import { AdminManualBookingModal } from './components/AdminManualBookingModal';
+import {
+  AdminManualBookingModal,
+  type AdminManualBookingInitialData,
+} from './components/AdminManualBookingModal';
 import { AdminAvailabilityModal } from './components/AdminAvailabilityModal';
 import { AdminBookingsCalendarView } from './components/AdminBookingsCalendarView';
 import {
@@ -38,6 +45,35 @@ import {
   intakeDurations,
   coachingPackages,
 } from '../../data/content';
+
+/**
+ * Helper to identify package bookings that have been reserved/purchased
+ * but have not had their session dates and times scheduled on the calendar yet.
+ * In this case, Mai's Assistant must reach out to the client and schedule them.
+ */
+export const isNeedsCalendarScheduling = (b: Booking): boolean => {
+  if (b.status === 'cancelled') return false;
+  if (b.status === 'pending_calendar_sync') return true;
+
+  const isPackage =
+    b.appointment_type_id?.startsWith('package') ||
+    b.appointment_type_title?.toLowerCase().includes('package') ||
+    b.appointment_type_title?.toLowerCase().includes('advisory') ||
+    b.appointment_type_title?.toLowerCase().includes('sprint') ||
+    b.appointment_type_title?.toLowerCase().includes('realignment') ||
+    b.appointment_type_title?.toLowerCase().includes('reset') ||
+    b.appointment_type_title?.toLowerCase().includes('concierge') ||
+    b.notes?.includes('[Package') ||
+    b.notes?.includes('Package Reservation');
+
+  const isUnscheduled =
+    b.appointment_time === 'Unscheduled' ||
+    !b.appointment_time ||
+    b.appointment_time.trim() === '' ||
+    !b.google_calendar_event_id;
+
+  return Boolean(isPackage && (b.status === 'pending' || isUnscheduled));
+};
 
 const statusConfig: Record<
   Booking['status'],
@@ -71,12 +107,26 @@ const statusConfig: Record<
 };
 
 type DateFilter = 'all' | 'today' | 'this_week' | 'upcoming' | 'past';
+type BookingFilterStatus = 'all' | 'needs_scheduling' | Booking['status'];
 
 const AdminBookings = (): JSX.Element => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'all' | Booking['status']>('all');
+  const [statusFilter, setStatusFilter] = useState<BookingFilterStatus>(() => {
+    const filterParam = searchParams.get('filter');
+    if (filterParam === 'needs_scheduling') return 'needs_scheduling';
+    if (
+      filterParam &&
+      ['pending', 'confirmed', 'completed', 'cancelled', 'pending_calendar_sync'].includes(
+        filterParam
+      )
+    ) {
+      return filterParam as Booking['status'];
+    }
+    return 'all';
+  });
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
@@ -87,7 +137,16 @@ const AdminBookings = (): JSX.Element => {
   const [rescheduleBooking, setRescheduleBooking] = useState<Booking | null>(null);
   const [editBooking, setEditBooking] = useState<Booking | null>(null);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  const [manualBookingInitialData, setManualBookingInitialData] =
+    useState<AdminManualBookingInitialData | null>(null);
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
+
+  useEffect(() => {
+    const filterParam = searchParams.get('filter');
+    if (filterParam === 'needs_scheduling') {
+      setStatusFilter('needs_scheduling');
+    }
+  }, [searchParams]);
 
   const fetchBookings = async (): Promise<void> => {
     setLoading(true);
@@ -217,7 +276,11 @@ const AdminBookings = (): JSX.Element => {
 
     return bookings.filter((b) => {
       // 1. Status Filter
-      if (statusFilter !== 'all' && b.status !== statusFilter) return false;
+      if (statusFilter === 'needs_scheduling') {
+        if (!isNeedsCalendarScheduling(b)) return false;
+      } else if (statusFilter !== 'all' && b.status !== statusFilter) {
+        return false;
+      }
 
       // 2. Date Filter
       if (dateFilter === 'today' && b.appointment_date !== todayStr) return false;
@@ -252,12 +315,21 @@ const AdminBookings = (): JSX.Element => {
   const totalCount = bookings.length;
   const pendingCount = bookings.filter((b) => b.status === 'pending').length;
   const confirmedCount = bookings.filter((b) => b.status === 'confirmed').length;
+  const unscheduledBookings = useMemo(
+    () => bookings.filter(isNeedsCalendarScheduling),
+    [bookings]
+  );
+  const unscheduledCount = unscheduledBookings.length;
 
   return (
     <AdminLayout title="Consultation Bookings">
       <div className="space-y-6">
         {/* Top Metric Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div
+          className={`grid gap-4 sm:grid-cols-2 ${
+            unscheduledCount > 0 ? 'xl:grid-cols-4' : 'xl:grid-cols-3'
+          }`}
+        >
           <StatCard
             icon={CalendarDays}
             label="Total Bookings"
@@ -265,6 +337,15 @@ const AdminBookings = (): JSX.Element => {
             detail="All consultation and coaching sessions requested to date."
             tone="sage"
           />
+          {unscheduledCount > 0 && (
+            <StatCard
+              icon={AlertTriangle}
+              label="Needs Scheduling"
+              value={unscheduledCount}
+              detail="Client packages booked without calendar dates assigned."
+              tone="amber"
+            />
+          )}
           <StatCard
             icon={Clock}
             label="Pending Review"
@@ -280,6 +361,68 @@ const AdminBookings = (): JSX.Element => {
             tone="sky"
           />
         </div>
+
+        {/* Unscheduled Action Banner for Mai's Assistant */}
+        {unscheduledCount > 0 && (
+          <div className="relative overflow-hidden rounded-2xl border-2 border-amber-300 bg-linear-to-r from-amber-50 via-cream to-amber-50/70 p-5 shadow-xs">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3.5">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-300 bg-amber-100 text-amber-800 shadow-2xs">
+                  <AlertTriangle className="h-5 w-5 text-amber-700 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-md bg-amber-200/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900">
+                      Assistant Action Required
+                    </span>
+                    <span className="text-xs font-semibold text-amber-800">
+                      {unscheduledCount} {unscheduledCount === 1 ? 'Package' : 'Packages'} Pending Calendar Times
+                    </span>
+                  </div>
+                  <h3 className="mt-1 font-serif text-lg font-semibold text-charcoal">
+                    Client Consultation Times Not Booked
+                  </h3>
+                  <p className="mt-0.5 text-xs text-warm-gray max-w-2xl leading-relaxed">
+                    Clients have enrolled in coaching packages, but session dates and times are not yet booked on the calendar. Mai's Assistant must reach out to coordinate client availability and lock in their consultation sessions.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                {statusFilter === 'needs_scheduling' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatusFilter('all');
+                      setSearchParams({});
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-white px-3.5 py-2 text-xs font-semibold text-amber-900 shadow-2xs hover:bg-amber-100/50 transition"
+                  >
+                    <span>Showing Unscheduled</span>
+                    <span className="rounded-full bg-amber-200 px-1.5 py-0.2 text-[11px] font-bold">
+                      {unscheduledCount}
+                    </span>
+                    <span className="text-[11px] text-warm-gray ml-1">✕ Clear</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatusFilter('needs_scheduling');
+                      setSearchParams({ filter: 'needs_scheduling' });
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-amber-800 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-amber-900 transition active:scale-95"
+                  >
+                    <span>Filter Unscheduled</span>
+                    <span className="rounded-full bg-amber-600 px-1.5 py-0.2 text-[11px] font-bold text-white">
+                      {unscheduledCount}
+                    </span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Error Alert */}
         {error && (
@@ -313,7 +456,10 @@ const AdminBookings = (): JSX.Element => {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => setIsManualModalOpen(true)}
+                onClick={() => {
+                  setManualBookingInitialData(null);
+                  setIsManualModalOpen(true);
+                }}
                 className="inline-flex items-center gap-1.5 rounded-2xl bg-sage px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-sage-dark"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -415,11 +561,55 @@ const AdminBookings = (): JSX.Element => {
               {/* Status Filter Tabs */}
               <div className="flex flex-wrap items-center gap-1 text-xs">
                 <span className="mr-1 text-[11px] font-semibold text-soft-gray">Status:</span>
-                {(['all', 'pending', 'confirmed', 'completed', 'cancelled'] as const).map((tab) => (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('all');
+                    setSearchParams({});
+                  }}
+                  className={`rounded-xl px-2.5 py-1 font-medium transition ${
+                    statusFilter === 'all'
+                      ? 'bg-charcoal text-white shadow-sm'
+                      : 'bg-cream text-warm-gray hover:bg-beige/50 hover:text-charcoal'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('needs_scheduling');
+                    setSearchParams({ filter: 'needs_scheduling' });
+                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 font-medium transition ${
+                    statusFilter === 'needs_scheduling'
+                      ? 'bg-amber-800 text-white shadow-sm'
+                      : unscheduledCount > 0
+                      ? 'bg-amber-100 text-amber-900 border border-amber-300 font-semibold hover:bg-amber-200'
+                      : 'bg-cream text-warm-gray hover:bg-beige/50 hover:text-charcoal'
+                  }`}
+                >
+                  <span>Needs Scheduling</span>
+                  {unscheduledCount > 0 && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                        statusFilter === 'needs_scheduling'
+                          ? 'bg-amber-950 text-white'
+                          : 'bg-amber-800 text-white'
+                      }`}
+                    >
+                      {unscheduledCount}
+                    </span>
+                  )}
+                </button>
+                {(['pending', 'confirmed', 'completed', 'cancelled'] as const).map((tab) => (
                   <button
                     key={tab}
                     type="button"
-                    onClick={() => setStatusFilter(tab)}
+                    onClick={() => {
+                      setStatusFilter(tab);
+                      setSearchParams({ filter: tab });
+                    }}
                     className={`rounded-xl px-2.5 py-1 font-medium capitalize transition ${
                       statusFilter === tab
                         ? 'bg-charcoal text-white shadow-sm'
@@ -465,11 +655,16 @@ const AdminBookings = (): JSX.Element => {
                 const config = statusConfig[booking.status] ?? statusConfig.pending;
                 const isUpdating = updatingId === booking.id;
                 const isSyncing = syncingId === booking.id;
+                const needsScheduling = isNeedsCalendarScheduling(booking);
 
                 return (
                   <article
                     key={booking.id}
-                    className="flex flex-col justify-between rounded-[24px] border border-beige bg-cream/70 p-5 transition-all hover:bg-cream hover:shadow-xs"
+                    className={`flex flex-col justify-between rounded-[24px] border p-5 transition-all hover:shadow-xs ${
+                      needsScheduling
+                        ? 'border-amber-300 bg-amber-50/30 hover:bg-amber-50/50'
+                        : 'border-beige bg-cream/70 hover:bg-cream'
+                    }`}
                   >
                     <div className="space-y-3">
                       {/* Top Row: Client Info & Appointment Time */}
@@ -484,6 +679,11 @@ const AdminBookings = (): JSX.Element => {
                             >
                               {config.label}
                             </span>
+                            {needsScheduling && (
+                              <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900">
+                                ⚠️ Needs Scheduling
+                              </span>
+                            )}
                           </div>
 
                           <div className="mt-1 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-xs text-warm-gray">
@@ -511,19 +711,69 @@ const AdminBookings = (): JSX.Element => {
                         </div>
 
                         {/* Appointment Time Badge */}
-                        <div className="shrink-0 rounded-2xl border border-beige bg-white px-3.5 py-2 text-right shadow-2xs">
+                        <div
+                          className={`shrink-0 rounded-2xl border px-3.5 py-2 text-right shadow-2xs ${
+                            needsScheduling
+                              ? 'border-amber-300 bg-amber-50/80'
+                              : 'border-beige bg-white'
+                          }`}
+                        >
                           <p className="text-[10px] font-medium uppercase tracking-wider text-warm-gray">
                             Appointment
                           </p>
                           <p className="font-serif text-sm font-semibold text-charcoal">
                             {booking.appointment_date}
                           </p>
-                          <p className="text-xs font-medium text-sage-dark">
-                            {booking.appointment_time}{' '}
+                          <p
+                            className={`text-xs font-semibold ${
+                              needsScheduling ? 'text-amber-800' : 'text-sage-dark'
+                            }`}
+                          >
+                            {booking.appointment_time === 'Unscheduled'
+                              ? '⚠️ Time Unscheduled'
+                              : booking.appointment_time}{' '}
                             <span className="text-[10px] text-warm-gray">({booking.time_zone})</span>
                           </p>
                         </div>
                       </div>
+
+                      {/* Urgent Assistant Scheduling Notice */}
+                      {needsScheduling && (
+                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50/90 px-3 py-2 text-xs text-amber-900">
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4 text-amber-700 shrink-0" />
+                            <div>
+                              <span className="font-semibold text-amber-900">
+                                Calendar Times Not Booked
+                              </span>
+                              <span className="text-amber-800 ml-1 hidden sm:inline">
+                                — Assistant needs to coordinate & book session times
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setManualBookingInitialData({
+                                bookingId: booking.id,
+                                name: booking.parent_name,
+                                email: booking.email,
+                                phone: booking.phone || '',
+                                country: booking.country || '',
+                                childName: booking.child_name || '',
+                                childAge: booking.child_age || '',
+                                appointmentTypeId: booking.appointment_type_id || 'initial',
+                                notes: booking.notes || '',
+                              });
+                              setIsManualModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-lg bg-amber-800 px-2.5 py-1 text-[11px] font-semibold text-white shadow-2xs hover:bg-amber-900 transition active:scale-95"
+                          >
+                            <CalendarPlus className="h-3.5 w-3.5" />
+                            <span>Schedule on Calendar</span>
+                          </button>
+                        </div>
+                      )}
 
                       {/* Middle Row: Session Type, Child Info & Status Select */}
                       <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
@@ -631,7 +881,44 @@ const AdminBookings = (): JSX.Element => {
 
                     {/* Quick Action Triggers */}
                     <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-beige/60 pt-3">
-                      {booking.status === 'pending' && (
+                      {needsScheduling && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setManualBookingInitialData({
+                              bookingId: booking.id,
+                              name: booking.parent_name,
+                              email: booking.email,
+                              phone: booking.phone || '',
+                              country: booking.country || '',
+                              childName: booking.child_name || '',
+                              childAge: booking.child_age || '',
+                              appointmentTypeId: booking.appointment_type_id || 'initial',
+                              notes: booking.notes || '',
+                            });
+                            setIsManualModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-sage px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sage-dark active:scale-95"
+                        >
+                          <CalendarPlus className="h-3.5 w-3.5" />
+                          <span>Schedule on Calendar</span>
+                        </button>
+                      )}
+                      {booking.phone && (
+                        <a
+                          href={`https://wa.me/${booking.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                            `Hello ${booking.parent_name}, this is Mai's assistant reaching out regarding your ${booking.appointment_type_title}. I am coordinating consultation dates and times for you with Mai. What days and times work best for your first session?`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-800 shadow-2xs transition hover:bg-emerald-100"
+                          title="Message client on WhatsApp to coordinate consultation dates"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>WhatsApp Client</span>
+                        </a>
+                      )}
+                      {booking.status === 'pending' && !needsScheduling && (
                         <button
                           type="button"
                           disabled={isUpdating}
@@ -720,8 +1007,12 @@ const AdminBookings = (): JSX.Element => {
 
       <AdminManualBookingModal
         isOpen={isManualModalOpen}
-        onClose={() => setIsManualModalOpen(false)}
+        onClose={() => {
+          setIsManualModalOpen(false);
+          setManualBookingInitialData(null);
+        }}
         onCreated={() => void fetchBookings()}
+        initialData={manualBookingInitialData}
       />
 
       <AdminAvailabilityModal

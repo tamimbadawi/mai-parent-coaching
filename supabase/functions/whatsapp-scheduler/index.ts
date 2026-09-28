@@ -54,8 +54,8 @@ Deno.serve(async (request: Request) => {
         .eq('id', userData.user.id)
         .maybeSingle();
 
-      if (!profile || profile.role !== 'admin') {
-        return json({ error: 'Forbidden: Admin or service role required.' }, 403);
+      if (!profile || (profile.role !== 'admin' && profile.role !== 'assistant')) {
+        return json({ error: 'Forbidden: Admin, Assistant, or service role required.' }, 403);
       }
     }
 

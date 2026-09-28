@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 
 interface ProtectedRouteProps {
   children: JSX.Element;
-  requiredRole?: 'student' | 'admin';
+  requiredRole?: 'student' | 'admin' | 'assistant';
   redirectTo?: string;
 }
 
@@ -23,13 +23,16 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo }: ProtectedRoutePr
     return <Navigate to={redirectTo || '/auth/login'} replace state={{ from: location.pathname }} />;
   }
 
-  const isAdmin =
+  const isStaff =
     profile?.role === 'admin' ||
+    profile?.role === 'assistant' ||
     user.user_metadata?.role === 'admin' ||
+    user.user_metadata?.role === 'assistant' ||
     user.app_metadata?.role === 'admin' ||
+    user.app_metadata?.role === 'assistant' ||
     user.email?.toLowerCase() === 'tamimbadawi@gmail.com';
 
-  if (!isAdmin) {
+  if (!isStaff) {
     const rawPhone = profile?.phone || user.user_metadata?.phone || '';
     const cleanDigits = rawPhone.replace(/\D/g, '');
     const hasPhone = Boolean(rawPhone && cleanDigits.length >= 7);
@@ -40,11 +43,11 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo }: ProtectedRoutePr
     }
   }
 
-  if (requiredRole === 'admin' && !isAdmin) {
+  if (requiredRole === 'admin' && !isStaff) {
     return <Navigate to="/dashboard" replace state={{ from: location.pathname }} />;
   }
 
-  if (!requiredRole && isAdmin && location.pathname.startsWith('/dashboard')) {
+  if (!requiredRole && isStaff && location.pathname.startsWith('/dashboard')) {
     return <Navigate to="/admin" replace state={{ from: location.pathname }} />;
   }
 

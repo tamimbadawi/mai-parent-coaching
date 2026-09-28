@@ -1,4 +1,4 @@
-import type { Service, Course, BlogPost, Testimonial, FAQ, FreeResource, AppointmentType, ShopProduct, CommunityPost, DiscoveryTopic, IntakeOption, CoachingPackage, GroupPackage } from '../types';
+import type { Service, Course, BlogPost, Testimonial, FAQ, FreeResource, AppointmentType, ShopProduct, CommunityPost, DiscoveryTopic, IntakeOption, CoachingPackage, GroupPackage, AdvisoryFocusArea, AdvisoryScope, AdvisoryCadence } from '../types';
 import { courseVideoIds } from './courseVideoIds';
 
 export const services: Service[] = [
@@ -513,6 +513,184 @@ export function suggestPackage(needId: string, durationId: string): CoachingPack
   if (needIdx === -1 || durIdx === -1) return undefined;
   const packageId = packageSuggestionMatrix[needIdx]?.[durIdx];
   return coachingPackages.find((p) => p.id === packageId);
+}
+
+export const advisoryFocusAreas: AdvisoryFocusArea[] = [
+  {
+    id: 'dysregulation',
+    title: 'Affect Dysregulation & Storms',
+    sub: 'Evidence-based co-regulation protocols for acute meltdowns and impulse control',
+    clinicalNote: 'Affect storms reflect neurobiological overwhelm rather than defiance. We install proactive co-regulation frameworks.',
+    toneTheme: 'mint',
+  },
+  {
+    id: 'burnout',
+    title: 'Executive Burnout & Nervous System Care',
+    sub: 'Restoring parental capacity, reducing chronic reactivity, and resolving guilt',
+    clinicalNote: 'Sustainable parenting requires a regulated adult nervous system. Coaching replenishes your reserves and breaks reactivity loops.',
+    toneTheme: 'gold',
+  },
+  {
+    id: 'boundaries',
+    title: 'Boundary Architecture & Authority',
+    sub: 'Holding non-negotiable limits with warmth, absolute clarity, and zero escalation',
+    clinicalNote: 'Authority and empathy are complementary. We calibrate precise verbal and somatic boundaries that hold without escalation.',
+    toneTheme: 'mint',
+  },
+  {
+    id: 'circadian',
+    title: 'Circadian Rhythms, Sleep & Transitions',
+    sub: 'Restructuring bedtime resistance and high-friction daily thresholds',
+    clinicalNote: 'Transition friction dissolves when sensory and relational safety are engineered into the family schedule.',
+    toneTheme: 'blue',
+  },
+  {
+    id: 'anxiety',
+    title: 'Child Anxiety, Somatic Fears & Autonomy',
+    sub: 'Expanding emotional tolerance, navigating school resistance, and building courage',
+    clinicalNote: 'Anxious temperaments require steady co-regulation and progressive exposure rather than rationalized reassurance.',
+    toneTheme: 'blue',
+  },
+  {
+    id: 'siblings',
+    title: 'Sibling Systems & Family Dynamics',
+    sub: 'Deconstructing chronic conflict, rivalry, and competing emotional needs',
+    clinicalNote: 'Sibling friction shifts rapidly once each child feels distinct developmental recognition and emotional equity.',
+    toneTheme: 'blue',
+  },
+  {
+    id: 'digital',
+    title: 'Digital Ergonomics & Attention Health',
+    sub: 'Strategic boundary design around technology, gaming, and neuro-attentional focus',
+    clinicalNote: 'Digital resistance stems from neurological friction during task switching. We install calm, predictable media boundaries.',
+    toneTheme: 'mint',
+  },
+  {
+    id: 'generational',
+    title: 'Transgenerational Patterns & Mastery',
+    sub: 'Interrupting legacy conditioning, trigger mastery, and conscious calm',
+    clinicalNote: 'Conscious parenting is an advanced inner practice. We deconstruct subconscious triggers to ensure you lead from presence.',
+    toneTheme: 'gold',
+  },
+  {
+    id: 'coparenting',
+    title: 'Co-Parenting Alignment & Governance',
+    sub: 'Unifying divergent parenting philosophies into a synchronized family strategy',
+    clinicalNote: 'When parental approaches align, children settle into psychological safety. We build a unified executive roadmap.',
+    toneTheme: 'mint',
+  },
+];
+
+export const advisoryScopes: AdvisoryScope[] = [
+  {
+    id: 'diagnostic',
+    title: 'Targeted Diagnostic & Strategy Blueprint',
+    duration: '1 Consultation · Rapid Action Plan',
+    sub: 'Targeted clinical assessment focused on an immediate developmental hurdle or acute family transition.',
+    targetPackageId: 'single',
+  },
+  {
+    id: 'sprint',
+    title: 'Focused Advisory Sprint',
+    duration: '2 Consultations · 4 Weeks',
+    sub: 'Two-stage clinical engagement: initial diagnostic roadmap, followed by field observation and protocol calibration.',
+    targetPackageId: 'starter',
+  },
+  {
+    id: 'realignment',
+    title: 'Core Behavioral & Systemic Realignment',
+    duration: '4 Consultations · 8 Weeks (Recommended)',
+    sub: 'Structured bi-weekly advisory to dismantle conditioned reactivity, rewire emotional rhythms, and anchor lasting family calm.',
+    targetPackageId: 'growth',
+  },
+  {
+    id: 'executive-reset',
+    title: 'Executive Coaching & Deep Nervous System Reset',
+    duration: '8 Consultations · 16 Weeks',
+    sub: 'High-touch clinical partnership for chronic parent burnout, complex neuro-affective challenges, and transgenerational pattern healing.',
+    targetPackageId: 'deep-work',
+  },
+  {
+    id: 'concierge',
+    title: 'Concierge Family Transformation & Governance',
+    duration: '12 Consultations · 6 Months',
+    sub: 'Comprehensive executive partnership across six months, providing ongoing advisory through all developmental milestones and transitions.',
+    targetPackageId: 'full',
+  },
+];
+
+export const advisoryCadences: AdvisoryCadence[] = [
+  {
+    id: 'independent',
+    label: 'Strategic Consultations with Independent Execution',
+    sub: 'Direct 60-minute advisory consultations; independent implementation at your family’s natural rhythm.',
+  },
+  {
+    id: 'action-maps',
+    label: 'Consultations + Bespoke Protocol Blueprints',
+    sub: 'Bi-weekly advisory consultations accompanied by written Action Maps and customized verbal scripts after each session.',
+  },
+  {
+    id: 'concierge-voice',
+    label: 'High-Touch Partnership + Priority Direct Voice Advisory',
+    sub: 'Weekly consultations paired with priority WhatsApp voice advisory between calls for immediate real-time calibration.',
+  },
+];
+
+export function getAdvisoryRecommendation(
+  scopeId: string,
+  _cadenceId?: string,
+  _focusAreaIds?: string[]
+): {
+  recommendedPackage: CoachingPackage;
+  rationale: string;
+  deliverables: string[];
+} {
+  const scope = advisoryScopes.find((s) => s.id === scopeId);
+  const pkgId = scope ? scope.targetPackageId : 'growth';
+  const pkg = coachingPackages.find((p) => p.id === pkgId) || coachingPackages[2];
+
+  let rationale = '';
+  switch (pkg.id) {
+    case 'single':
+      rationale =
+        'When addressing a localized transition or immediate developmental hurdle, an intensive diagnostic consultation provides targeted clinical clarity, actionable communication scripts, and strategic reassurance without necessitating an extended commitment.';
+      break;
+    case 'starter':
+      rationale =
+        'A 2-consultation advisory sprint provides an initial clinical deep-dive to establish your customized protocol, followed by a dedicated recalibration session after field-testing the tools in your home environment.';
+      break;
+    case 'growth':
+      rationale =
+        'Rewiring conditioned neurological responses in children requires iterative calibration. A 4-session engagement across 8 weeks provides the precise container needed to implement initial co-regulation protocols in week one, observe real-world home responses, address resistance in sessions two and three, and permanently consolidate sustainable family rhythms.';
+      break;
+    case 'deep-work':
+      rationale =
+        'Addressing persistent nervous system exhaustion and chronic parental reactivity cannot be rushed. The 8-session Deep Work engagement provides an unhurried, evidence-based container to systematically replenish parental reserves while restructuring household dynamics, supported by priority direct voice advisory between sessions.';
+      break;
+    case 'full':
+      rationale =
+        'A dedicated 6-month concierge partnership offering comprehensive clinical oversight, developmental milestone navigation, and multi-child systemic harmony with total peace of mind.';
+      break;
+    default:
+      rationale =
+        'A tailored evidence-based container calibrated to your family’s unique developmental dynamics.';
+  }
+
+  const deliverables = [
+    'Private 60-minute confidential consultations via secure Google Meet',
+    'Customized Clinical Action Maps & verbatim scripts delivered after each session',
+    'Somatic and co-regulation audio tools for high-stress family moments',
+    pkg.sessions >= 8
+      ? 'Priority direct WhatsApp voice advisory access between consultations'
+      : 'Full scheduling autonomy and rescheduling flexibility across your dashboard',
+  ];
+
+  return {
+    recommendedPackage: pkg,
+    rationale,
+    deliverables,
+  };
 }
 
 export const shopProducts: ShopProduct[] = [

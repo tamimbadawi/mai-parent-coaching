@@ -12,6 +12,7 @@ import {
   Loader2,
   Calendar,
   AlertCircle,
+  AlertTriangle,
   UserCheck,
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -23,6 +24,7 @@ import { BookingRescheduleModal } from './components/BookingRescheduleModal';
 import { BookingEditModal } from './components/BookingEditModal';
 import { AdminManualBookingModal } from './components/AdminManualBookingModal';
 import type { Booking } from '../../types';
+import { isNeedsCalendarScheduling } from './AdminBookings';
 
 interface Stats {
   totalUsers: number;
@@ -153,6 +155,12 @@ const AdminDashboard = (): JSX.Element => {
     );
   }, [bookings, todayStr]);
 
+  const unscheduledBookings = useMemo(
+    () => bookings.filter(isNeedsCalendarScheduling),
+    [bookings]
+  );
+  const unscheduledCount = unscheduledBookings.length;
+
   const bookingStats = useMemo(() => {
     const pending = bookings.filter((b) => b.status === 'pending').length;
     const confirmed = bookings.filter((b) => b.status === 'confirmed').length;
@@ -161,8 +169,9 @@ const AdminDashboard = (): JSX.Element => {
       pending,
       confirmed,
       todayCount: todaySessions.length,
+      unscheduledCount,
     };
-  }, [bookings, todaySessions.length]);
+  }, [bookings, todaySessions.length, unscheduledCount]);
 
   return (
     <AdminLayout
@@ -208,8 +217,49 @@ const AdminDashboard = (): JSX.Element => {
           </div>
         </div>
 
-        {/* ── 2. THREE RESTRAINED SUMMARY CARDS ───────────────────────── */}
-        <div className="grid gap-4 sm:grid-cols-3">
+        {/* ── URGENT ASSISTANT ACTION BANNER: UNSCHEDULED SESSIONS ────────── */}
+        {unscheduledCount > 0 && (
+          <div className="relative overflow-hidden rounded-2xl border-2 border-amber-300 bg-linear-to-r from-amber-50 via-cream to-amber-50/70 p-5 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-300 bg-amber-100 text-amber-800 shadow-2xs">
+                  <AlertTriangle className="h-5 w-5 text-amber-700 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-md bg-amber-200/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900">
+                      Assistant Action Required
+                    </span>
+                    <span className="text-xs font-semibold text-amber-800">
+                      {unscheduledCount} {unscheduledCount === 1 ? 'Package' : 'Packages'} Pending Calendar Times
+                    </span>
+                  </div>
+                  <h3 className="mt-1 font-serif text-lg font-semibold text-charcoal">
+                    Client Consultation Times Not Booked
+                  </h3>
+                  <p className="mt-0.5 text-xs text-warm-gray leading-relaxed max-w-2xl">
+                    Clients have enrolled in coaching packages without assigned session times. Mai's Assistant needs to coordinate client availability and lock in their consultation dates.
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                to="/admin/bookings?filter=needs_scheduling"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-800 px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-amber-900 transition-colors shrink-0"
+              >
+                <span>Resolve Unscheduled ({unscheduledCount})</span>
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* ── 2. SUMMARY CARDS ───────────────────────── */}
+        <div
+          className={`grid gap-4 sm:grid-cols-2 ${
+            unscheduledCount > 0 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'
+          }`}
+        >
           {/* Card 1: Today's Sessions */}
           <div className="rounded-2xl border border-beige/80 bg-white p-5 shadow-xs transition-colors hover:border-beige">
             <div className="flex items-center justify-between">
@@ -234,7 +284,32 @@ const AdminDashboard = (): JSX.Element => {
             </p>
           </div>
 
-          {/* Card 2: New Enquiries */}
+          {/* Card 2: Action Required for Unscheduled Packages */}
+          {unscheduledCount > 0 && (
+            <Link
+              to="/admin/bookings?filter=needs_scheduling"
+              className="group rounded-2xl border-2 border-amber-300/80 bg-amber-50/50 p-5 shadow-xs transition-colors hover:border-amber-400 block"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-800 border border-amber-200">
+                  <AlertTriangle className="h-4 w-4 text-amber-700" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 group-hover:text-amber-950 transition-colors">
+                  Action Required
+                </span>
+              </div>
+              <p className="mt-4 font-serif text-3xl sm:text-4xl text-amber-900 font-normal">
+                {unscheduledCount}
+              </p>
+              <p className="mt-1.5 text-xs text-amber-900 leading-relaxed font-medium">
+                {unscheduledCount === 1
+                  ? '1 package needs calendar scheduling'
+                  : `${unscheduledCount} packages need calendar scheduling`}
+              </p>
+            </Link>
+          )}
+
+          {/* Card 3: New Enquiries */}
           <Link
             to="/admin/messages"
             className="group rounded-2xl border border-beige/80 bg-white p-5 shadow-xs transition-colors hover:border-beige block"
@@ -259,7 +334,7 @@ const AdminDashboard = (): JSX.Element => {
             </p>
           </Link>
 
-          {/* Card 3: Registered Clients */}
+          {/* Card 4: Registered Clients */}
           <Link
             to="/admin/crm"
             className="group rounded-2xl border border-beige/80 bg-white p-5 shadow-xs transition-colors hover:border-beige block"

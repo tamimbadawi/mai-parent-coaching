@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 type ApprovalStatus = 'pending' | 'approved' | 'rejected';
-type UserRole = 'student' | 'admin';
+type UserRole = 'student' | 'admin' | 'assistant';
 
 type CreateUserPayload = {
   action: 'createUser';
@@ -115,8 +115,8 @@ Deno.serve(async (request) => {
       return json({ step: 'profile_fetch', error: 'No profile row found', userId, diagnostics }, 404);
     }
 
-    if (profile.role !== 'admin') {
-      return json({ step: 'role_check', error: 'Not an admin', profile, diagnostics }, 403);
+    if (profile.role !== 'admin' && profile.role !== 'assistant') {
+      return json({ step: 'role_check', error: 'Not authorized (requires admin or assistant role)', profile, diagnostics }, 403);
     }
 
     // ── Step 4: all good — parse action and run it ─────────────────────────

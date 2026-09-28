@@ -236,8 +236,8 @@ Deno.serve(async (request) => {
         .eq('id', userData.user.id)
         .maybeSingle();
 
-      if (profile?.role !== 'admin') {
-        return json({ error: 'Forbidden. Admin role required.' }, 403);
+      if (profile?.role !== 'admin' && profile?.role !== 'assistant') {
+        return json({ error: 'Forbidden. Admin or Assistant role required.' }, 403);
       }
 
       // Test FreeBusy query on Google Calendar

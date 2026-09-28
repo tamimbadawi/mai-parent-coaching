@@ -1284,14 +1284,6 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Your Name</label>
-              <input type="text" class="form-input" value="Lina Mansour" readonly>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Your Email Address</label>
-              <input type="email" class="form-input" value="lina@example.com" readonly>
-            </div>
-            <div class="form-group">
               <label class="form-label">A note for Mai (optional)</label>
               <input type="text" class="form-input" placeholder="What would you like to share before we meet?">
             </div>
@@ -1562,14 +1554,6 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Your Name</label>
-              <input type="text" class="form-input" value="Lina Mansour" readonly>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Your Email Address</label>
-              <input type="email" class="form-input" value="lina@example.com" readonly>
-            </div>
-            <div class="form-group">
               <label class="form-label">A note for Mai (optional)</label>
               <input type="text" class="form-input" placeholder="What are we working on this week?">
             </div>
@@ -1593,8 +1577,11 @@
               <span>Confirm 60-min Session with Mai</span>
               <span>→</span>
             </button>
-            <button type="button" onclick="openPackageModal()" style="margin-top: 8px; width: 100%; border: 1px dashed var(--sage); background: var(--sage-wash); color: var(--sage-dark); border-radius: 99px; padding: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
-              🎁 Want a package? View Multi-Session Plans (Save 5%–30%)
+            <button type="button" onclick="openQuizModal()" style="margin-top: 8px; width: 100%; border: 1.5px solid var(--sage); background: var(--sage-wash); color: var(--sage-dark); border-radius: 99px; padding: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+              ✨ Which package fits us? Take 1-min fit quiz
+            </button>
+            <button type="button" onclick="openPackageModal()" style="margin-top: 4px; width: 100%; border: 1px dashed var(--line); background: #fff; color: var(--ink-2); border-radius: 99px; padding: 5px; font-size: 10.5px; font-weight: 600; cursor: pointer;">
+              🎁 View All Multi-Session Plans (Save 5%–30%)
             </button>
           </div>
         </div>
@@ -1721,7 +1708,7 @@
           <span style="font-size: 9.5px; color: var(--ink-2); display: block; margin-top: 2px;">Use in 16 wks</span>
         </div>
         <div style="border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px; background: var(--surface); text-align: center;">
-          <span style="font-size: 9.5px; font-weight: 700; color: var(--terracotta-dark); text-transform: uppercase;">Best · Save 30%</span>
+          <span style="font-size: 9.5px; font-weight: 700; color: var(--sage-dark); text-transform: uppercase;">Best · Save 30%</span>
           <h5 style="font-size: 12px; font-weight: 700; color: var(--charcoal); margin: 3px 0;">Full (12)</h5>
           <div style="font-size: 13px; font-weight: 800; color: var(--charcoal);">EGP 29,400</div>
           <span style="font-size: 9.5px; color: var(--ink-2); display: block; margin-top: 2px;">Use in 24 wks</span>
@@ -1731,6 +1718,196 @@
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
         <button type="button" class="btn-confirm" style="width: auto; padding: 8px 18px; font-size: 12px;" onclick="closePackageModal()">
           Continue Booking Session
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Package Fit Assessment Quiz Modal (Detailed, not pushy, non-scrolling) -->
+  <div id="quizModalOverlay" class="pkg-modal-overlay" onclick="closeQuizModal(event)">
+    <div class="pkg-modal" style="max-width: 620px;" onclick="event.stopPropagation()">
+      <!-- Quiz Header -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid var(--line); pb-2;">
+        <div>
+          <span class="door-tag" style="background: var(--sage-wash); color: var(--sage-dark);">Confidential Clinical Diagnostic</span>
+          <h3 style="font-family: var(--font-serif); font-size: 18px; font-weight: 700; color: var(--charcoal); margin-top: 2px;">
+            Determine Your Family’s Advisory Scope
+          </h3>
+          <p style="font-size: 11px; color: var(--ink-2);">
+            Aligning your clinical objectives with the appropriate advisory depth and clinician access.
+          </p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="quizStepIndicator" style="font-size: 11px; font-weight: 600; color: var(--ink-2);">Step 1 of 3</span>
+          <button type="button" onclick="closeQuizModal()" style="border:none;background:none;font-size:18px;color:var(--ink-3);cursor:pointer;padding:2px 6px;">✕</button>
+        </div>
+      </div>
+
+      <!-- Step 1: Clinical Priorities -->
+      <div id="quizStep1">
+        <h4 style="font-family: var(--font-serif); font-size: 14px; font-weight: 700; color: var(--charcoal); margin-bottom: 3px;">
+          Core Clinical & Developmental Priorities
+        </h4>
+        <p style="font-size: 11px; color: var(--ink-2); margin-bottom: 10px;">
+          Select the key dynamics where your family requires structured guidance. Most clients select two or three.
+        </p>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px;">
+          <!-- 1: Affect Dysregulation (Mint) -->
+          <div class="door-card selected" style="padding: 7px 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 12px;" onclick="this.classList.toggle('selected')">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--sage-wash); color: var(--sage-dark); display: grid; place-items: center; font-size: 13px; flex-shrink: 0;">⚡</div>
+            <div style="min-width: 0;">
+              <b style="font-size: 11px; display: block; color: var(--charcoal); line-height: 1.2;">Affect Dysregulation</b>
+              <span style="font-size: 9.5px; color: var(--ink-2); display: block;">Meltdowns & impulse control</span>
+            </div>
+          </div>
+          <!-- 2: Executive Burnout (Gold) -->
+          <div class="door-card" style="padding: 7px 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 12px;" onclick="this.classList.toggle('selected')">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--gold-wash); color: #8C6819; display: grid; place-items: center; font-size: 13px; flex-shrink: 0;">🔋</div>
+            <div style="min-width: 0;">
+              <b style="font-size: 11px; display: block; color: var(--charcoal); line-height: 1.2;">Executive Burnout</b>
+              <span style="font-size: 9.5px; color: var(--ink-2); display: block;">Nervous system replenishment</span>
+            </div>
+          </div>
+          <!-- 3: Boundary Architecture (Mint) -->
+          <div class="door-card" style="padding: 7px 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 12px;" onclick="this.classList.toggle('selected')">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--sage-wash); color: var(--sage-dark); display: grid; place-items: center; font-size: 13px; flex-shrink: 0;">🛡️</div>
+            <div style="min-width: 0;">
+              <b style="font-size: 11px; display: block; color: var(--charcoal); line-height: 1.2;">Boundary Architecture</b>
+              <span style="font-size: 9.5px; color: var(--ink-2); display: block;">Calm, non-negotiable limits</span>
+            </div>
+          </div>
+          <!-- 4: Circadian & Sleep (Blue) -->
+          <div class="door-card" style="padding: 7px 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 12px;" onclick="this.classList.toggle('selected')">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--blue-wash); color: var(--blue); display: grid; place-items: center; font-size: 13px; flex-shrink: 0;">🌙</div>
+            <div style="min-width: 0;">
+              <b style="font-size: 11px; display: block; color: var(--charcoal); line-height: 1.2;">Circadian & Sleep</b>
+              <span style="font-size: 9.5px; color: var(--ink-2); display: block;">Restructuring threshold battles</span>
+            </div>
+          </div>
+          <!-- 5: Child Anxiety (Blue) -->
+          <div class="door-card" style="padding: 7px 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 12px;" onclick="this.classList.toggle('selected')">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--blue-wash); color: var(--blue); display: grid; place-items: center; font-size: 13px; flex-shrink: 0;">🤍</div>
+            <div style="min-width: 0;">
+              <b style="font-size: 11px; display: block; color: var(--charcoal); line-height: 1.2;">Child Anxiety & Fears</b>
+              <span style="font-size: 9.5px; color: var(--ink-2); display: block;">Expanding window of tolerance</span>
+            </div>
+          </div>
+          <!-- 6: Sibling Systems (Blue) -->
+          <div class="door-card" style="padding: 7px 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 12px;" onclick="this.classList.toggle('selected')">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--blue-wash); color: var(--blue); display: grid; place-items: center; font-size: 13px; flex-shrink: 0;">👥</div>
+            <div style="min-width: 0;">
+              <b style="font-size: 11px; display: block; color: var(--charcoal); line-height: 1.2;">Sibling Systems</b>
+              <span style="font-size: 9.5px; color: var(--ink-2); display: block;">Deconstructing chronic rivalry</span>
+            </div>
+          </div>
+          <!-- 7: Digital Ergonomics (Mint) -->
+          <div class="door-card" style="padding: 7px 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 12px;" onclick="this.classList.toggle('selected')">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--sage-wash); color: var(--sage-dark); display: grid; place-items: center; font-size: 13px; flex-shrink: 0;">💻</div>
+            <div style="min-width: 0;">
+              <b style="font-size: 11px; display: block; color: var(--charcoal); line-height: 1.2;">Digital Ergonomics</b>
+              <span style="font-size: 9.5px; color: var(--ink-2); display: block;">Attention & screen balance</span>
+            </div>
+          </div>
+          <!-- 8: Transgenerational Patterns (Gold) -->
+          <div class="door-card" style="padding: 7px 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 12px;" onclick="this.classList.toggle('selected')">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--gold-wash); color: #8C6819; display: grid; place-items: center; font-size: 13px; flex-shrink: 0;">⭐</div>
+            <div style="min-width: 0;">
+              <b style="font-size: 11px; display: block; color: var(--charcoal); line-height: 1.2;">Transgenerational</b>
+              <span style="font-size: 9.5px; color: var(--ink-2); display: block;">Conscious calm & mastery</span>
+            </div>
+          </div>
+          <!-- 9: Co-Parenting Alignment (Mint) -->
+          <div class="door-card" style="padding: 7px 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 12px;" onclick="this.classList.toggle('selected')">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--sage-wash); color: var(--sage-dark); display: grid; place-items: center; font-size: 13px; flex-shrink: 0;">🏛️</div>
+            <div style="min-width: 0;">
+              <b style="font-size: 11px; display: block; color: var(--charcoal); line-height: 1.2;">Co-Parenting Alignment</b>
+              <span style="font-size: 9.5px; color: var(--ink-2); display: block;">Synchronized family roadmap</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clinical Note Callout -->
+        <div style="display: flex; align-items: center; gap: 8px; background: var(--gold-wash); border: 1px solid rgba(230, 185, 77, 0.4); border-radius: 12px; padding: 7px 12px; margin-bottom: 6px;">
+          <span style="width: 20px; height: 20px; border-radius: 50%; background: #E6B94D; color: #2D2A28; display: grid; place-items: center; font-size: 11px; flex-shrink: 0;">✨</span>
+          <p style="font-size: 11px; color: var(--charcoal); margin: 0;">Clinical Confidentiality: Mai tailors each advisory protocol specifically to your family’s dynamic and developmental milestones.</p>
+        </div>
+      </div>
+
+      <!-- Step 2: Depth & Pacing -->
+      <div id="quizStep2" style="display: none;">
+        <h4 style="font-family: var(--font-serif); font-size: 14px; font-weight: 700; color: var(--charcoal); margin-bottom: 3px;">
+          Engagement Scope & Preferred Pacing
+        </h4>
+        <p style="font-size: 11px; color: var(--ink-2); margin-bottom: 10px;">
+          Select the advisory depth and between-consultation support architecture tailored to your schedule.
+        </p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+          <div style="border: 1px solid var(--line); border-radius: 12px; padding: 8px; background: #fff; cursor: pointer;" onclick="setQuizDepth('growth', this)">
+            <b style="font-size: 11px; color: var(--charcoal); display: block;">Core Behavioral Realignment (4 Consultations)</b>
+            <span style="font-size: 9.5px; color: var(--ink-2);">Recommended · Bi-weekly pacing across 8 weeks to anchor lasting calm</span>
+          </div>
+          <div style="border: 1px solid var(--line); border-radius: 12px; padding: 8px; background: #fff; cursor: pointer;" onclick="setQuizDepth('starter', this)">
+            <b style="font-size: 11px; color: var(--charcoal); display: block;">Focused Advisory Sprint (2 Consultations)</b>
+            <span style="font-size: 9.5px; color: var(--ink-2);">Initial diagnostic protocol + follow-up calibration</span>
+          </div>
+          <div style="border: 1px solid var(--line); border-radius: 12px; padding: 8px; background: #fff; cursor: pointer;" onclick="setQuizDepth('deep-work', this)">
+            <b style="font-size: 11px; color: var(--charcoal); display: block;">Executive Coaching & Deep Reset (8 Consultations)</b>
+            <span style="font-size: 9.5px; color: var(--ink-2);">High-touch clinical container with direct priority voice advisory</span>
+          </div>
+          <div style="border: 1px solid var(--line); border-radius: 12px; padding: 8px; background: #fff; cursor: pointer;" onclick="setQuizDepth('single', this)">
+            <b style="font-size: 11px; color: var(--charcoal); display: block;">Targeted Diagnostic Blueprint (1 Consultation)</b>
+            <span style="font-size: 9.5px; color: var(--ink-2);">Rapid strategic clarity for a single acute hurdle</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Recommendation & Switcher -->
+      <div id="quizStep3" style="display: none;">
+        <div style="background: var(--sage-wash); border: 1.5px solid rgba(107, 142, 123, 0.4); border-radius: 14px; padding: 12px; margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 9.5px; font-weight: 700; text-transform: uppercase; color: var(--sage-dark);">Recommended Advisory Framework</span>
+            <span id="quizBadge" style="background: rgba(107, 142, 123, 0.2); color: var(--sage-dark); font-size: 9px; font-weight: 700; border-radius: 99px; padding: 2px 8px;">Suggested Container</span>
+          </div>
+          <h4 id="quizRecTitle" style="font-family: var(--font-serif); font-size: 16px; font-weight: 700; color: var(--charcoal); margin: 0 0 4px 0;">
+            Growth Package: Core Behavioral Realignment (4 Sessions · 11,200 EGP)
+          </h4>
+          <p id="quizRecRationale" style="font-size: 11px; color: var(--ink-2); line-height: 1.4; margin: 0;">
+            Rewiring conditioned neurological responses in children requires iterative calibration. A 4-session engagement across 8 weeks provides the precise container needed to implement initial co-regulation protocols in week one, observe real-world home responses, address resistance in sessions two and three, and permanently consolidate sustainable family rhythms.
+          </p>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 10.5px; font-weight: 700; color: var(--charcoal);">Adjust engagement scope anytime:</span>
+            <span style="font-size: 9.5px; color: var(--ink-3);">Strict Discretion</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;">
+            <button type="button" class="quiz-pkg-btn" onclick="selectQuizPackage('single', 'Diagnostic Blueprint (1 Consultation)', 'Targeted diagnostic assessment for an immediate transition.')" style="border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 2px; font-size: 10px; cursor: pointer;">
+              Diagnostic (1)
+            </button>
+            <button type="button" class="quiz-pkg-btn" onclick="selectQuizPackage('starter', 'Advisory Sprint (2 Consultations)', 'Two-stage clinical protocol and refinement.')" style="border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 2px; font-size: 10px; cursor: pointer;">
+              Sprint (2)
+            </button>
+            <button type="button" class="quiz-pkg-btn selected" id="quizPkgBtnGrowth" onclick="selectQuizPackage('growth', 'Core Realignment (4 Consultations)', 'Bi-weekly clinical container across 8 weeks.')" style="border: 1.5px solid var(--sage); background: #fff; font-weight: 700; color: var(--sage-dark); border-radius: 8px; padding: 6px 2px; font-size: 10px; cursor: pointer;">
+              Core (4)
+            </button>
+            <button type="button" class="quiz-pkg-btn" onclick="selectQuizPackage('deep-work', 'Executive Reset (8 Consultations)', 'High-touch clinical partnership with priority voice advisory.')" style="border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 2px; font-size: 10px; cursor: pointer;">
+              Executive (8)
+            </button>
+            <button type="button" class="quiz-pkg-btn" onclick="selectQuizPackage('full', 'Concierge Transformation (12 Consultations)', 'Comprehensive multi-generational governance across 6 months.')" style="border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 2px; font-size: 10px; cursor: pointer;">
+              Concierge (12)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quiz Nav -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-t: 1px solid var(--line); pt-2; margin-top: 10px;">
+        <button type="button" onclick="prevQuizStep()" id="quizBackBtn" style="border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 6px 14px; font-size: 11px; font-weight: 600; color: var(--ink-2); cursor: pointer;">
+          Cancel
+        </button>
+        <button type="button" onclick="nextQuizStep()" id="quizNextBtn" class="btn-confirm" style="width: auto; padding: 6px 16px; font-size: 11px;">
+          Continue →
         </button>
       </div>
     </div>
@@ -1787,6 +1964,72 @@
     function closePackageModal(e) {
       if (e && e.target !== document.getElementById('packageModalOverlay') && e.target.tagName !== 'BUTTON') return;
       document.getElementById('packageModalOverlay').style.display = 'none';
+    }
+
+    let currentQuizStep = 1;
+    function openQuizModal() {
+      currentQuizStep = 1;
+      updateQuizStepUI();
+      document.getElementById('quizModalOverlay').style.display = 'grid';
+    }
+
+    function closeQuizModal(e) {
+      if (e && e.target !== document.getElementById('quizModalOverlay') && e.target.tagName !== 'BUTTON') return;
+      document.getElementById('quizModalOverlay').style.display = 'none';
+    }
+
+    function nextQuizStep() {
+      if (currentQuizStep < 3) {
+        currentQuizStep++;
+        updateQuizStepUI();
+      } else {
+        closeQuizModal();
+      }
+    }
+
+    function prevQuizStep() {
+      if (currentQuizStep > 1) {
+        currentQuizStep--;
+        updateQuizStepUI();
+      } else {
+        closeQuizModal();
+      }
+    }
+
+    function updateQuizStepUI() {
+      document.getElementById('quizStep1').style.display = currentQuizStep === 1 ? 'block' : 'none';
+      document.getElementById('quizStep2').style.display = currentQuizStep === 2 ? 'block' : 'none';
+      document.getElementById('quizStep3').style.display = currentQuizStep === 3 ? 'block' : 'none';
+      document.getElementById('quizStepIndicator').textContent = `Step ${currentQuizStep} of 3`;
+      document.getElementById('quizBackBtn').textContent = currentQuizStep === 1 ? 'Cancel' : 'Back';
+      document.getElementById('quizNextBtn').textContent = currentQuizStep === 3 ? 'Select Pathway ✓' : 'Continue →';
+    }
+
+    function selectQuizPackage(pkgId, title, rationale) {
+      document.querySelectorAll('.quiz-pkg-btn').forEach(btn => {
+        btn.style.border = '1px solid var(--line)';
+        btn.style.background = 'var(--surface)';
+        btn.style.fontWeight = 'normal';
+        btn.style.color = 'var(--charcoal)';
+      });
+      if (window.event && window.event.currentTarget) {
+        window.event.currentTarget.style.border = '1.5px solid var(--sage)';
+        window.event.currentTarget.style.background = '#fff';
+        window.event.currentTarget.style.fontWeight = '700';
+        window.event.currentTarget.style.color = 'var(--sage-dark)';
+      }
+      document.getElementById('quizRecTitle').textContent = title;
+      document.getElementById('quizRecRationale').textContent = rationale;
+      document.getElementById('quizBadge').textContent = 'Selected Fit';
+    }
+
+    function setQuizDepth(depthId, el) {
+      el.parentElement.querySelectorAll('div').forEach(d => {
+        d.style.borderColor = 'var(--line)';
+        d.style.background = '#fff';
+      });
+      el.style.borderColor = 'var(--sage)';
+      el.style.background = 'var(--sage-wash)';
     }
     // Detailed Service Expectations Data for the Hover Popover
     const SERVICE_EXPECTATIONS = {

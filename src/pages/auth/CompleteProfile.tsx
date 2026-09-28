@@ -27,7 +27,7 @@ const CompleteProfile = (): JSX.Element => {
     }
 
     if (!loading && profile) {
-      if (profile.role === 'admin') {
+      if (profile.role === 'admin' || profile.role === 'assistant') {
         void navigate('/admin', { replace: true });
         return;
       }
@@ -97,7 +97,7 @@ const CompleteProfile = (): JSX.Element => {
     const from = (location.state as { from?: string } | null)?.from;
     if (from) {
       void navigate(from, { replace: true });
-    } else if (profile?.role === 'admin') {
+    } else if (profile?.role === 'admin' || profile?.role === 'assistant') {
       void navigate('/admin', { replace: true });
     } else {
       void navigate('/', { replace: true });

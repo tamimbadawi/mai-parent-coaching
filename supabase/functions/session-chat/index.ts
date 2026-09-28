@@ -47,7 +47,7 @@ Deno.serve(async (request: Request) => {
       .eq('id', userData.user.id)
       .maybeSingle();
     if (profileError) return json({ error: 'Failed to verify admin privileges.', code: 'PROFILE_FETCH_FAILED' }, 500);
-    if (!profile || profile.role !== 'admin') return json({ error: 'Forbidden: Admin access required.', code: 'ADMIN_REQUIRED' }, 403);
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'assistant')) return json({ error: 'Forbidden: Admin access required.', code: 'ADMIN_REQUIRED' }, 403);
 
     const { data: activeUnlock } = await adminClient
       .from('family_unlocks')

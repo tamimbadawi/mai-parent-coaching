@@ -9,7 +9,7 @@ const PendingApproval = (): JSX.Element => {
 
   useEffect(() => {
     if (!loading && profile) {
-      if (profile.role === 'admin') {
+      if (profile.role === 'admin' || profile.role === 'assistant') {
         void navigate('/admin', { replace: true });
         return;
       }

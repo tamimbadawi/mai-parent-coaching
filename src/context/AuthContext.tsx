@@ -38,11 +38,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       return;
     }
 
-    const inferredRole: 'student' | 'admin' =
+    const inferredRole: UserProfile['role'] =
       currentUser.user_metadata?.role === 'admin' ||
       currentUser.app_metadata?.role === 'admin' ||
       currentUser.email?.toLowerCase() === 'tamimbadawi@gmail.com'
         ? 'admin'
+        : currentUser.user_metadata?.role === 'assistant' ||
+          currentUser.app_metadata?.role === 'assistant'
+        ? 'assistant'
         : 'student';
 
     const fallbackProfile: UserProfile = {

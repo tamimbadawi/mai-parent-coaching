@@ -58,7 +58,7 @@ Deno.serve(async (request: Request) => {
       .eq('id', userData.user.id)
       .maybeSingle();
 
-    if (profileError || !profile || profile.role !== 'admin') {
+    if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'assistant')) {
       return json({ error: 'Forbidden: Admin access required.', code: 'ADMIN_REQUIRED' }, 403);
     }
 

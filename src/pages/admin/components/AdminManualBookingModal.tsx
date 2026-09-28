@@ -2,18 +2,32 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { CalendarPlus, Loader2, AlertCircle, X, Check } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import { appointmentTypes } from '../../../data/content';
+import { appointmentTypes, coachingPackages } from '../../../data/content';
+
+export interface AdminManualBookingInitialData {
+  bookingId?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  country?: string;
+  childName?: string;
+  childAge?: string;
+  appointmentTypeId?: string;
+  notes?: string;
+}
 
 interface AdminManualBookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated: () => void;
+  initialData?: AdminManualBookingInitialData | null;
 }
 
 export const AdminManualBookingModal = ({
   isOpen,
   onClose,
   onCreated,
+  initialData,
 }: AdminManualBookingModalProps): JSX.Element | null => {
   const [selectedType, setSelectedType] = useState('initial');
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -31,10 +45,41 @@ export const AdminManualBookingModal = ({
     notes: '',
   });
 
+  // Pre-fill initial data if passed (e.g. from an unscheduled package booking)
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name || '',
+        email: initialData.email || '',
+        phone: initialData.phone || '',
+        country: initialData.country || '',
+        childName: initialData.childName || '',
+        childAge: initialData.childAge || '',
+        notes: initialData.notes || '',
+      });
+      if (initialData.appointmentTypeId) {
+        setSelectedType(initialData.appointmentTypeId);
+      }
+    } else if (isOpen) {
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        country: '',
+        childName: '',
+        childAge: '',
+        notes: '',
+      });
+      setSelectedType('initial');
+    }
+  }, [initialData, isOpen]);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedAppointment = appointmentTypes.find((a) => a.id === selectedType);
+  const selectedAppointment =
+    appointmentTypes.find((a) => a.id === selectedType) ||
+    coachingPackages.find((p) => p.id === selectedType);
 
   useEffect(() => {
     if (!isOpen || !date) return;
@@ -86,6 +131,46 @@ export const AdminManualBookingModal = ({
     setError(null);
 
     try {
+      if (initialData?.bookingId) {
+        const { error: updateErr } = await supabase
+          .from('bookings')
+          .update({
+            appointment_type_id: selectedType,
+            appointment_type_title: selectedAppointment?.title || '1:1 Coaching Consultation',
+            appointment_date: date,
+            appointment_time: time,
+            time_zone: timeZone,
+            parent_name: formData.name.trim(),
+            email: formData.email.trim().toLowerCase(),
+            phone: formData.phone.trim() || null,
+            country: formData.country.trim() || null,
+            child_name: formData.childName.trim() || null,
+            child_age: formData.childAge.trim() || null,
+            notes: formData.notes.trim() || null,
+            status: 'confirmed',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', initialData.bookingId);
+
+        if (updateErr) {
+          setError(updateErr.message);
+          return;
+        }
+
+        // Try syncing to Google Calendar
+        try {
+          await supabase.functions.invoke('admin-booking-manager', {
+            body: { action: 'sync-calendar', bookingId: initialData.bookingId },
+          });
+        } catch (syncErr) {
+          console.warn('Calendar sync attempt note:', syncErr);
+        }
+
+        onCreated();
+        onClose();
+        return;
+      }
+
       const { data, error: invokeErr } = await supabase.functions.invoke('create-booking', {
         body: {
           appointment_type_id: selectedType,
@@ -133,8 +218,14 @@ export const AdminManualBookingModal = ({
             <CalendarPlus className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="font-serif text-lg font-semibold text-charcoal">Add Manual Booking</h2>
-            <p className="text-xs text-warm-gray">Schedule a session for phone or direct clients</p>
+            <h2 className="font-serif text-lg font-semibold text-charcoal">
+              {initialData?.bookingId ? 'Schedule Client on Calendar' : 'Add Manual Booking'}
+            </h2>
+            <p className="text-xs text-warm-gray">
+              {initialData?.bookingId
+                ? `Assign confirmed session date & time for ${formData.name || 'client'}`
+                : 'Schedule a session for phone or direct clients'}
+            </p>
           </div>
         </div>
 
@@ -142,7 +233,7 @@ export const AdminManualBookingModal = ({
           <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
             <div className="flex-1">
-              <p className="font-semibold">Booking could not be created</p>
+              <p className="font-semibold">Booking could not be saved</p>
               <p className="mt-0.5 text-rose-700">{error}</p>
             </div>
           </div>
@@ -160,11 +251,20 @@ export const AdminManualBookingModal = ({
                 }}
                 className="w-full rounded-xl border border-beige bg-cream px-3 py-2 text-xs font-medium text-charcoal transition focus:outline-none focus:ring-2 focus:ring-sage/30"
               >
-                {appointmentTypes.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.title} ({t.duration})
-                  </option>
-                ))}
+                <optgroup label="Consultation Types">
+                  {appointmentTypes.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.title} ({t.duration})
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Coaching Packages">
+                  {coachingPackages.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title} ({p.duration})
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </div>
             <div>
@@ -319,12 +419,12 @@ export const AdminManualBookingModal = ({
               {submitting ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span>Creating Booking...</span>
+                  <span>{initialData?.bookingId ? 'Confirming & Syncing...' : 'Creating Booking...'}</span>
                 </>
               ) : (
                 <>
                   <Check className="h-3.5 w-3.5" />
-                  <span>Create Booking & Sync</span>
+                  <span>{initialData?.bookingId ? 'Confirm & Book on Calendar' : 'Create Booking & Sync'}</span>
                 </>
               )}
             </button>

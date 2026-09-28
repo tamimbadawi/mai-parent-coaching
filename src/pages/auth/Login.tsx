@@ -94,8 +94,11 @@ const Login = (): JSX.Element => {
 
         const isAdmin =
           profileData?.role === 'admin' ||
+          profileData?.role === 'assistant' ||
           currentUser.user_metadata?.role === 'admin' ||
+          currentUser.user_metadata?.role === 'assistant' ||
           currentUser.app_metadata?.role === 'admin' ||
+          currentUser.app_metadata?.role === 'assistant' ||
           currentUser.email?.toLowerCase() === 'tamimbadawi@gmail.com';
 
         if (isAdmin) {
