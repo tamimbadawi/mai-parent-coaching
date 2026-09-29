@@ -359,3 +359,12 @@ export interface AuthState {
   loading: boolean;
   enrollments: CourseEnrollment[];
 }
+
+export interface WhatsAppSettings {
+  id: string;
+  whatsapp_phone: string;
+  whatsapp_message: string;
+  is_widget_enabled: boolean;
+  updated_at?: string;
+  updated_by?: string | null;
+}

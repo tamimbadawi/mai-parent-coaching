@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Floating Widget & Admin Settings — Interactive Mockup</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ivory: '#FAF8F5',
+            cream: '#F4EFEA',
+            beige: '#E8DFD5',
+            sand: '#D9CDBF',
+            sage: '#6B8E7B',
+            'sage-dark': '#557262',
+            'sage-light': '#8FA89C',
+            charcoal: '#2D312E',
+            'warm-gray': '#6E726E',
+            'soft-gray': '#9CA3AF'
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            serif: ['"Playfair Display"', 'serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #FAF8F5;
+      color: #2D312E;
+    }
+    .font-serif {
+      font-family: 'Playfair Display', serif;
+    }
+    /* Smooth CSS transition for button hover */
+    .whatsapp-float-btn {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .whatsapp-float-btn:hover {
+      opacity: 0.92;
+      transform: scale(1.05);
+    }
+    .whatsapp-float-btn:active {
+      transform: scale(0.96);
+    }
+  </style>
+</head>
+<body class="min-h-screen relative pb-28">
+
+  <!-- Header Bar -->
+  <header class="border-b border-beige/80 bg-white/90 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="w-8 h-8 rounded-full bg-sage/20 text-sage-dark flex items-center justify-center font-serif font-bold text-sm">M</span>
+        <div>
+          <h1 class="text-sm font-semibold text-charcoal">WhatsApp Floating Widget & Admin Settings Preview</h1>
+          <p class="text-xs text-warm-gray">Interactive Prototype & Design Alignment Spec</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          Live Sync Active
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="max-w-6xl mx-auto px-4 py-8 space-y-8">
+
+    <!-- Overview Note -->
+    <div class="rounded-2xl border border-sage/30 bg-sage/5 p-5 text-sm">
+      <div class="flex items-start gap-3">
+        <div class="w-6 h-6 rounded-full bg-sage/20 text-sage-dark flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">ℹ</div>
+        <div>
+          <h2 class="font-medium text-charcoal">Design Alignment Verification</h2>
+          <p class="text-xs text-warm-gray mt-1 leading-relaxed">
+            This mockup verifies the appearance and ergonomics of both the <strong>Admin WhatsApp Settings Form</strong> and the <strong>Floating WhatsApp Widget</strong>. Changes made in the Admin Settings section below immediately update the floating widget in the bottom-right corner.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 1: Simulated Admin Panel Component -->
+    <div class="rounded-2xl border border-beige bg-white p-6 shadow-sm space-y-6">
+      <div class="flex items-center justify-between border-b border-beige/60 pb-4">
+        <div>
+          <span class="text-xs font-medium uppercase tracking-wider text-sage-dark">Admin Integration</span>
+          <h2 class="text-lg font-serif font-normal text-charcoal mt-0.5">Floating WhatsApp Widget Settings</h2>
+          <p class="text-xs text-warm-gray mt-0.5">Configure the target phone number, default greeting message, and visibility for visitors.</p>
+        </div>
+        <span id="saveStatusBadge" class="hidden text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
+          Saved
+        </span>
+      </div>
+
+      <form id="adminSettingsForm" class="space-y-5" onsubmit="event.preventDefault(); handleSave();">
+        <!-- Phone Number Input -->
+        <div>
+          <label for="phoneInput" class="block text-xs font-medium text-charcoal mb-1.5">
+            WhatsApp Phone Number <span class="text-rose-500">*</span>
+          </label>
+          <div class="relative max-w-md">
+            <input
+              type="tel"
+              id="phoneInput"
+              name="whatsapp_phone"
+              value="+201005809498"
+              placeholder="+201005809498"
+              class="w-full rounded-xl border border-beige bg-ivory/40 px-3.5 py-2.5 text-sm text-charcoal placeholder-warm-gray/60 focus:bg-white focus:border-sage focus:outline-none focus:ring-1 focus:ring-sage transition-colors font-mono"
+              required
+            />
+          </div>
+          <p id="phoneError" class="text-xs text-rose-600 mt-1 hidden">Please enter a valid international phone number (e.g. +201005809498).</p>
+          <p class="text-[11px] text-warm-gray mt-1">Include country code with leading + sign (no spaces or dashes in the final link).</p>
+        </div>
+
+        <!-- Default Message Textarea -->
+        <div>
+          <div class="flex items-center justify-between max-w-xl mb-1.5">
+            <label for="messageInput" class="block text-xs font-medium text-charcoal">
+              Welcome / Prefilled Message <span class="text-rose-500">*</span>
+            </label>
+            <span id="charCount" class="text-[11px] text-warm-gray font-mono">132 / 500</span>
+          </div>
+          <textarea
+            id="messageInput"
+            name="whatsapp_message"
+            rows="3"
+            maxlength="500"
+            class="w-full max-w-xl rounded-xl border border-beige bg-ivory/40 px-3.5 py-2.5 text-sm text-charcoal placeholder-warm-gray/60 focus:bg-white focus:border-sage focus:outline-none focus:ring-1 focus:ring-sage transition-colors leading-relaxed"
+            required
+          >Hi Mai! 👋 I'd love to learn how you can help my family with parenting, burnout recovery, or coaching. What's the best way to get started?</textarea>
+          <p class="text-[11px] text-warm-gray mt-1">This text will be pre-filled when visitors click the floating WhatsApp button.</p>
+        </div>
+
+        <!-- Toggle Widget Enabled Checkbox -->
+        <div class="pt-2">
+          <label class="flex items-start gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              id="enableWidgetToggle"
+              name="is_widget_enabled"
+              checked
+              class="h-4 w-4 rounded border-beige text-sage focus:ring-sage focus:ring-offset-0 mt-0.5 accent-sage cursor-pointer"
+            />
+            <div>
+              <span class="text-xs font-medium text-charcoal">Enable Floating WhatsApp Widget</span>
+              <p class="text-[11px] text-warm-gray mt-0.5">When checked, the 56px floating circular button is visible at the bottom-right on all public website pages.</p>
+            </div>
+          </label>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-3 pt-3 border-t border-beige/60">
+          <button
+            type="submit"
+            id="saveBtn"
+            class="inline-flex items-center gap-2 rounded-xl bg-sage px-5 py-2.5 text-xs font-medium text-white hover:bg-sage-dark transition-colors shadow-xs"
+          >
+            <span id="saveBtnSpinner" class="hidden animate-spin">⟳</span>
+            <span id="saveBtnText">Save WhatsApp Settings</span>
+          </button>
+          
+          <div id="toastMessage" class="hidden items-center gap-2 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg">
+            <span>✓</span>
+            <span>WhatsApp settings updated successfully</span>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Section 2: Link Inspection / Verification -->
+    <div class="rounded-2xl border border-beige bg-white p-6 shadow-sm space-y-4">
+      <h3 class="text-sm font-semibold text-charcoal">Generated WhatsApp Deep Link (wa.me)</h3>
+      <p class="text-xs text-warm-gray">This shows the real-time encoded URL that the floating button targets:</p>
+      <div class="p-3 bg-ivory rounded-xl border border-beige font-mono text-xs text-charcoal break-all" id="generatedLinkPreview">
+        https://wa.me/201005809498?text=Hi%20Mai!%20%F0%9F%91%8B%20I'd%20love%20to%20learn%20how%20you%20can%20help%20my%20family%20with%20parenting%2C%20burnout%20recovery%2C%20or%20coaching.%20What's%20the%20best%20way%20to%20get%20started%3F
+      </div>
+    </div>
+
+    <!-- Section 3: Simulated Public Page Background for Visual Context -->
+    <div class="rounded-2xl border border-beige bg-cream/30 p-8 space-y-6 text-center">
+      <h3 class="font-serif text-2xl text-charcoal">Parenting & Family Coaching with Mai</h3>
+      <p class="text-sm text-warm-gray max-w-lg mx-auto leading-relaxed">
+        Evidence-based guidance, nervous system healing, and personalized support for modern parents navigating high stress, burnout, and emotional connection.
+      </p>
+      <div class="flex justify-center gap-3 pt-2">
+        <span class="px-4 py-2 rounded-xl bg-white border border-beige text-xs font-medium text-charcoal shadow-xs">Explore Services</span>
+        <span class="px-4 py-2 rounded-xl bg-sage text-white text-xs font-medium shadow-xs">Book Discovery Call</span>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ======================================================== -->
+  <!-- FLOATING WHATSAPP BUTTON (Component Spec) -->
+  <!-- Fixed bottom-5 right-5, 56px (w-14 h-14), sage color (#6B8E7B), -->
+  <!-- white MessageCircle icon, smooth hover opacity/scale shift, z-50 -->
+  <!-- ======================================================== -->
+  <div id="floatingWidgetContainer">
+    <a
+      id="floatingWhatsAppBtn"
+      href="#"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Chat with Mai on WhatsApp"
+      class="whatsapp-float-btn fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-sage text-white shadow-lg hover:bg-sage-dark focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2"
+    >
+      <!-- MessageCircle Icon (Lucide 28px) -->
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="28"
+        height="28"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="h-7 w-7"
+        aria-hidden="true"
+      >
+        <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+      </svg>
+    </a>
+  </div>
+
+  <script>
+    const phoneInput = document.getElementById('phoneInput');
+    const messageInput = document.getElementById('messageInput');
+    const enableToggle = document.getElementById('enableWidgetToggle');
+    const charCount = document.getElementById('charCount');
+    const generatedLinkPreview = document.getElementById('generatedLinkPreview');
+    const floatingWhatsAppBtn = document.getElementById('floatingWhatsAppBtn');
+    const floatingWidgetContainer = document.getElementById('floatingWidgetContainer');
+    const phoneError = document.getElementById('phoneError');
+
+    function updatePreview() {
+      const phone = phoneInput.value.trim().replace(/[^\d+]/g, '');
+      const rawDigits = phone.replace(/^\+/, '');
+      const message = messageInput.value;
+      const isEnabled = enableToggle.checked;
+
+      // Update Char Count
+      charCount.textContent = `${message.length} / 500`;
+
+      // Update Link
+      const encodedMsg = encodeURIComponent(message);
+      const waUrl = rawDigits ? `https://wa.me/${rawDigits}?text=${encodedMsg}` : '#';
+      generatedLinkPreview.textContent = waUrl;
+      floatingWhatsAppBtn.href = waUrl;
+
+      // Toggle Widget Visibility
+      if (isEnabled && rawDigits) {
+        floatingWidgetContainer.style.display = 'block';
+      } else {
+        floatingWidgetContainer.style.display = 'none';
+      }
+
+      // Validate Phone Format (+ followed by 7-15 digits)
+      const phoneValid = /^\+?[1-9]\d{6,14}$/.test(phone);
+      if (phone.length > 0 && !phoneValid) {
+        phoneError.classList.remove('hidden');
+      } else {
+        phoneError.classList.add('hidden');
+      }
+    }
+
+    phoneInput.addEventListener('input', updatePreview);
+    messageInput.addEventListener('input', updatePreview);
+    enableToggle.addEventListener('change', updatePreview);
+
+    function handleSave() {
+      const saveBtn = document.getElementById('saveBtn');
+      const saveBtnSpinner = document.getElementById('saveBtnSpinner');
+      const saveBtnText = document.getElementById('saveBtnText');
+      const toastMessage = document.getElementById('toastMessage');
+
+      saveBtn.disabled = true;
+      saveBtnSpinner.classList.remove('hidden');
+      saveBtnText.textContent = 'Saving...';
+
+      setTimeout(() => {
+        saveBtn.disabled = false;
+        saveBtnSpinner.classList.add('hidden');
+        saveBtnText.textContent = 'Save WhatsApp Settings';
+
+        toastMessage.classList.remove('hidden');
+        toastMessage.classList.add('inline-flex');
+
+        setTimeout(() => {
+          toastMessage.classList.add('hidden');
+          toastMessage.classList.remove('inline-flex');
+        }, 4000);
+      }, 700);
+    }
+
+    // Initial update
+    updatePreview();
+  </script>
+</body>
+</html>

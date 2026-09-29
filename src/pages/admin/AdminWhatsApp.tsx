@@ -25,10 +25,12 @@ import {
   Sliders,
   Check,
   BookOpen,
+  MessageCircle,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
 import { Panel, StatCard } from './components/AdminUI';
+import AdminWhatsAppSettingsForm from './components/AdminWhatsAppSettingsForm';
 import PhoneInput, { getDialCodeForCountry, parsePhone } from '../../components/ui/PhoneInput';
 import {
   fetchWhatsAppStatus,
@@ -48,7 +50,16 @@ import {
 
 export default function AdminWhatsApp(): JSX.Element {
   // Navigation tabs
-  const [activeTab, setActiveTab] = useState<'history' | 'rules' | 'connection'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'rules' | 'connection' | 'widget'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam === 'widget' || tabParam === 'rules' || tabParam === 'connection') {
+        return tabParam;
+      }
+    }
+    return 'history';
+  });
 
   // Connection & pairing states
   const [statusData, setStatusData] = useState<WhatsAppStatusResponse | null>(null);
@@ -643,11 +654,47 @@ export default function AdminWhatsApp(): JSX.Element {
             <span>Live Device Connection</span>
             <span className={`h-2 w-2 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
           </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('widget')}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition ${
+              activeTab === 'widget'
+                ? 'bg-charcoal text-white shadow-xs'
+                : 'text-charcoal hover:bg-cream/80'
+            }`}
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span>Floating Widget</span>
+            <span className="ml-1 rounded-full bg-sage/20 text-sage-dark px-1.5 py-0.5 text-[10px] font-semibold">
+              Public Site
+            </span>
+          </button>
         </div>
 
         {/* TAB 1: MESSAGE HISTORY */}
         {activeTab === 'history' && (
           <div className="space-y-6">
+            {/* Quick Floating Widget Banner */}
+            <div className="flex items-center justify-between rounded-2xl border border-sage/40 bg-sage/5 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sage/15 text-sage-dark shrink-0">
+                  <MessageCircle className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-charcoal">Floating WhatsApp Widget</h4>
+                  <p className="text-[11px] text-warm-gray">Manage phone number, greeting message, and visitor visibility.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('widget')}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-sage px-3.5 py-1.5 text-xs font-medium text-white hover:bg-sage-dark transition shadow-xs shrink-0"
+              >
+                <span>Configure Widget</span>
+              </button>
+            </div>
+
             {/* History Stat Cards */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard
@@ -1311,6 +1358,18 @@ export default function AdminWhatsApp(): JSX.Element {
                 </div>
               </div>
             )}
+
+            {/* Floating Widget Integration Settings (in connection view) */}
+            <div className="pt-4 border-t border-beige/60">
+              <AdminWhatsAppSettingsForm />
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: FLOATING WIDGET SETTINGS */}
+        {activeTab === 'widget' && (
+          <div className="space-y-6">
+            <AdminWhatsAppSettingsForm />
           </div>
         )}
       </div>
