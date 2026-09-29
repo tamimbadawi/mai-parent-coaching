@@ -16,6 +16,7 @@ This directory is the single source of truth for **project status, architectural
 
 | Feature Area | Subfolder | Status | Summary |
 | :--- | :--- | :--- | :--- |
+| **Website Review (Pre-launch Audit)** | [`/Website Review`](file:///d:/Cursor/Mai_Website/project-plan/Website%20Review) | **Planned — blocks launch** | 2026-09-29 full production audit: verified findings (C/H/M/L) and the phased fix plan. Step 0 backup and Phase 1 security lockdown come before any other work. |
 | **Booking System** | [`/booking`](file:///d:/Cursor/Mai_Website/project-plan/booking) | **In Progress (#1 Priority)** | Persistence, Google Calendar sync and Mai's weekly schedule live; next work tracked in /offer-journey. |
 | **Offer & Booking Journey** | [`/offer-journey`](file:///d:/Cursor/Mai_Website/project-plan/offer-journey) | **Planned (Stage 1 ready)** | Three doors (Discovery Call, 1:1 packages, group coaching), intake pop-up, package balances, groups, PayTabs at launch. |
 | **Payments** | [`/payments`](file:///d:/Cursor/Mai_Website/project-plan/payments) | **Planned** | Gateway chosen (PayTabs); pending clean backend build after booking persistence. |
@@ -34,6 +35,11 @@ This directory is the single source of truth for **project status, architectural
 
 ## Directory Navigation
 
+- [Website Review (Pre-launch Audit & Fix Plan)](file:///d:/Cursor/Mai_Website/project-plan/Website%20Review):
+  - [Status](file:///d:/Cursor/Mai_Website/project-plan/Website%20Review/status.md)
+  - [Decisions](file:///d:/Cursor/Mai_Website/project-plan/Website%20Review/decisions.md)
+  - [Next Steps](file:///d:/Cursor/Mai_Website/project-plan/Website%20Review/next-steps.md)
+  - [Audit Findings](file:///d:/Cursor/Mai_Website/project-plan/Website%20Review/audit-findings.md)
 - [Course Authoring & Delivery Plan](file:///d:/Cursor/Mai_Website/project-plan/courses):
   - [Status](file:///d:/Cursor/Mai_Website/project-plan/courses/status.md)
   - [Decisions](file:///d:/Cursor/Mai_Website/project-plan/courses/decisions.md)
