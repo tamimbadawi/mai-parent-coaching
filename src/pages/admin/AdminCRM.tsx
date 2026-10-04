@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   Users,
@@ -21,6 +21,8 @@ import {
   Eye,
   EyeOff,
   UserCheck,
+  ArrowUpDown,
+  Check,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
@@ -34,6 +36,25 @@ import type { CustomerJourneyState } from '../../types';
 import { COUNTRIES } from '../../data/countries';
 
 type FilterTab = 'all' | 'clients' | 'admins' | 'track_a' | 'track_b' | 'attention' | 'active_coaching';
+
+type SortKey =
+  | 'last_activity'
+  | 'newest_joined'
+  | 'oldest_joined'
+  | 'last_session'
+  | 'next_booking'
+  | 'name_asc'
+  | 'needs_follow_up';
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'last_activity', label: 'Last activity' },
+  { key: 'newest_joined', label: 'Newest joined' },
+  { key: 'oldest_joined', label: 'Oldest joined' },
+  { key: 'last_session', label: 'Last session' },
+  { key: 'next_booking', label: 'Next booking' },
+  { key: 'name_asc', label: 'Name A–Z' },
+  { key: 'needs_follow_up', label: 'Needs follow-up' },
+];
 
 export const AdminCRM = (): JSX.Element => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -90,7 +111,38 @@ export const AdminCRM = (): JSX.Element => {
 
   // Card dropdown menu state & action in progress
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
+  const [dropdownAlign, setDropdownAlign] = useState<'left' | 'right'>('right');
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+
+  // Sort state
+  const [sortKey, setSortKey] = useState<SortKey>('last_activity');
+  const [sortOpen, setSortOpen] = useState(false);
+  const [sortAlign, setSortAlign] = useState<'left' | 'right'>('right');
+  const sortRef = useRef<HTMLDivElement>(null);
+
+  // Close sort dropdown on outside click and Escape
+  useEffect(() => {
+    if (!sortOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSortOpen(false);
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+        setSortOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [sortOpen]);
 
   useEffect(() => {
     const s = searchParams.get('section') || searchParams.get('tab') || searchParams.get('view');
@@ -190,7 +242,7 @@ export const AdminCRM = (): JSX.Element => {
 
   // Filter and search logic
   const filteredClients = useMemo(() => {
-    return clients.filter((client) => {
+    const result = clients.filter((client) => {
       // 1. Search filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -228,7 +280,58 @@ export const AdminCRM = (): JSX.Element => {
 
       return true;
     });
-  }, [clients, searchQuery, activeTab]);
+
+    return [...result].sort((a, b) => {
+      switch (sortKey) {
+        case 'last_activity': {
+          if (!a.last_engagement_at && !b.last_engagement_at) return 0;
+          if (!a.last_engagement_at) return 1;
+          if (!b.last_engagement_at) return -1;
+          return new Date(b.last_engagement_at).getTime() - new Date(a.last_engagement_at).getTime();
+        }
+        case 'newest_joined': {
+          if (!a.client_created_at && !b.client_created_at) return 0;
+          if (!a.client_created_at) return 1;
+          if (!b.client_created_at) return -1;
+          return new Date(b.client_created_at).getTime() - new Date(a.client_created_at).getTime();
+        }
+        case 'oldest_joined': {
+          if (!a.client_created_at && !b.client_created_at) return 0;
+          if (!a.client_created_at) return 1;
+          if (!b.client_created_at) return -1;
+          return new Date(a.client_created_at).getTime() - new Date(b.client_created_at).getTime();
+        }
+        case 'last_session': {
+          if (!a.last_completed_paid_session_at && !b.last_completed_paid_session_at) return 0;
+          if (!a.last_completed_paid_session_at) return 1;
+          if (!b.last_completed_paid_session_at) return -1;
+          return (
+            new Date(b.last_completed_paid_session_at).getTime() -
+            new Date(a.last_completed_paid_session_at).getTime()
+          );
+        }
+        case 'next_booking': {
+          if (!a.next_upcoming_session_at && !b.next_upcoming_session_at) return 0;
+          if (!a.next_upcoming_session_at) return 1;
+          if (!b.next_upcoming_session_at) return -1;
+          return (
+            new Date(a.next_upcoming_session_at).getTime() -
+            new Date(b.next_upcoming_session_at).getTime()
+          );
+        }
+        case 'name_asc': {
+          return (a.parent_name || '').localeCompare(b.parent_name || '');
+        }
+        case 'needs_follow_up': {
+          const daysA = typeof a.days_since_last_engagement === 'number' ? a.days_since_last_engagement : -1;
+          const daysB = typeof b.days_since_last_engagement === 'number' ? b.days_since_last_engagement : -1;
+          return daysB - daysA;
+        }
+        default:
+          return 0;
+      }
+    });
+  }, [clients, searchQuery, activeTab, sortKey]);
 
   const handleOpenDossier = (client: CustomerJourneyState): void => {
     setSelectedClient(client);
@@ -507,7 +610,16 @@ export const AdminCRM = (): JSX.Element => {
             {/* Top Summary 4-Stat Cards (Compact horizontal layout matching user suggestion) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
               {/* Card 1: Total Users (Everyone) */}
-              <div className="rounded-2xl border border-beige/80 bg-white px-3.5 py-2.5 shadow-2xs transition hover:border-beige flex items-center gap-2.5 min-w-0">
+              <button
+                type="button"
+                aria-pressed={activeTab === 'all'}
+                onClick={() => setActiveTab('all')}
+                className={`w-full text-left rounded-2xl border border-beige/80 px-3.5 py-2.5 shadow-2xs transition hover:-translate-y-0.5 hover:border-beige flex items-center gap-2.5 min-w-0 cursor-pointer ${
+                  activeTab === 'all'
+                    ? 'ring-2 ring-[#4d8b82]/40 bg-[#edf5f3]/40'
+                    : 'bg-white'
+                }`}
+              >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#edf5f3] text-[#4d8b82]">
                   <Users className="h-4 w-4" />
                 </div>
@@ -523,10 +635,19 @@ export const AdminCRM = (): JSX.Element => {
                     Clients and admins
                   </p>
                 </div>
-              </div>
+              </button>
 
               {/* Card 2: Track A (Nurture) */}
-              <div className="rounded-2xl border border-beige/80 bg-white px-3.5 py-2.5 shadow-2xs transition hover:border-beige flex items-center gap-2.5 min-w-0">
+              <button
+                type="button"
+                aria-pressed={activeTab === 'track_a'}
+                onClick={() => setActiveTab(activeTab === 'track_a' ? 'all' : 'track_a')}
+                className={`w-full text-left rounded-2xl border border-beige/80 px-3.5 py-2.5 shadow-2xs transition hover:-translate-y-0.5 hover:border-beige flex items-center gap-2.5 min-w-0 cursor-pointer ${
+                  activeTab === 'track_a'
+                    ? 'ring-2 ring-[#3b82f6]/40 bg-[#eef6fc]/40'
+                    : 'bg-white'
+                }`}
+              >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#eef6fc] text-[#3b82f6]">
                   <Sparkles className="h-4 w-4" />
                 </div>
@@ -542,10 +663,19 @@ export const AdminCRM = (): JSX.Element => {
                     Pre-first paid session taste
                   </p>
                 </div>
-              </div>
+              </button>
 
               {/* Card 3: Track B (Continuity) */}
-              <div className="rounded-2xl border border-beige/80 bg-white px-3.5 py-2.5 shadow-2xs transition hover:border-beige flex items-center gap-2.5 min-w-0">
+              <button
+                type="button"
+                aria-pressed={activeTab === 'track_b'}
+                onClick={() => setActiveTab(activeTab === 'track_b' ? 'all' : 'track_b')}
+                className={`w-full text-left rounded-2xl border border-beige/80 px-3.5 py-2.5 shadow-2xs transition hover:-translate-y-0.5 hover:border-beige flex items-center gap-2.5 min-w-0 cursor-pointer ${
+                  activeTab === 'track_b'
+                    ? 'ring-2 ring-[#10b981]/40 bg-[#eef8f4]/40'
+                    : 'bg-white'
+                }`}
+              >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#eef8f4] text-[#10b981]">
                   <HeartHandshake className="h-4 w-4" />
                 </div>
@@ -561,10 +691,19 @@ export const AdminCRM = (): JSX.Element => {
                     Post-paid session care
                   </p>
                 </div>
-              </div>
+              </button>
 
               {/* Card 4: Needs Attention */}
-              <div className="rounded-2xl border border-beige/80 bg-white px-3.5 py-2.5 shadow-2xs transition hover:border-beige flex items-center gap-2.5 min-w-0">
+              <button
+                type="button"
+                aria-pressed={activeTab === 'attention'}
+                onClick={() => setActiveTab(activeTab === 'attention' ? 'all' : 'attention')}
+                className={`w-full text-left rounded-2xl border border-beige/80 px-3.5 py-2.5 shadow-2xs transition hover:-translate-y-0.5 hover:border-beige flex items-center gap-2.5 min-w-0 cursor-pointer ${
+                  activeTab === 'attention'
+                    ? 'ring-2 ring-[#f59e0b]/40 bg-[#fffbeb]/40'
+                    : 'bg-white'
+                }`}
+              >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fffbeb] text-[#f59e0b]">
                   <AlertTriangle className="h-4 w-4" />
                 </div>
@@ -580,11 +719,11 @@ export const AdminCRM = (): JSX.Element => {
                     Re-engagement or taper
                   </p>
                 </div>
-              </div>
+              </button>
             </div>
 
             {/* Search & Filter Bar Matching Screenshot */}
-            <div className="rounded-2xl border border-beige/80 bg-white p-3.5 shadow-2xs space-y-3">
+            <div className="rounded-2xl border border-beige/80 bg-white p-3.5 shadow-2xs">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                 {/* Search Input */}
                 <div className="relative flex-1 max-w-md">
@@ -598,85 +737,95 @@ export const AdminCRM = (): JSX.Element => {
                   />
                 </div>
 
-                {/* Filter Pills */}
-                <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-[#faf8f4] p-1 border border-beige/60 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('all')}
-                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                      activeTab === 'all'
-                        ? 'bg-white text-charcoal shadow-2xs font-semibold'
-                        : 'text-warm-gray hover:text-charcoal'
-                    }`}
-                  >
-                    All ({stats.total})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('clients')}
-                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                      activeTab === 'clients'
-                        ? 'bg-white text-charcoal shadow-2xs font-semibold'
-                        : 'text-warm-gray hover:text-charcoal'
-                    }`}
-                  >
-                    Clients ({stats.totalClients})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('admins')}
-                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                      activeTab === 'admins'
-                        ? 'bg-white text-amber-800 shadow-2xs font-semibold'
-                        : 'text-warm-gray hover:text-charcoal'
-                    }`}
-                  >
-                    Admins & Team ({stats.totalAdmins})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('track_a')}
-                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                      activeTab === 'track_a'
-                        ? 'bg-white text-charcoal shadow-2xs font-semibold'
-                        : 'text-warm-gray hover:text-charcoal'
-                    }`}
-                  >
-                    Track A ({stats.trackA})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('track_b')}
-                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                      activeTab === 'track_b'
-                        ? 'bg-white text-charcoal shadow-2xs font-semibold'
-                        : 'text-warm-gray hover:text-charcoal'
-                    }`}
-                  >
-                    Track B ({stats.trackB})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('attention')}
-                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                      activeTab === 'attention'
-                        ? 'bg-white text-amber-700 shadow-2xs font-semibold'
-                        : 'text-warm-gray hover:text-charcoal'
-                    }`}
-                  >
-                    Needs Attention ({stats.attention})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('active_coaching')}
-                    className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
-                      activeTab === 'active_coaching'
-                        ? 'bg-white text-emerald-700 shadow-2xs font-semibold'
-                        : 'text-warm-gray hover:text-charcoal'
-                    }`}
-                  >
-                    Upcoming Booked
-                  </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Filter Pills */}
+                  <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-[#faf8f4] p-1 border border-beige/60 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('clients')}
+                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                        activeTab === 'clients'
+                          ? 'bg-white text-charcoal shadow-2xs font-semibold'
+                          : 'text-warm-gray hover:text-charcoal'
+                      }`}
+                    >
+                      Clients ({stats.totalClients})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('admins')}
+                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                        activeTab === 'admins'
+                          ? 'bg-white text-amber-800 shadow-2xs font-semibold'
+                          : 'text-warm-gray hover:text-charcoal'
+                      }`}
+                    >
+                      Admins & Team ({stats.totalAdmins})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('active_coaching')}
+                      className={`rounded-lg px-3 py-1.5 font-medium transition cursor-pointer ${
+                        activeTab === 'active_coaching'
+                          ? 'bg-white text-emerald-700 shadow-2xs font-semibold'
+                          : 'text-warm-gray hover:text-charcoal'
+                      }`}
+                    >
+                      Upcoming Booked ({stats.activeCoaching})
+                    </button>
+                  </div>
+
+                  {/* Sort Control */}
+                  <div ref={sortRef} className="relative">
+                    <button
+                      type="button"
+                      aria-haspopup="listbox"
+                      aria-expanded={sortOpen}
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setSortAlign(rect.left < 200 ? 'left' : 'right');
+                        setSortOpen((prev) => !prev);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-[#faf8f4] px-3 py-2 border border-beige/60 text-xs font-medium text-charcoal hover:bg-white hover:border-beige transition cursor-pointer"
+                    >
+                      <ArrowUpDown className="h-3.5 w-3.5 text-warm-gray" />
+                      <span>
+                        Sort: {SORT_OPTIONS.find((o) => o.key === sortKey)?.label}
+                      </span>
+                    </button>
+
+                    {sortOpen && (
+                      <div
+                        role="listbox"
+                        className={`absolute z-30 top-full mt-1.5 w-48 max-w-[calc(100vw-2rem)] rounded-xl border border-beige/80 bg-white p-1.5 shadow-lg animate-in fade-in ${
+                          sortAlign === 'left' ? 'left-0' : 'right-0'
+                        }`}
+                      >
+                        {SORT_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.key}
+                            type="button"
+                            role="option"
+                            aria-selected={sortKey === opt.key}
+                            onClick={() => {
+                              setSortKey(opt.key);
+                              setSortOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition text-left cursor-pointer ${
+                              sortKey === opt.key
+                                ? 'bg-beige/30 font-semibold text-charcoal'
+                                : 'text-warm-gray hover:bg-beige/15 hover:text-charcoal'
+                            }`}
+                          >
+                            <span>{opt.label}</span>
+                            {sortKey === opt.key && (
+                              <Check className="h-3.5 w-3.5 text-sage-dark shrink-0 ml-2" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -923,11 +1072,13 @@ export const AdminCRM = (): JSX.Element => {
                           )}
 
                           {/* More Options Dropdown Menu for User Management (Always Kept) */}
-                          <div className="relative client-actions-dropdown">
+                          <div className="relative ml-auto lg:ml-0 client-actions-dropdown">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setDropdownAlign(rect.left < 210 ? 'left' : 'right');
                                 setActiveDropdownId(
                                   activeDropdownId === client.client_id ? null : client.client_id
                                 );
@@ -939,7 +1090,11 @@ export const AdminCRM = (): JSX.Element => {
                             </button>
 
                             {activeDropdownId === client.client_id && (
-                              <div className="absolute right-0 z-30 mt-1 w-52 rounded-2xl border border-beige bg-white p-1.5 shadow-xl animate-in fade-in">
+                              <div
+                                className={`absolute z-30 mt-1 w-52 max-w-[calc(100vw-2rem)] rounded-2xl border border-beige bg-white p-1.5 shadow-xl animate-in fade-in ${
+                                  dropdownAlign === 'left' ? 'left-0' : 'right-0'
+                                }`}
+                              >
                                 <button
                                   type="button"
                                   onClick={() => void handleOpenEditUser(client)}

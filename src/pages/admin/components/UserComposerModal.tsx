@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AlertCircle,
-  ChevronDown,
   Edit3,
-  Globe,
   Loader2,
   PlusCircle,
+  ShieldCheck,
+  UserRound,
   X,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
@@ -60,8 +60,7 @@ export const UserComposerModal = ({
   onSaved,
 }: UserComposerModalProps): JSX.Element | null => {
   const [draft, setDraft] = useState<UserComposerData>(emptyDraft);
-  const [countryOpen, setCountryOpen] = useState(false);
-  const [countrySearch, setCountrySearch] = useState('');
+  const [activeTab, setActiveTab] = useState<'profile' | 'access'>('profile');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,13 +68,12 @@ export const UserComposerModal = ({
     if (!isOpen) {
       setDraft(emptyDraft);
       setError(null);
-      setCountryOpen(false);
-      setCountrySearch('');
+      setActiveTab('profile');
       return;
     }
 
     if (editingUser) {
-      const { dialCode: parsedDial, local } = parsePhone(editingUser.phone);
+      const { dialCode: parsedDial, local } = parsePhone(editingUser.phone ?? null);
       const countryDial = getDialCodeForCountry(editingUser.country);
       const dialCode = editingUser.phone ? parsedDial : (countryDial ?? parsedDial);
 
@@ -111,17 +109,6 @@ export const UserComposerModal = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const selectedCountry = useMemo(() => {
-    if (!draft.country) return null;
-    return COUNTRIES.find((c) => c.iso === draft.country || c.name === draft.country) ?? null;
-  }, [draft.country]);
-
-  const filteredCountries = useMemo(() => {
-    if (!countrySearch.trim()) return COUNTRIES;
-    const q = countrySearch.toLowerCase();
-    return COUNTRIES.filter((c) => c.name.toLowerCase().includes(q) || c.iso.toLowerCase().includes(q));
-  }, [countrySearch]);
-
   const handleCountrySelect = (iso: string): void => {
     const prefix = getDialCodeForCountry(iso);
     setDraft((prev) => ({
@@ -129,8 +116,6 @@ export const UserComposerModal = ({
       country: iso,
       dialCode: prefix ?? prev.dialCode,
     }));
-    setCountryOpen(false);
-    setCountrySearch('');
   };
 
   const invokeUserManager = async (payload: Record<string, unknown>): Promise<{ error?: string }> => {
@@ -186,24 +171,34 @@ export const UserComposerModal = ({
     e.preventDefault();
     setError(null);
 
-    if (!draft.email.trim() || !draft.fullName.trim()) {
-      setError('Email and full name are required.');
+    if (!draft.fullName.trim()) {
+      setActiveTab('profile');
+      setError('Full name is required.');
+      return;
+    }
+
+    if (!draft.email.trim()) {
+      setActiveTab('profile');
+      setError('Email address is required.');
+      return;
+    }
+
+    if (!draft.country?.trim()) {
+      setActiveTab('profile');
+      setError('Country of residency is required.');
       return;
     }
 
     const cleanPhoneDigits = draft.localPhone.replace(/\D/g, '');
     if (!draft.localPhone.trim() || cleanPhoneDigits.length < 7) {
+      setActiveTab('profile');
       setError('A working phone number is required (minimum 7 digits).');
       return;
     }
 
-    if (!draft.country?.trim()) {
-      setError('Country of residency is required.');
-      return;
-    }
-
     if (!editingUser && !draft.password.trim()) {
-      setError('A password is required when creating a user.');
+      setActiveTab('access');
+      setError('A password is required when creating a new user.');
       return;
     }
 
@@ -258,7 +253,7 @@ export const UserComposerModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/60 p-4 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/60 p-3 sm:p-4 backdrop-blur-xs"
       role="dialog"
       aria-modal="true"
       aria-labelledby="user-modal-title"
@@ -266,250 +261,253 @@ export const UserComposerModal = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-2xl rounded-3xl border border-beige bg-white p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-4 top-4 rounded-xl p-2 text-warm-gray transition hover:bg-beige/40 hover:text-charcoal cursor-pointer"
-          aria-label="Close"
-        >
-          <X className="h-5 w-5" />
-        </button>
-
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sage/20 text-sage-dark">
-            {editingUser ? <Edit3 className="h-5 w-5" /> : <PlusCircle className="h-5 w-5" />}
+      <div className="relative flex flex-col justify-between w-full max-w-xl max-h-[calc(100dvh-1.5rem)] overflow-hidden rounded-3xl border border-beige bg-white p-4 sm:p-5 shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-beige/60 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sage/20 text-sage-dark">
+              {editingUser ? <Edit3 className="h-4 w-4" /> : <PlusCircle className="h-4 w-4" />}
+            </div>
+            <div className="min-w-0">
+              <h2 id="user-modal-title" className="font-serif text-base sm:text-lg font-semibold text-charcoal truncate">
+                {editingUser ? 'Edit User Details' : 'Add New Client / User'}
+              </h2>
+              <p className="text-[11px] text-warm-gray truncate">
+                {editingUser ? `Account: ${editingUser.email}` : 'Create a managed account with assigned role'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 id="user-modal-title" className="font-serif text-xl font-semibold text-charcoal">
-              {editingUser ? 'Edit User Details' : 'Add New Client / User'}
-            </h2>
-            <p className="text-xs text-warm-gray">
-              {editingUser
-                ? `Updating account: ${editingUser.email}`
-                : 'Create a managed account with assigned role and contact profile'}
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl p-1.5 text-warm-gray transition hover:bg-beige/40 hover:text-charcoal cursor-pointer shrink-0"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
+        {/* Tab switcher */}
+        <div className="flex items-center gap-1.5 my-2.5 p-1 rounded-xl bg-[#faf8f4] border border-beige/60 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('profile')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs transition cursor-pointer ${
+              activeTab === 'profile'
+                ? 'bg-white text-charcoal shadow-2xs font-semibold'
+                : 'text-warm-gray hover:text-charcoal font-medium'
+            }`}
+          >
+            <UserRound className="h-3.5 w-3.5 text-sage-dark" />
+            <span>Profile & Contact</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('access')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs transition cursor-pointer ${
+              activeTab === 'access'
+                ? 'bg-white text-charcoal shadow-2xs font-semibold'
+                : 'text-warm-gray hover:text-charcoal font-medium'
+            }`}
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-sage-dark" />
+            <span>Role & Security</span>
+          </button>
+        </div>
+
+        {/* Error notice if present */}
         {error ? (
-          <div className="flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
-            <div className="flex-1">
-              <p className="font-semibold">Unable to {editingUser ? 'update' : 'create'} user</p>
-              <p className="mt-0.5 text-rose-700">{error}</p>
-            </div>
+          <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-800 shrink-0 mb-2">
+            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+            <span className="truncate">{error}</span>
           </div>
         ) : null}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">
-                Full name *
-              </label>
-              <input
-                required
-                value={draft.fullName}
-                onChange={(event) => setDraft((prev) => ({ ...prev, fullName: event.target.value }))}
-                placeholder="e.g. Sarah Jenkins"
-                className="w-full rounded-2xl border border-beige bg-[#faf8f4] px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">
-                Email address *
-              </label>
-              <input
-                type="email"
-                required
-                value={draft.email}
-                onChange={(event) => setDraft((prev) => ({ ...prev, email: event.target.value }))}
-                placeholder="parent@example.com"
-                className="w-full rounded-2xl border border-beige bg-[#faf8f4] px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="relative">
-              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">
-                Country of residency *
-              </label>
-              <button
-                type="button"
-                onClick={() => setCountryOpen((prev) => !prev)}
-                className="flex w-full items-center justify-between rounded-2xl border border-beige bg-[#faf8f4] px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white text-left cursor-pointer"
-                aria-haspopup="listbox"
-                aria-expanded={countryOpen}
-              >
-                {selectedCountry ? (
-                  <span className="flex items-center gap-2 truncate">
-                    <span className="text-base">{selectedCountry.flag}</span>
-                    <span className="truncate">{selectedCountry.name}</span>
-                    <span className="text-xs text-warm-gray font-mono">({selectedCountry.iso})</span>
-                  </span>
-                ) : (
-                  <span className="text-warm-gray/60 flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-warm-gray/60" />
-                    Select country
-                  </span>
-                )}
-                <ChevronDown
-                  className={`ml-2 h-4 w-4 shrink-0 text-warm-gray transition-transform ${
-                    countryOpen ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-
-              {countryOpen && (
-                <div className="absolute left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto rounded-2xl border border-beige bg-white p-2 shadow-xl">
-                  <div className="sticky top-0 z-10 bg-white pb-1.5">
+        {/* Form content */}
+        <form onSubmit={handleSubmit} className="flex flex-col justify-between flex-1 min-h-0">
+          <div className="space-y-2.5">
+            {activeTab === 'profile' ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-warm-gray">
+                      Full Name *
+                    </label>
                     <input
-                      autoFocus
-                      placeholder="Search country name or code..."
-                      value={countrySearch}
-                      onChange={(e) => setCountrySearch(e.target.value)}
-                      className="w-full rounded-xl border border-beige bg-[#faf8f4] px-3 py-1.5 text-xs text-charcoal outline-none focus:border-sage focus:bg-white"
+                      required
+                      value={draft.fullName}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, fullName: e.target.value }))}
+                      placeholder="e.g. Sarah Jenkins"
+                      className="w-full rounded-xl border border-beige bg-[#faf8f4] px-3 py-2 text-xs sm:text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
                     />
                   </div>
-                  <ul role="listbox" className="space-y-0.5">
-                    {draft.country && (
-                      <li>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDraft((prev) => ({ ...prev, country: '' }));
-                            setCountryOpen(false);
-                            setCountrySearch('');
-                          }}
-                          className="flex w-full items-center px-3 py-1.5 text-left text-xs text-warm-gray hover:bg-[#faf8f4] rounded-xl italic cursor-pointer"
-                        >
-                          Clear country selection
-                        </button>
-                      </li>
-                    )}
-                    {filteredCountries.map((c) => {
-                      const isSelected = draft.country === c.iso || draft.country === c.name;
-                      return (
-                        <li key={c.iso} role="option" aria-selected={isSelected}>
-                          <button
-                            type="button"
-                            onClick={() => handleCountrySelect(c.iso)}
-                            className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition rounded-xl cursor-pointer ${
-                              isSelected
-                                ? 'bg-sage/15 font-medium text-sage-dark'
-                                : 'text-charcoal hover:bg-[#faf8f4]'
-                            }`}
-                          >
-                            <span className="flex items-center gap-2 truncate">
-                              <span>{c.flag}</span>
-                              <span className="truncate">{c.name}</span>
-                            </span>
-                            <span className="text-[10px] text-warm-gray font-mono">{c.iso}</span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                    {filteredCountries.length === 0 && (
-                      <li className="px-3 py-2 text-center text-xs text-warm-gray">No matching countries</li>
-                    )}
-                  </ul>
+
+                  <div>
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-warm-gray">
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={draft.email}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, email: e.target.value }))}
+                      placeholder="parent@example.com"
+                      className="w-full rounded-xl border border-beige bg-[#faf8f4] px-3 py-2 text-xs sm:text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
+                    />
+                  </div>
                 </div>
-              )}
-            </div>
 
-            <div>
-              <PhoneInput
-                label="Working phone number *"
-                value={`${draft.dialCode}${draft.localPhone}`}
-                onChange={(val) => {
-                  const { dialCode, local } = parsePhone(val || null);
-                  setDraft((prev) => ({ ...prev, dialCode, localPhone: local }));
-                }}
-              />
-            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-warm-gray">
+                      Country of Residency *
+                    </label>
+                    <select
+                      value={draft.country}
+                      onChange={(e) => handleCountrySelect(e.target.value)}
+                      className="w-full rounded-xl border border-beige bg-[#faf8f4] px-3 py-2 text-xs sm:text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white cursor-pointer"
+                    >
+                      <option value="">Select country...</option>
+                      {COUNTRIES.map((c) => (
+                        <option key={c.iso} value={c.iso}>
+                          {c.flag} {c.name} ({c.iso})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <PhoneInput
+                      label="Working Phone Number *"
+                      inputClassName="!py-2 !text-xs sm:!text-sm !rounded-xl"
+                      value={`${draft.dialCode}${draft.localPhone}`}
+                      onChange={(val) => {
+                        const { dialCode, local } = parsePhone(val || null);
+                        setDraft((prev) => ({ ...prev, dialCode, localPhone: local }));
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-warm-gray">
+                      City
+                    </label>
+                    <input
+                      value={draft.city}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, city: e.target.value }))}
+                      placeholder="e.g. Cairo, Dubai, London"
+                      className="w-full rounded-xl border border-beige bg-[#faf8f4] px-3 py-2 text-xs sm:text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-warm-gray">
+                      Address / Street
+                    </label>
+                    <input
+                      value={draft.address}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, address: e.target.value }))}
+                      placeholder="Street, building, apartment"
+                      className="w-full rounded-xl border border-beige bg-[#faf8f4] px-3 py-2 text-xs sm:text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-warm-gray">
+                    Account Role
+                  </label>
+                  <select
+                    value={draft.role}
+                    onChange={(e) =>
+                      setDraft((prev) => ({ ...prev, role: e.target.value as 'student' | 'admin' | 'assistant' }))
+                    }
+                    className="w-full rounded-xl border border-beige bg-[#faf8f4] px-3 py-2 text-xs sm:text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white cursor-pointer"
+                  >
+                    <option value="student">Student / Client (Default Member Access)</option>
+                    <option value="assistant">Assistant (Practice & Scheduling Lead)</option>
+                    <option value="admin">Administrator (Full System Access)</option>
+                  </select>
+                  <p className="mt-1 text-[11px] text-warm-gray leading-normal">
+                    {draft.role === 'admin'
+                      ? 'Full administrative control over CRM, clients, sessions, content, and settings.'
+                      : draft.role === 'assistant'
+                      ? 'Scheduling coordinator with access to client follow-up hub, notes, and direct outreach.'
+                      : 'Standard client profile with access to their dashboard, courses, and booked sessions.'}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-warm-gray">
+                    {editingUser ? 'New Password (Optional)' : 'Account Password *'}
+                  </label>
+                  <input
+                    type="password"
+                    value={draft.password}
+                    onChange={(e) => setDraft((prev) => ({ ...prev, password: e.target.value }))}
+                    placeholder={editingUser ? 'Leave blank to keep existing password' : 'Minimum 6 characters'}
+                    className="w-full rounded-xl border border-beige bg-[#faf8f4] px-3 py-2 text-xs sm:text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
+                  />
+                  <p className="mt-1 text-[11px] text-warm-gray leading-normal">
+                    {editingUser
+                      ? 'Only fill this in if you need to reset or update this user’s password.'
+                      : 'Required to create a new authentication login for this account.'}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">City</label>
-              <input
-                value={draft.city}
-                onChange={(event) => setDraft((prev) => ({ ...prev, city: event.target.value }))}
-                placeholder="e.g. Cairo, Dubai, London"
-                className="w-full rounded-2xl border border-beige bg-[#faf8f4] px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">
-                Address / Street
-              </label>
-              <input
-                value={draft.address}
-                onChange={(event) => setDraft((prev) => ({ ...prev, address: event.target.value }))}
-                placeholder="Street, building, apartment"
-                className="w-full rounded-2xl border border-beige bg-[#faf8f4] px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">
-                {editingUser ? 'New password (leave blank to keep current)' : 'Account Password *'}
-              </label>
-              <input
-                type="password"
-                value={draft.password}
-                onChange={(event) => setDraft((prev) => ({ ...prev, password: event.target.value }))}
-                placeholder={editingUser ? '••••••••' : 'Minimum 6 characters'}
-                className="w-full rounded-2xl border border-beige bg-[#faf8f4] px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.14em] text-warm-gray">Role</label>
-              <select
-                value={draft.role}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, role: event.target.value as 'student' | 'admin' | 'assistant' }))
-                }
-                className="w-full rounded-2xl border border-beige bg-[#faf8f4] px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-sage focus:bg-white cursor-pointer"
-              >
-                <option value="student">Student / Client (Default)</option>
-                <option value="assistant">Assistant (Practice & Scheduling Assistant)</option>
-                <option value="admin">Administrator (Full Access)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap justify-end gap-3 pt-3 border-t border-beige/80">
+          {/* Footer buttons pinned to bottom */}
+          <div className="flex items-center justify-between gap-3 pt-3 border-t border-beige/60 mt-3 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-2xl border border-beige bg-white px-5 py-2.5 text-sm font-medium text-charcoal transition hover:bg-[#faf8f4] cursor-pointer"
+              className="rounded-xl border border-beige bg-white px-3.5 py-2 text-xs font-medium text-charcoal transition hover:bg-[#faf8f4] cursor-pointer"
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-2xl bg-sage px-6 py-2.5 text-sm font-medium text-white transition hover:bg-sage-dark disabled:opacity-50 cursor-pointer shadow-xs"
-            >
-              {saving ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving…
-                </span>
-              ) : editingUser ? (
-                'Save Changes'
+
+            <div className="flex items-center gap-2">
+              {activeTab === 'profile' ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('access')}
+                  className="rounded-xl border border-beige bg-[#faf8f4] px-3 py-2 text-xs font-medium text-charcoal transition hover:border-sage cursor-pointer"
+                >
+                  Role & Security →
+                </button>
               ) : (
-                'Create User'
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('profile')}
+                  className="rounded-xl border border-beige bg-[#faf8f4] px-3 py-2 text-xs font-medium text-charcoal transition hover:border-sage cursor-pointer"
+                >
+                  ← Contact Info
+                </button>
               )}
-            </button>
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-xl bg-sage px-4 sm:px-5 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-sage-dark disabled:opacity-50 cursor-pointer"
+              >
+                {saving ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Saving…
+                  </span>
+                ) : editingUser ? (
+                  'Save Changes'
+                ) : (
+                  'Create User'
+                )}
+              </button>
+            </div>
           </div>
         </form>
       </div>

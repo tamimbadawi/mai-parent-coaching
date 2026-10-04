@@ -116,7 +116,7 @@ function AppShell() {
         </Routes>
       </main>
       {isAdminRoute || isDashboardRoute ? null : <Footer />}
-      <WhatsAppWidget />
+      {isAdminRoute ? null : <WhatsAppWidget />}
     </div>
   );
 }
