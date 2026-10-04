@@ -193,8 +193,10 @@ export const MemberStudyModal = ({
       setActions((memberActionsData as MemberActionItem[]) || []);
 
       if (personaData) {
-        setPersonaDraft((prev) => ({
-          ...prev,
+        setPersonaDraft({
+          full_name: member.full_name,
+          role: member.role,
+          birth_year: member.birth_year ? String(member.birth_year) : '',
           notes: personaData.notes || '',
           persona_summary: personaData.persona_summary || '',
           concern_level: personaData.concern_level || '',
@@ -202,11 +204,13 @@ export const MemberStudyModal = ({
           temperament_traits: personaData.temperament_traits || [],
           known_triggers: personaData.known_triggers || [],
           strengths: personaData.strengths || [],
-        }));
-        setEditDraft((prev) => ({
-          ...prev,
+        });
+        setEditDraft({
+          full_name: member.full_name,
+          role: member.role,
+          birth_year: member.birth_year ? String(member.birth_year) : '',
           notes: personaData.notes || '',
-        }));
+        });
       }
     } catch (err: any) {
       console.error('Failed to load member session history:', err);

@@ -66,13 +66,8 @@ const AdminUsers = (): JSX.Element => {
         setError(`Failed to load users: ${data?.message ?? response.status}`);
         setUsers([]);
       } else {
-        // Rule: No user is to be added/displayed without both valid phone number and country of residence
-        const validUsers = ((data ?? []) as UserProfile[]).filter((u) => {
-          if (u.role === 'admin' || u.role === 'assistant') return true;
-          const clean = (u.phone || '').replace(/\D/g, '');
-          return Boolean(u.phone && clean.length >= 7 && u.country && u.country.trim().length > 0);
-        });
-        setUsers(validUsers);
+        // Display all users authentically without dropping clients who don't have phone numbers
+        setUsers((data ?? []) as UserProfile[]);
       }
     } catch (err) {
       setError(`Failed to load users: ${err instanceof Error ? err.message : String(err)}`);
@@ -311,14 +306,18 @@ const AdminUsers = (): JSX.Element => {
                           </span>
                         </div>
                         <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-warm-gray">
-                          <span>{user.email}</span>
-                          {user.phone ? (
+                          {user.email && user.email.trim() && !user.email.includes('@historical.client') ? (
+                            <span>{user.email}</span>
+                          ) : (
+                            <span className="italic text-warm-gray/60">No email on file</span>
+                          )}
+                          {user.phone && user.phone.trim() && !user.phone.startsWith('+20100000') ? (
                             <span className="flex items-center gap-1 text-xs font-medium text-charcoal bg-white/70 px-2 py-0.5 rounded-lg border border-beige/60">
                               <Phone className="h-3 w-3 text-sage-dark" />
                               {user.phone}
                             </span>
                           ) : (
-                            <span className="text-xs text-rose-500 font-medium">No phone on file</span>
+                            <span className="text-xs text-warm-gray/60 italic">No phone on file</span>
                           )}
                           {user.country ? (() => {
                             const cObj = COUNTRIES.find((c) => c.iso === user.country || c.name.toLowerCase() === user.country?.toLowerCase());

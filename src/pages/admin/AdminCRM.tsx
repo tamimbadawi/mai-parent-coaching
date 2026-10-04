@@ -180,13 +180,7 @@ export const AdminCRM = (): JSX.Element => {
       if (fetchErr) throw fetchErr;
 
       const items = (data || []) as CustomerJourneyState[];
-      // Rule: No user is to be added/displayed without both valid phone number and country of residence
-      const validItems = items.filter((c) => {
-        if (c.role === 'admin' || c.role === 'assistant') return true;
-        const clean = (c.phone || '').replace(/\D/g, '');
-        return Boolean(c.phone && clean.length >= 7 && c.country && c.country.trim().length > 0);
-      });
-      setClients(validItems);
+      setClients(items);
       const hSet = new Set((households || []).map((h) => h.primary_contact_profile_id).filter(Boolean) as string[]);
       setHouseholdClientIds(hSet);
 
@@ -960,14 +954,18 @@ export const AdminCRM = (): JSX.Element => {
 
                             {/* Contact Info Row */}
                             <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-warm-gray">
-                              <span>{client.email}</span>
-                              {client.phone ? (
+                              {client.email && client.email.trim() && !client.email.includes('@historical.client') ? (
+                                <span>{client.email}</span>
+                              ) : (
+                                <span className="italic text-warm-gray/60">No email on file</span>
+                              )}
+                              {client.phone && client.phone.trim() && !client.phone.startsWith('+20100000') ? (
                                 <span className="flex items-center gap-1 font-mono text-charcoal">
                                   <Phone className="h-3 w-3 text-sage-dark" />
                                   {client.phone}
                                 </span>
                               ) : (
-                                <span className="text-rose-500 font-medium">No phone</span>
+                                <span className="italic text-warm-gray/60">No phone on file</span>
                               )}
                               {country ? (
                                 <span className="flex items-center gap-1">

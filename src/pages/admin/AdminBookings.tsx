@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import {
   CalendarCheck,
   CalendarClock,
@@ -26,13 +26,15 @@ import {
   RotateCw,
   CalendarPlus,
   MessageSquare,
+  UserCheck,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AdminLayout from './AdminLayout';
-import type { Booking } from '../../types';
+import type { Booking, CustomerJourneyState } from '../../types';
 import { EmptyPanel, Panel, StatCard } from './components/AdminUI';
 import { BookingRescheduleModal } from './components/BookingRescheduleModal';
 import { BookingEditModal } from './components/BookingEditModal';
+import { ClientDossierModal } from './components/ClientDossierModal';
 import {
   AdminManualBookingModal,
   type AdminManualBookingInitialData,
@@ -133,6 +135,13 @@ const AdminBookings = (): JSX.Element => {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
+  // Profile lookup mapping to resolve client_id for CRM & Workspace navigation
+  const [profilesLookup, setProfilesLookup] = useState<{
+    byId: Record<string, string>;
+    byEmail: Record<string, string>;
+    byName: Record<string, string>;
+  }>({ byId: {}, byEmail: {}, byName: {} });
+
   // Modals state
   const [rescheduleBooking, setRescheduleBooking] = useState<Booking | null>(null);
   const [editBooking, setEditBooking] = useState<Booking | null>(null);
@@ -140,6 +149,75 @@ const AdminBookings = (): JSX.Element => {
   const [manualBookingInitialData, setManualBookingInitialData] =
     useState<AdminManualBookingInitialData | null>(null);
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
+
+  // Floating Client Dossier Modal state (in-place popup)
+  const [selectedDossierClient, setSelectedDossierClient] =
+    useState<CustomerJourneyState | null>(null);
+  const [loadingDossierId, setLoadingDossierId] = useState<string | null>(null);
+
+  const handleOpenClientDossier = async (booking: Booking): Promise<void> => {
+    const clientId = getClientIdForBooking(booking);
+    setLoadingDossierId(booking.id);
+
+    try {
+      if (clientId) {
+        const { data } = await supabase
+          .from('customer_journey_state')
+          .select('*')
+          .eq('client_id', clientId)
+          .maybeSingle();
+
+        if (data) {
+          setSelectedDossierClient(data as CustomerJourneyState);
+          return;
+        }
+      }
+
+      if (booking.email) {
+        const { data: emailData } = await supabase
+          .from('customer_journey_state')
+          .select('*')
+          .ilike('email', booking.email.trim())
+          .maybeSingle();
+
+        if (emailData) {
+          setSelectedDossierClient(emailData as CustomerJourneyState);
+          return;
+        }
+      }
+
+      // Fallback: construct CustomerJourneyState from booking details
+      const fallbackClient: CustomerJourneyState = {
+        client_id: clientId || booking.user_id || booking.id,
+        parent_name: booking.parent_name || 'Client',
+        email: booking.email || '',
+        phone: booking.phone || '',
+        country: booking.country || 'Egypt',
+        role: 'student',
+        client_created_at: booking.created_at || new Date().toISOString(),
+        engagement_status: 'active',
+        engagement_cadence_days: 14,
+        current_track: 'track_a',
+        completed_paid_sessions_count: booking.status === 'completed' ? 1 : 0,
+        completed_free_sessions_count: 0,
+        upcoming_sessions_count: booking.status === 'confirmed' ? 1 : 0,
+        cancelled_sessions_count: booking.status === 'cancelled' ? 1 : 0,
+        first_completed_paid_session_at: booking.status === 'completed' ? booking.appointment_date : null,
+        last_completed_paid_session_at: booking.status === 'completed' ? booking.appointment_date : null,
+        next_upcoming_session_at: booking.status === 'confirmed' ? booking.appointment_date : null,
+        last_engagement_at: booking.appointment_date || new Date().toISOString(),
+        days_since_last_engagement: 0,
+        days_since_last_session: null,
+        lifecycle_stage: 'track_a_booked',
+        next_step_recommendation: 'Review discovery notes and formulate personalized coaching plan',
+      };
+      setSelectedDossierClient(fallbackClient);
+    } catch (err) {
+      console.error('Failed to open client dossier:', err);
+    } finally {
+      setLoadingDossierId(null);
+    }
+  };
 
   useEffect(() => {
     const filterParam = searchParams.get('filter');
@@ -152,17 +230,34 @@ const AdminBookings = (): JSX.Element => {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: queryError } = await supabase
-        .from('bookings')
-        .select('*')
-        .order('appointment_date', { ascending: false })
-        .order('appointment_time', { ascending: false });
+      const [{ data, error: queryError }, { data: profilesData }] = await Promise.all([
+        supabase
+          .from('bookings')
+          .select('*')
+          .order('appointment_date', { ascending: false })
+          .order('appointment_time', { ascending: false }),
+        supabase
+          .from('profiles')
+          .select('id, full_name, email'),
+      ]);
 
       if (queryError) {
         console.error('Error querying bookings:', queryError);
         setError(queryError.message);
       } else {
         setBookings((data as Booking[]) ?? []);
+      }
+
+      if (profilesData) {
+        const byId: Record<string, string> = {};
+        const byEmail: Record<string, string> = {};
+        const byName: Record<string, string> = {};
+        for (const p of profilesData) {
+          if (p.id) byId[p.id] = p.id;
+          if (p.email) byEmail[p.email.toLowerCase().trim()] = p.id;
+          if (p.full_name) byName[p.full_name.toLowerCase().trim()] = p.id;
+        }
+        setProfilesLookup({ byId, byEmail, byName });
       }
     } catch (err: unknown) {
       console.error('Unexpected error loading bookings:', err);
@@ -171,6 +266,20 @@ const AdminBookings = (): JSX.Element => {
       setLoading(false);
     }
   };
+
+  const getClientIdForBooking = useCallback(
+    (b: Booking): string | null => {
+      if (b.user_id && profilesLookup.byId[b.user_id]) return b.user_id;
+      if (b.email && profilesLookup.byEmail[b.email.toLowerCase().trim()]) {
+        return profilesLookup.byEmail[b.email.toLowerCase().trim()];
+      }
+      if (b.parent_name && profilesLookup.byName[b.parent_name.toLowerCase().trim()]) {
+        return profilesLookup.byName[b.parent_name.toLowerCase().trim()];
+      }
+      return b.user_id || null;
+    },
+    [profilesLookup]
+  );
 
   useEffect(() => {
     void fetchBookings();
@@ -637,6 +746,8 @@ const AdminBookings = (): JSX.Element => {
                 await handleApproveBooking(b.id);
               }}
               approvingId={updatingId}
+              resolveClientId={getClientIdForBooking}
+              onOpenDossier={(b) => void handleOpenClientDossier(b)}
             />
           ) : filteredBookings.length === 0 ? (
             <EmptyPanel
@@ -687,20 +798,28 @@ const AdminBookings = (): JSX.Element => {
                           </div>
 
                           <div className="mt-1 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-xs text-warm-gray">
-                            <span className="flex items-center gap-1">
-                              <Mail className="h-3.5 w-3.5 text-soft-gray shrink-0" />
-                              <a href={`mailto:${booking.email}`} className="text-charcoal hover:underline truncate max-w-[200px]">
-                                {booking.email}
-                              </a>
-                            </span>
-                            {booking.phone && (
+                            {booking.email && booking.email.trim() && !booking.email.includes('@historical.client') ? (
+                              <span className="flex items-center gap-1">
+                                <Mail className="h-3.5 w-3.5 text-soft-gray shrink-0" />
+                                <a href={`mailto:${booking.email}`} className="text-charcoal hover:underline truncate max-w-[200px]">
+                                  {booking.email}
+                                </a>
+                              </span>
+                            ) : null}
+                            {booking.phone && booking.phone.trim() && !booking.phone.startsWith('+20100000') ? (
                               <span className="flex items-center gap-1">
                                 <Phone className="h-3.5 w-3.5 text-soft-gray shrink-0" />
                                 <a href={`tel:${booking.phone}`} className="text-charcoal hover:underline">
                                   {booking.phone}
                                 </a>
                               </span>
-                            )}
+                            ) : null}
+                            {(!booking.phone || booking.phone.startsWith('+20100000')) &&
+                             (!booking.email || !booking.email.trim() || booking.email.includes('@historical.client')) ? (
+                              <span className="italic text-warm-gray/60 text-[11px]">
+                                No phone or email in notes
+                              </span>
+                            ) : null}
                             {booking.country && (
                               <span className="flex items-center gap-1">
                                 <Globe className="h-3.5 w-3.5 text-soft-gray shrink-0" />
@@ -775,7 +894,7 @@ const AdminBookings = (): JSX.Element => {
                         </div>
                       )}
 
-                      {/* Middle Row: Session Type, Child Info & Status Select */}
+                      {/* Middle Row: Session Type, Option Tabs & Status Select */}
                       <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="inline-flex items-center gap-1.5 rounded-xl bg-sage/10 px-2.5 py-1 text-xs font-medium text-sage-dark">
@@ -791,6 +910,43 @@ const AdminBookings = (): JSX.Element => {
                             </span>
                           )}
                         </div>
+
+                        {/* Direct Navigation Option Tabs: Client Dossier & Workspace */}
+                        {(() => {
+                          const clientId = getClientIdForBooking(booking);
+                          const isLoadingDossier = loadingDossierId === booking.id;
+                          return (
+                            <div className="inline-flex items-center rounded-xl border border-beige/90 bg-white p-0.5 shadow-2xs text-xs">
+                              <button
+                                type="button"
+                                onClick={() => void handleOpenClientDossier(booking)}
+                                disabled={isLoadingDossier}
+                                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-semibold text-charcoal hover:bg-sage/15 hover:text-sage-dark transition active:scale-95 cursor-pointer disabled:opacity-50"
+                                title={`Open ${booking.parent_name}'s Client Dossier Popup`}
+                              >
+                                {isLoadingDossier ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-sage-dark" />
+                                ) : (
+                                  <UserCheck className="h-3.5 w-3.5 text-sage-dark" />
+                                )}
+                                <span>Client Dossier</span>
+                              </button>
+                              <div className="h-3.5 w-px bg-beige" />
+                              <Link
+                                to={
+                                  clientId
+                                    ? `/admin/sessions?client=${clientId}`
+                                    : `/admin/sessions`
+                                }
+                                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-semibold text-charcoal hover:bg-sage/15 hover:text-sage-dark transition active:scale-95"
+                                title={`Open ${booking.parent_name}'s Workspace & Clinical Notes`}
+                              >
+                                <Sparkles className="h-3.5 w-3.5 text-sage-dark" />
+                                <span>Workspace</span>
+                              </Link>
+                            </div>
+                          );
+                        })()}
 
                         {/* Status Select */}
                         <div className="relative">
@@ -1020,6 +1176,18 @@ const AdminBookings = (): JSX.Element => {
         onClose={() => setIsAvailabilityModalOpen(false)}
         onUpdated={() => void fetchBookings()}
       />
+
+      {/* Floating Client Dossier Modal (In-place popup) */}
+      {selectedDossierClient && (
+        <ClientDossierModal
+          key={selectedDossierClient.client_id}
+          client={selectedDossierClient}
+          onClose={() => setSelectedDossierClient(null)}
+          onClientUpdated={(updated) => {
+            setSelectedDossierClient((prev) => (prev ? { ...prev, ...updated } : null));
+          }}
+        />
+      )}
     </AdminLayout>
   );
 };

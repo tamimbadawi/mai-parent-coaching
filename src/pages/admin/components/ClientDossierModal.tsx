@@ -30,10 +30,11 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import type { CustomerJourneyState, CRMContentItem, CRMLifecycleStage } from '../../../types';
-import { roleLabel, currentAge, type Household, type HouseholdMember } from '../../../types/family';
+import { roleLabel, currentAge, type Household, type HouseholdMember, type CaseSession } from '../../../types/family';
 import { COUNTRIES } from '../../../data/countries';
 import InternalWhatsAppMessengerModal from './InternalWhatsAppMessengerModal';
 import AssistantFollowUpModal from './AssistantFollowUpModal';
+import { MemberStudyModal } from '../family/MemberStudyModal';
 import { ensureHousehold } from '../family/ensureHousehold';
 
 export interface TimelineEvent {
@@ -134,6 +135,8 @@ export const ClientDossierModal = ({
     members: HouseholdMember[];
     openActionCounts: Record<string, number>;
   } | null>(null);
+  const [selectedStudyMember, setSelectedStudyMember] = useState<HouseholdMember | null>(null);
+  const [householdSessions, setHouseholdSessions] = useState<CaseSession[]>([]);
 
   // Content pieces for manual dispatch
   const [libraryPieces, setLibraryPieces] = useState<CRMContentItem[]>([]);
@@ -339,7 +342,7 @@ export const ClientDossierModal = ({
       if (client.client_id) {
         let { data: householdData } = await supabase
           .from('households')
-          .select('*, household_members(*)')
+          .select('*, household_members(*, member_personas(*)), household_clinical(*)')
           .eq('primary_contact_profile_id', client.client_id)
           .maybeSingle();
 
@@ -348,7 +351,7 @@ export const ClientDossierModal = ({
           if (hId) {
             const { data: createdHousehold } = await supabase
               .from('households')
-              .select('*, household_members(*)')
+              .select('*, household_members(*, member_personas(*)), household_clinical(*)')
               .eq('id', hId)
               .maybeSingle();
             householdData = createdHousehold;
@@ -356,7 +359,24 @@ export const ClientDossierModal = ({
         }
 
         if (householdData) {
-          const membersList: HouseholdMember[] = householdData.household_members || [];
+          const rawClinical = Array.isArray(householdData.household_clinical)
+            ? householdData.household_clinical[0]
+            : householdData.household_clinical;
+          const rawMembers: any[] = householdData.household_members || [];
+          const membersList: HouseholdMember[] = rawMembers.map((m: any) => {
+            const persona = Array.isArray(m.member_personas) ? m.member_personas[0] : m.member_personas;
+            return {
+              ...m,
+              persona: persona || null,
+              notes: persona?.notes ?? null,
+              persona_summary: persona?.persona_summary ?? null,
+              concern_level: persona?.concern_level ?? null,
+              family_dynamic_role: persona?.family_dynamic_role ?? null,
+              known_triggers: persona?.known_triggers ?? [],
+              strengths: persona?.strengths ?? [],
+              temperament_traits: persona?.temperament_traits ?? [],
+            };
+          });
           const memberIds = membersList.map((m) => m.id);
           const openActionCountsByMember: Record<string, number> = {};
 
@@ -374,7 +394,12 @@ export const ClientDossierModal = ({
           }
 
           setHouseholdInfo({
-            household: householdData as Household,
+            household: {
+              ...householdData,
+              presenting_issue: rawClinical?.presenting_issue ?? householdData.presenting_issue ?? null,
+              working_plan: rawClinical?.working_plan ?? householdData.working_plan ?? null,
+              next_step: rawClinical?.next_step ?? householdData.next_step ?? null,
+            } as Household,
             members: membersList,
             openActionCounts: openActionCountsByMember,
           });
@@ -386,6 +411,20 @@ export const ClientDossierModal = ({
             .order('session_date', { ascending: false });
 
           if (caseSessions && caseSessions.length > 0) {
+            const mappedCaseSessions: CaseSession[] = caseSessions.map((cs: any) => ({
+              id: cs.id,
+              household_id: cs.household_id,
+              booking_id: cs.booking_id || null,
+              session_date: cs.session_date,
+              duration_minutes: cs.duration_minutes || null,
+              google_meet_url: cs.google_meet_url || null,
+              status: cs.status === 'completed' ? 'completed' : cs.status === 'cancelled' ? 'cancelled' : 'scheduled',
+              drive_web_view_url: cs.drive_web_view_url || null,
+              created_at: cs.session_date,
+              updated_at: cs.session_date,
+            }));
+            setHouseholdSessions(mappedCaseSessions);
+
             caseSessions.forEach((cs, csIdx) => {
               const postNotes = cs.session_content?.find(
                 (c: { content_type: string; content: string | null }) => c.content_type === 'post_session_notes'
@@ -638,17 +677,21 @@ export const ClientDossierModal = ({
               </div>
 
               <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-warm-gray">
-                <span className="flex items-center gap-1">
-                  <Mail className="h-3.5 w-3.5 text-warm-gray" />
-                  {client.email}
-                </span>
-                {client.phone ? (
+                {client.email && client.email.trim() && !client.email.includes('@historical.client') ? (
+                  <span className="flex items-center gap-1">
+                    <Mail className="h-3.5 w-3.5 text-warm-gray" />
+                    {client.email}
+                  </span>
+                ) : (
+                  <span className="text-warm-gray/60 italic">No email on file</span>
+                )}
+                {client.phone && client.phone.trim() && !client.phone.startsWith('+20100000') ? (
                   <span className="flex items-center gap-1 font-mono">
                     <Phone className="h-3.5 w-3.5 text-sage-dark" />
                     {client.phone}
                   </span>
                 ) : (
-                  <span className="text-rose-500 font-medium">No phone on file</span>
+                  <span className="text-warm-gray/60 italic">No phone on file</span>
                 )}
                 {countryObj ? (
                   <span className="flex items-center gap-1">
@@ -656,7 +699,7 @@ export const ClientDossierModal = ({
                     <span>{countryObj.name}</span>
                   </span>
                 ) : null}
-                {client.phone ? (
+                {client.phone && client.phone.trim() && !client.phone.startsWith('+20100000') ? (
                   <button
                     type="button"
                     onClick={() => setIsMessengerOpen(true)}
@@ -1041,18 +1084,19 @@ export const ClientDossierModal = ({
                           {householdInfo.members.map((member) => {
                             const openTasks = householdInfo.openActionCounts[member.id] || 0;
                             const age = currentAge(member.birth_year);
-                            const householdId = householdInfo.household?.id;
 
                             return (
                               <div
                                 key={member.id}
-                                className="rounded-xl border border-beige/80 bg-white p-4 shadow-2xs hover:border-sage/60 transition flex flex-col justify-between space-y-3"
+                                onClick={() => setSelectedStudyMember(member)}
+                                className="rounded-xl border border-beige/80 bg-white p-4 shadow-2xs hover:border-sage transition flex flex-col justify-between space-y-3 cursor-pointer group"
+                                title={`Click to open full clinical dossier & study for ${member.full_name}`}
                               >
                                 <div>
                                   <div className="flex items-start justify-between gap-2">
                                     <div>
                                       <div className="flex items-center gap-1.5">
-                                        <h6 className="text-sm font-medium text-charcoal">{member.full_name}</h6>
+                                        <h6 className="text-sm font-semibold text-charcoal group-hover:text-sage-dark transition">{member.full_name}</h6>
                                         <span className="rounded-md bg-beige/60 px-1.5 py-0.5 text-[10px] text-warm-gray font-medium">
                                           {roleLabel(member.role)}
                                         </span>
@@ -1062,9 +1106,13 @@ export const ClientDossierModal = ({
                                       ) : null}
                                     </div>
 
-                                    {/* Neutral concern level badge (per decisions.md §6 placeholder taxonomy) */}
+                                    {/* Concern level badge */}
                                     {member.concern_level ? (
-                                      <span className="inline-flex items-center rounded-md bg-[#faf8f4] px-2 py-0.5 text-[10px] font-medium text-charcoal border border-beige">
+                                      <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold border ${
+                                        member.concern_level === 'Primary concern'
+                                          ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                          : 'bg-[#faf8f4] text-charcoal border-beige'
+                                      }`}>
                                         {member.concern_level}
                                       </span>
                                     ) : null}
@@ -1080,20 +1128,20 @@ export const ClientDossierModal = ({
 
                                   {/* Persona summary */}
                                   {member.persona_summary ? (
-                                    <p className="mt-2 text-xs text-charcoal/80 bg-[#faf8f4] p-2.5 rounded-lg border border-beige/60 leading-relaxed line-clamp-3">
+                                    <p className="mt-2 text-xs text-charcoal/85 bg-[#faf8f4] p-2.5 rounded-lg border border-beige/60 leading-relaxed line-clamp-3">
                                       {member.persona_summary}
                                     </p>
                                   ) : null}
 
                                   {/* Triggers & Strengths */}
-                                  <div className="mt-2 space-y-1">
+                                  <div className="mt-2 space-y-1.5">
                                     {member.known_triggers && member.known_triggers.length > 0 ? (
                                       <div className="flex flex-wrap gap-1 items-center">
-                                        <span className="text-[10px] text-rose-700 font-medium">Triggers:</span>
+                                        <span className="text-[10px] text-rose-700 font-semibold">Triggers:</span>
                                         {member.known_triggers.slice(0, 3).map((t, idx) => (
                                           <span
                                             key={idx}
-                                            className="rounded bg-rose-50 text-rose-700 px-1.5 py-0.5 text-[10px] border border-rose-200"
+                                            className="rounded bg-rose-50 text-rose-800 px-1.5 py-0.5 text-[10px] border border-rose-200 font-medium"
                                           >
                                             {t}
                                           </span>
@@ -1103,11 +1151,11 @@ export const ClientDossierModal = ({
 
                                     {member.strengths && member.strengths.length > 0 ? (
                                       <div className="flex flex-wrap gap-1 items-center">
-                                        <span className="text-[10px] text-emerald-700 font-medium">Strengths:</span>
+                                        <span className="text-[10px] text-emerald-700 font-semibold">Strengths:</span>
                                         {member.strengths.slice(0, 3).map((s, idx) => (
                                           <span
                                             key={idx}
-                                            className="rounded bg-emerald-50 text-emerald-700 px-1.5 py-0.5 text-[10px] border border-emerald-200"
+                                            className="rounded bg-emerald-50 text-emerald-800 px-1.5 py-0.5 text-[10px] border border-emerald-200 font-medium"
                                           >
                                             {s}
                                           </span>
@@ -1127,15 +1175,17 @@ export const ClientDossierModal = ({
                                     {openTasks} open requirement{openTasks === 1 ? '' : 's'}
                                   </span>
 
-                                  {householdId ? (
-                                    <Link
-                                      to={`/admin/sessions?client=${client.client_id}&member=${member.id}`}
-                                      className="inline-flex items-center gap-1 text-[11px] font-medium text-sage-dark hover:underline"
-                                    >
-                                      Clinical Study
-                                      <ArrowRight className="h-3 w-3" />
-                                    </Link>
-                                  ) : null}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedStudyMember(member);
+                                    }}
+                                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-sage-dark hover:underline cursor-pointer"
+                                  >
+                                    Clinical Study
+                                    <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition" />
+                                  </button>
                                 </div>
                               </div>
                             );
@@ -1378,6 +1428,39 @@ export const ClientDossierModal = ({
         client={client}
         onFollowUpCompleted={() => void loadTimeline()}
       />
+
+      {/* Floating Member Study Dossier Modal */}
+      {selectedStudyMember && householdInfo?.household && (
+        <MemberStudyModal
+          member={selectedStudyMember}
+          household={householdInfo.household}
+          allHouseholdSessions={householdSessions}
+          onClose={() => setSelectedStudyMember(null)}
+          onMemberUpdated={(updated) => {
+            setHouseholdInfo((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    members: prev.members.map((m) => (m.id === updated.id ? { ...m, ...updated } : m)),
+                  }
+                : null
+            );
+            setSelectedStudyMember(updated);
+          }}
+          onMemberDeleted={(deletedId) => {
+            setHouseholdInfo((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    members: prev.members.filter((m) => m.id !== deletedId),
+                  }
+                : null
+            );
+            setSelectedStudyMember(null);
+          }}
+          onStudyGenerated={() => {}}
+        />
+      )}
 
 
     </div>

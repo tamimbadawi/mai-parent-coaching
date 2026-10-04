@@ -11,7 +11,8 @@ import {
   addMonths,
   subMonths,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Video, Calendar, Clock, User, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Video, Calendar, Clock, User, Sparkles, UserCheck } from 'lucide-react';
 import type { Booking } from '../../../types';
 
 interface AdminBookingsCalendarViewProps {
@@ -20,6 +21,8 @@ interface AdminBookingsCalendarViewProps {
   onEdit: (booking: Booking) => void;
   onApprove?: (booking: Booking) => Promise<void> | void;
   approvingId?: string | null;
+  resolveClientId?: (booking: Booking) => string | null;
+  onOpenDossier?: (booking: Booking) => void;
 }
 
 const statusBadgeColors: Record<Booking['status'], string> = {
@@ -36,6 +39,8 @@ export const AdminBookingsCalendarView = ({
   onEdit,
   onApprove,
   approvingId,
+  resolveClientId,
+  onOpenDossier,
 }: AdminBookingsCalendarViewProps): JSX.Element => {
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDayKey, setSelectedDayKey] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -200,8 +205,42 @@ export const AdminBookingsCalendarView = ({
                         {b.appointment_time} ({b.time_zone})
                       </span>
                       <h5 className="mt-1 font-semibold text-charcoal">{b.parent_name}</h5>
-                      <p className="text-xs text-warm-gray">{b.appointment_type_title}</p>
-                      {b.email && <p className="text-[11px] text-soft-gray">{b.email}</p>}
+                      {b.email && b.email.trim() && !b.email.includes('@historical.client') ? (
+                        <p className="text-[11px] text-soft-gray">{b.email}</p>
+                      ) : null}
+
+                      {/* Direct Navigation Option Tabs: Client Dossier & Workspace */}
+                      {(() => {
+                        const clientId = resolveClientId ? resolveClientId(b) : b.user_id;
+                        return (
+                          <div className="mt-2 flex items-center gap-1.5">
+                            <div className="inline-flex items-center rounded-lg border border-beige/90 bg-cream/70 p-0.5 text-[10px]">
+                              <button
+                                type="button"
+                                onClick={() => onOpenDossier && onOpenDossier(b)}
+                                className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-semibold text-charcoal hover:bg-white hover:text-sage-dark transition cursor-pointer"
+                                title={`Open ${b.parent_name}'s Client Dossier Popup`}
+                              >
+                                <UserCheck className="h-3 w-3 text-sage-dark" />
+                                <span>Client Dossier</span>
+                              </button>
+                              <div className="h-3 w-px bg-beige" />
+                              <Link
+                                to={
+                                  clientId
+                                    ? `/admin/sessions?client=${clientId}`
+                                    : `/admin/sessions`
+                                }
+                                className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-semibold text-charcoal hover:bg-white hover:text-sage-dark transition"
+                                title={`Open ${b.parent_name}'s Workspace & Clinical Notes`}
+                              >
+                                <Sparkles className="h-3 w-3 text-sage-dark" />
+                                <span>Workspace</span>
+                              </Link>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${
